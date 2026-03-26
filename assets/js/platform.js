@@ -28,11 +28,36 @@ const store = {
   document.body.setAttribute('data-theme', saved);
 })();
 
-document.getElementById('themeToggle').addEventListener('click', () => {
+document.getElementById('themeToggle').addEventListener('click', function() {
   const next = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-  document.body.setAttribute('data-theme', next);
-  store.set('theme', next);
-  // hljs theme is now in platform.css keyed off [data-theme] — no link swap needed
+
+  const applyTheme = () => {
+    document.body.setAttribute('data-theme', next);
+    store.set('theme', next);
+  };
+
+  // Circular reveal via View Transitions API; fall back if unsupported or reduced-motion
+  if (!document.startViewTransition ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    applyTheme();
+    return;
+  }
+
+  const rect = this.getBoundingClientRect();
+  const x    = Math.round(rect.left + rect.width  / 2);
+  const y    = Math.round(rect.top  + rect.height / 2);
+  const r    = Math.hypot(
+    Math.max(x, window.innerWidth  - x),
+    Math.max(y, window.innerHeight - y)
+  );
+
+  const t = document.startViewTransition(applyTheme);
+  t.ready.then(() => {
+    document.documentElement.animate(
+      { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${r}px at ${x}px ${y}px)`] },
+      { duration: 420, easing: 'ease-in-out', pseudoElement: '::view-transition-new(root)' }
+    );
+  });
 });
 
 // ── Marked: emit plain code blocks; hljs runs post-render via highlightCode ──
@@ -1710,7 +1735,11 @@ function openNotationModal() {
   if (!modal) return;
   modal.classList.add('is-open');
   const field = document.getElementById('notationSearchField');
-  if (field) { field.value = ''; field.focus(); }
+  if (field) {
+    field.value = '';
+    // Skip auto-focus on touch — keyboard would immediately compress the sheet
+    if (window.matchMedia('(pointer: fine)').matches) field.focus();
+  }
   renderNotationList('');
 }
 
