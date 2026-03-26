@@ -3,20 +3,6 @@
    Color system: dark = navy/steel-blue palette; light = pastel palette
    ============================================================ */
 
-/* ----------------------------------------------------------
-   View Transitions: theme toggle circular reveal
-   Suppress the browser's default cross-fade; the clip-path
-   animation is driven entirely from JS via .animate().
-   ---------------------------------------------------------- */
-@media (prefers-reduced-motion: no-preference) {
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
-    animation: none;
-    mix-blend-mode: normal;
-  }
-  ::view-transition-new(root) { z-index: 1; }
-  ::view-transition-old(root) { z-index: 0; }
-}
 
 /* ----------------------------------------------------------
    1. THEME TOKENS
@@ -256,6 +242,7 @@ img, svg { display: block; max-width: 100%; }
 .nav-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
 
 .theme-toggle {
+  position: relative;
   width: 36px;
   height: 36px;
   border-radius: 8px;
@@ -273,10 +260,22 @@ img, svg { display: block; max-width: 100%; }
   color: var(--text);
   border-color: var(--border-strong);
 }
-.theme-toggle .icon-sun { display: none; }
-.theme-toggle .icon-moon { display: block; }
-[data-theme="light"] .theme-toggle .icon-sun { display: block; }
-[data-theme="light"] .theme-toggle .icon-moon { display: none; }
+/* Both icons always in DOM — morph via opacity + rotation */
+.theme-toggle .icon-sun,
+.theme-toggle .icon-moon {
+  position: absolute;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+/* Dark mode: moon visible, sun rotated away */
+.theme-toggle .icon-sun  { opacity: 0; transform: scale(0.5) rotate(90deg); }
+.theme-toggle .icon-moon { opacity: 1; transform: scale(1)   rotate(0deg); }
+/* Light mode: sun visible, moon rotated away */
+[data-theme="light"] .theme-toggle .icon-sun  { opacity: 1; transform: scale(1)   rotate(0deg); }
+[data-theme="light"] .theme-toggle .icon-moon { opacity: 0; transform: scale(0.5) rotate(-90deg); }
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle .icon-sun,
+  .theme-toggle .icon-moon { transition: none; }
+}
 
 /* ----------------------------------------------------------
    4. MAIN & FOOTER
