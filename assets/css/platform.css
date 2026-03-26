@@ -2873,6 +2873,8 @@ img, svg { display: block; max-width: 100%; }
   font-size: 1.15rem;
   color: var(--text);
   padding-top: 2px;
+  min-width: 0;
+  overflow: hidden;
 }
 .notation-name {
   font-size: 0.85rem;
@@ -2932,18 +2934,6 @@ img, svg { display: block; max-width: 100%; }
     transform: translateY(0);
   }
 
-  /* Drag handle */
-  .notation-modal::before {
-    content: '';
-    display: block;
-    width: 36px;
-    height: 4px;
-    background: var(--border-strong);
-    border-radius: 2px;
-    margin: 12px auto 0;
-    flex-shrink: 0;
-  }
-
   /* Larger close button touch target */
   .notation-close-btn {
     min-width: 44px;
@@ -2953,7 +2943,13 @@ img, svg { display: block; max-width: 100%; }
     margin: -8px -4px;
   }
 
-  .notation-entry { grid-template-columns: 5.5rem 1fr; gap: 4px 12px; padding: 12px 16px; }
+  /* Stack symbol above body text — avoids wide KaTeX overflowing into adjacent column */
+  .notation-entry {
+    grid-template-columns: 1fr;
+    gap: 6px 0;
+    padding: 12px 16px;
+  }
+  .notation-sym { padding-top: 0; overflow: visible; }
 }
 
 /* ================================================================
