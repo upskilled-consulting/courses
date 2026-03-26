@@ -578,7 +578,7 @@ async function renderCourseOverview(params, root) {
         <div class="quiz-row-icon">Q</div>
         <div class="quiz-row-info">
           <div class="quiz-row-title">${q.title}</div>
-          <div class="quiz-row-desc">${q.questionCount} questions · ${Math.round((q.passingScore || 0.7) * 100)}% to pass</div>
+          <div class="quiz-row-desc">${q.questionCount ? `${q.questionCount} questions · ` : ''}${Math.round((q.passingScore || 0.7) * 100)}% to pass</div>
         </div>
         ${passed ? '<div class="quiz-row-passed">✓</div>' : ''}
       </div>`;
@@ -895,7 +895,7 @@ async function renderModuleOverview(params, root) {
         <div class="quiz-row-icon">Q</div>
         <div class="quiz-row-info">
           <div class="quiz-row-title">${q.title}</div>
-          <div class="quiz-row-desc">${q.questionCount} questions · ${Math.round((q.passingScore || 0.7) * 100)}% to pass</div>
+          <div class="quiz-row-desc">${q.questionCount ? `${q.questionCount} questions · ` : ''}${Math.round((q.passingScore || 0.7) * 100)}% to pass</div>
         </div>
         ${passed ? '<div class="quiz-row-passed">✓</div>' : ''}
       </div>`;
@@ -2732,7 +2732,8 @@ async function renderDrill(params, root) {
             <button class="btn-drill-got" id="drill-got">Got it</button>
           </div>
         </div>
-        <p class="drill-hint">Space to flip · 1 = Again · 2 = Got it</p>
+        <p class="drill-hint drill-hint-kb">Space to flip · 1 = Again · 2 = Got it</p>
+        <p class="drill-hint drill-hint-touch">Tap card to flip</p>
       </div>
     </div>`;
 
@@ -2741,6 +2742,7 @@ async function renderDrill(params, root) {
   );
 
   root.querySelector('.drill-btn-reveal')?.addEventListener('click', flipCard);
+  root.querySelector('.drill-card')?.addEventListener('click', flipCard);
   root.querySelector('#drill-again')?.addEventListener('click', () => rateCard(false));
   root.querySelector('#drill-got')?.addEventListener('click', () => rateCard(true));
 
@@ -2894,7 +2896,7 @@ async function renderPrereqSyllabus(params, root) {
         <div class="outline-item outline-item-flat${accessible ? '' : ' outline-item-locked'}">
           <span class="outline-item-icon outline-icon-quiz">${SYLLABUS_ICONS.quiz}</span>
           ${titleEl}${doneCheck}${lockBadge}
-          <span class="outline-item-meta">${item.meta.questionCount} questions</span>
+          <span class="outline-item-meta">${item.meta.questionCount ? `${item.meta.questionCount} questions` : ''}</span>
         </div>`;
     }
 

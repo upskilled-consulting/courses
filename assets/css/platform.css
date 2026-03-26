@@ -2579,6 +2579,25 @@ img, svg { display: block; max-width: 100%; }
   /* Quiz submit button — full width */
   .quiz-submit-btn { width: 100%; }
 
+  /* Drill card — mobile */
+  .drill-card-front,
+  .drill-card-back    { padding: 24px 20px; font-size: 0.98rem; }
+  .drill-card-front .katex { font-size: 1.3em; }
+  .drill-card         { cursor: pointer; }  /* whole card tappable */
+
+  .btn-drill-primary  { width: 100%; }
+  .drill-rating       { width: 100%; }
+  .btn-drill-again,
+  .btn-drill-got      { flex: 1; min-width: 0; }
+
+  /* Summary actions — stack on very small screens */
+  .drill-summary-actions,
+  .drill-complete-actions { flex-direction: column; width: 100%; }
+  .drill-summary-actions .btn-drill-primary,
+  .drill-summary-actions .btn-drill-secondary,
+  .drill-complete-actions .btn-drill-primary,
+  .drill-complete-actions .btn-drill-secondary { width: 100%; }
+
   /* Lab colab card — stack vertically */
   .lab-colab-card {
     flex-direction: column;
@@ -3206,6 +3225,11 @@ img, svg { display: block; max-width: 100%; }
   font-size: 0.75rem;
   color: var(--text-faint);
   margin: 0;
+}
+.drill-hint-touch { display: none; }
+@media (pointer: coarse) {
+  .drill-hint-kb    { display: none; }
+  .drill-hint-touch { display: block; }
 }
 
 /* Summary and complete screens */

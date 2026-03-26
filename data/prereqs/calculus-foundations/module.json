@@ -71,6 +71,7 @@
     {
       "id": "q1",
       "title": "Derivatives and Differentiation Rules",
+      "questionCount": 8,
       "estimatedMinutes": 15,
       "description": "8 questions covering the limit definition, power rule, product rule, chain rule, sigmoid derivative, log derivative, and backpropagation as chain rule application.",
       "dataPath": "data/prereqs/calculus-foundations/quizzes/q1-derivatives-rules.json"
@@ -78,6 +79,7 @@
     {
       "id": "q2",
       "title": "Optimization, Linear Approximation, and Integration",
+      "questionCount": 8,
       "estimatedMinutes": 15,
       "description": "8 questions covering critical points, the second derivative test, linear approximation, gradient descent updates, the Fundamental Theorem, PDF normalization, expected value as integral, and a gradient step implementation.",
       "dataPath": "data/prereqs/calculus-foundations/quizzes/q2-optimization-integration.json"

@@ -71,6 +71,7 @@
     {
       "id": "q1",
       "title": "Random Variables, Expectation, and Bayes' Theorem",
+      "questionCount": 8,
       "estimatedMinutes": 15,
       "description": "8 questions covering PMFs/PDFs, the law of total probability, linearity of expectation, variance, covariance, the disease-screening Bayes computation, and the chain rule of probability.",
       "dataPath": "data/prereqs/probability-foundations/quizzes/q1-random-variables-bayes.json"
@@ -78,6 +79,7 @@
     {
       "id": "q2",
       "title": "Distributions, Importance Sampling, and KL Divergence",
+      "questionCount": 9,
       "estimatedMinutes": 18,
       "description": "9 questions covering Categorical/Gaussian/Beta distributions, the IS validity condition, effective sample size, forward vs. reverse KL, entropy computation, cross-entropy as forward KL minimization, and a NumPy KL implementation.",
       "dataPath": "data/prereqs/probability-foundations/quizzes/q2-distributions-is-kl.json"
