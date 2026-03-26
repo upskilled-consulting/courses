@@ -334,6 +334,7 @@ img, svg { display: block; max-width: 100%; }
 .catalog-hero-inner h1 .hero-suffix {
   display: inline-block;
   color: #52ab97;
+  padding-bottom: 0.15em;
   clip-path: inset(0 100% 0 0);
   animation: heroSuffixReveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.5s forwards;
 }
