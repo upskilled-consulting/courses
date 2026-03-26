@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Redirecting…</title>
+  <script>
+    // GitHub Pages SPA redirect trick.
+    // Stores the full path in sessionStorage and sends the browser to index.html,
+    // which reads it back and restores the URL via history.replaceState.
+    sessionStorage.setItem(
+      'spa-redirect',
+      window.location.pathname + window.location.search + window.location.hash
+    );
+    window.location.replace('/courses/');
+  </script>
+</head>
+<body></body>
+</html>

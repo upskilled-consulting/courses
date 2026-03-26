@@ -1,19 +1,30 @@
 /* ============================================================
    UPSKILLED PLATFORM — platform.js
    Routes:
-     #/                                          → catalog
-     #/prereq/:id | #/supplement/:id             → course overview
-     #/(prereq|supplement)/:id/reading/:rid      → reading
-     #/(prereq|supplement)/:id/quiz/:qid         → quiz
-     #/(prereq|supplement)/:id/lab/:lid          → lab
-     #/course/:id                                → multi-module course home
-     #/course/:id/module/:mid                    → module overview
-     #/course/:id/module/:mid/reading/:rid       → reading
-     #/course/:id/module/:mid/quiz/:qid          → quiz
-     #/course/:id/module/:mid/lab/:lid           → lab
+     /                              → catalog
+     /prereq/:id                    → prereq overview
+     /prereq/:id/reading/:rid       → reading
+     /prereq/:id/quiz/:qid          → quiz
+     /prereq/:id/lab/:lid           → lab
+     /supplement/:id                → supplement overview
+     /supplement/:id/reading/:rid   → reading  (etc.)
+     /:id                           → multi-module course home
+     /:id/:mid                      → module overview
+     /:id/:mid/reading/:rid         → reading
+     /:id/:mid/quiz/:qid            → quiz
+     /:id/:mid/lab/:lid             → lab
+     /:id/syllabus                  → syllabus
    ============================================================ */
 
 'use strict';
+
+// ── Base path (GitHub Pages sub-directory support) ───────────
+const BASE_PATH = (() => {
+  try {
+    const url = new URL(document.currentScript.src);
+    return url.pathname.replace(/\/assets\/js\/platform\.js$/, '');
+  } catch { return ''; }
+})();
 
 // ── Storage namespace ───────────────────────────────────────
 const NS = 'upskilled:';
@@ -32,6 +43,11 @@ document.getElementById('themeToggle').addEventListener('click', () => {
   const next = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   document.body.setAttribute('data-theme', next);
   store.set('theme', next);
+});
+
+document.getElementById('navBrand')?.addEventListener('click', e => {
+  e.preventDefault();
+  navigate('/');
 });
 
 // ── Marked: emit plain code blocks; hljs runs post-render via highlightCode ──
@@ -226,7 +242,11 @@ function attachCodeRunners(contentEl) {
 
 // ── Fetch helpers ────────────────────────────────────────────
 async function fetchJSON(path) {
-  const resp = await fetch(path, { cache: 'no-store' });
+  // Resolve relative paths from the app root, not the current SPA route
+  const url = path.startsWith('/') || /^https?:\/\//.test(path)
+    ? path
+    : BASE_PATH + '/' + path;
+  const resp = await fetch(url, { cache: 'no-store' });
   if (!resp.ok) throw new Error(`Failed to load ${path}: ${resp.status}`);
   return resp.json();
 }
@@ -268,16 +288,16 @@ function isQuizPassed(moduleId, quizId) {
 // Build a URL for a prevItem/nextItem navigation target
 function navItemUrl(courseId, item, seg = 'prereq', moduleId = null) {
   if (seg === 'course' && moduleId) {
-    const base = `#/course/${courseId}/module/${moduleId}`;
+    const base = `/${courseId}/${moduleId}`;
     if (!item) return base;
     if (item.type === 'quiz') return `${base}/quiz/${item.id}`;
     if (item.type === 'lab')  return `${base}/lab/${item.id}`;
     return `${base}/reading/${item.id}`;
   }
-  if (!item) return `#/${seg}/${courseId}`;
-  if (item.type === 'quiz') return `#/${seg}/${courseId}/quiz/${item.id}`;
-  if (item.type === 'lab')  return `#/${seg}/${courseId}/lab/${item.id}`;
-  return `#/${seg}/${courseId}/reading/${item.id}`;
+  if (!item) return `/${seg}/${courseId}`;
+  if (item.type === 'quiz') return `/${seg}/${courseId}/quiz/${item.id}`;
+  if (item.type === 'lab')  return `/${seg}/${courseId}/lab/${item.id}`;
+  return `/${seg}/${courseId}/reading/${item.id}`;
 }
 
 // Find a course across all sections — returns the course ref from platform.json
@@ -381,13 +401,26 @@ function matchRoute(hash) {
   return null;
 }
 
-function navigate(hash) {
-  window.location.hash = hash;
+function navigate(path) {
+  history.pushState(null, '', BASE_PATH + path);
+  handleRoute();
 }
 
 function handleRoute() {
-  const hash = window.location.hash.replace(/^#/, '') || '/';
-  const match = matchRoute(hash);
+  // Migrate legacy hash URLs: /#/course/foo/module/bar → /foo/bar
+  if (window.location.hash.startsWith('#/')) {
+    const clean = window.location.hash.slice(1)
+      .replace(/^\/course\//, '/')
+      .replace(/\/module\//, '/');
+    history.replaceState(null, '', BASE_PATH + clean);
+  }
+  // Migrate legacy path URLs: /course/foo/module/bar → /foo/bar
+  let path = window.location.pathname.slice(BASE_PATH.length) || '/';
+  if (path.startsWith('/course/') || /\/module\//.test(path)) {
+    path = path.replace(/^\/course\//, '/').replace(/\/module\//, '/');
+    history.replaceState(null, '', BASE_PATH + path);
+  }
+  const match = matchRoute(path);
   const root = document.getElementById('appRoot');
   if (match) {
     match.handler(match.params, root);
@@ -396,7 +429,7 @@ function handleRoute() {
   }
 }
 
-window.addEventListener('hashchange', handleRoute);
+window.addEventListener('popstate', handleRoute);
 window.addEventListener('DOMContentLoaded', handleRoute);
 
 // ── Breadcrumb ───────────────────────────────────────────────
@@ -408,8 +441,11 @@ function setBreadcrumb(parts) {
     const isLast = i === parts.length - 1;
     const sep = i > 0 ? '<span class="bc-sep">/</span>' : '';
     if (isLast) return `${sep}<span class="bc-current">${p.label}</span>`;
-    return `${sep}<a href="${p.href}">${p.label}</a>`;
+    return `${sep}<a href="${BASE_PATH + p.href}" data-bc-nav="${p.href}">${p.label}</a>`;
   }).join(' ');
+  bc.querySelectorAll('[data-bc-nav]').forEach(el =>
+    el.addEventListener('click', e => { e.preventDefault(); navigate(el.dataset.bcNav); })
+  );
 }
 
 // ── Loading / error ──────────────────────────────────────────
@@ -483,8 +519,8 @@ function buildCourseCard(course) {
     : `${course.readingCount} readings`;
   const hoursLabel = `${course.estimatedHours}h estimated`;
   const ctaText = isCourse ? 'Explore course' : 'Start reading';
-  const seg = isPrereq ? 'prereq' : isSupplement ? 'supplement' : isCourse ? 'course' : '';
-  const nav = seg ? `data-nav="#/${seg}/${course.id}"` : '';
+  const seg = isPrereq ? 'prereq' : isSupplement ? 'supplement' : '';
+  const nav = isCourse ? `data-nav="/${course.id}"` : seg ? `data-nav="/${seg}/${course.id}"` : '';
   const ext = '';
 
   return `
@@ -510,7 +546,7 @@ function buildCourseCard(course) {
 // ── COURSE OVERVIEW ───────────────────────────────────────────
 async function renderCourseOverview(params, root) {
   const { id } = params;
-  setBreadcrumb([{ label: 'Catalog', href: '#/' }, { label: id }]);
+  setBreadcrumb([{ label: 'Catalog', href: '/' }, { label: id }]);
   showLoading(root);
 
   let module, courseRef;
@@ -527,14 +563,14 @@ async function renderCourseOverview(params, root) {
   const levelClass = 'level-' + (module.level || '').toLowerCase().replace(/\s+/, '-');
 
   setBreadcrumb([
-    { label: 'Catalog', href: '#/' },
+    { label: 'Catalog', href: '/' },
     { label: module.title },
   ]);
 
   const readingsHTML = module.readings.map((r, i) => {
     const done = isReadingRead(module.id, r.id);
     return `
-      <div class="reading-row" data-nav="#/${seg}/${id}/reading/${r.id}" role="button" tabindex="0">
+      <div class="reading-row" data-nav="/${seg}/${id}/reading/${r.id}" role="button" tabindex="0">
         <div class="reading-row-num">${i + 1}</div>
         <div class="reading-row-info">
           <div class="reading-row-title">${r.title}</div>
@@ -548,7 +584,7 @@ async function renderCourseOverview(params, root) {
   const quizzesHTML = (module.quizzes || []).map(q => {
     const passed = isQuizPassed(module.id, q.id);
     return `
-      <div class="quiz-row" data-nav="#/${seg}/${id}/quiz/${q.id}" role="button" tabindex="0">
+      <div class="quiz-row" data-nav="/${seg}/${id}/quiz/${q.id}" role="button" tabindex="0">
         <div class="quiz-row-icon">Q</div>
         <div class="quiz-row-info">
           <div class="quiz-row-title">${q.title}</div>
@@ -561,7 +597,7 @@ async function renderCourseOverview(params, root) {
   const labsHTML = (module.labs || []).map(l => {
     const visited = isLabVisited(module.id, l.id);
     return `
-      <div class="lab-row" data-nav="#/${seg}/${id}/lab/${l.id}" role="button" tabindex="0">
+      <div class="lab-row" data-nav="/${seg}/${id}/lab/${l.id}" role="button" tabindex="0">
         <div class="lab-row-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
@@ -593,7 +629,7 @@ async function renderCourseOverview(params, root) {
     const pct = total ? Math.round((known / total) * 100) : 0;
     const statusLabel = !started ? `${total} cards` : `${known}/${total} known`;
     return `
-      <div class="drill-row" data-nav="#/${seg}/${id}/drill/${d.id}" role="button" tabindex="0">
+      <div class="drill-row" data-nav="/${seg}/${id}/drill/${d.id}" role="button" tabindex="0">
         <div class="drill-row-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
             <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
@@ -618,7 +654,7 @@ async function renderCourseOverview(params, root) {
   root.innerHTML = `
     <div class="course-overview">
       <div class="course-ov-header">
-        <button class="course-ov-back" data-nav="#/">← Catalog</button>
+        <button class="course-ov-back" data-nav="/">← Catalog</button>
         <div class="course-ov-kicker">${kickerLabel}</div>
         <h1 class="course-ov-title">${module.title}</h1>
         <p class="course-ov-desc">${module.description}</p>
@@ -651,7 +687,7 @@ async function renderCourseOverview(params, root) {
   const syllabusBtn = root.querySelector('#syllabus-btn');
   if (syllabusBtn) {
     let holdTimer = null;
-    const syllabusUrl = `#/${seg}/${id}/syllabus`;
+    const syllabusUrl = `/${seg}/${id}/syllabus`;
 
     function startHold(e) {
       if (e.button !== undefined && e.button !== 0) return;
@@ -700,7 +736,7 @@ async function renderCourseHome(params, root) {
   }
 
   setBreadcrumb([
-    { label: 'Catalog', href: '#/' },
+    { label: 'Catalog', href: '/' },
     { label: courseManifest.title },
   ]);
 
@@ -742,7 +778,7 @@ async function renderCourseHome(params, root) {
       ? '<span class="module-row-done">✓</span>' : '';
 
     const lockedClass = unlocked ? '' : ' module-row--locked';
-    const navAttr = unlocked ? `data-nav="#/course/${id}/module/${modEntry.id}"` : '';
+    const navAttr = unlocked ? `data-nav="/${id}/${modEntry.id}"` : '';
 
     return `
       <div class="reading-row module-row${lockedClass}" ${navAttr} role="${unlocked ? 'button' : 'listitem'}" ${unlocked ? 'tabindex="0"' : ''}>
@@ -766,7 +802,7 @@ async function renderCourseHome(params, root) {
   root.innerHTML = `
     <div class="course-overview">
       <div class="course-ov-header">
-        <button class="course-ov-back" data-nav="#/">← Catalog</button>
+        <button class="course-ov-back" data-nav="/">← Catalog</button>
         <div class="course-ov-kicker">Course</div>
         <h1 class="course-ov-title">${courseManifest.title}</h1>
         <p class="course-ov-desc">${courseManifest.subtitle || ''}</p>
@@ -779,7 +815,7 @@ async function renderCourseHome(params, root) {
       </div>
       <div class="reading-list-label" style="display:flex;align-items:center;justify-content:space-between;">
         Modules
-        <button class="btn-outline-ctrl" id="syllabus-btn" data-nav="#/course/${id}/syllabus" title="Hold 2s for admin access">Syllabus</button>
+        <button class="btn-outline-ctrl" id="syllabus-btn" data-nav="/${id}/syllabus" title="Hold 2s for admin access">Syllabus</button>
       </div>
       <div class="reading-list">${modulesHTML}</div>
     </div>`;
@@ -801,7 +837,7 @@ async function renderCourseHome(params, root) {
         syllabusBtn.classList.remove('holding');
         holdTimer = null;
         sessionStorage.setItem('upskilled:devUnlock', '1');
-        fireConfetti(() => navigate(`#/course/${id}/syllabus`));
+        fireConfetti(() => navigate(`/${id}/syllabus`));
       }, 2000);
     }
 
@@ -816,7 +852,7 @@ async function renderCourseHome(params, root) {
     syllabusBtn.addEventListener('mouseleave',  cancelHold);
     syllabusBtn.addEventListener('touchend',    cancelHold);
     syllabusBtn.addEventListener('touchcancel', cancelHold);
-    syllabusBtn.addEventListener('click', () => { if (!holdTimer) navigate(`#/course/${id}/syllabus`); });
+    syllabusBtn.addEventListener('click', () => { if (!holdTimer) navigate(`/${id}/syllabus`); });
   }
 
   setSearchContext('catalog', { platform: await fetchJSON('data/platform.json') });
@@ -840,13 +876,13 @@ async function renderModuleOverview(params, root) {
   }
 
   setBreadcrumb([
-    { label: 'Catalog', href: '#/' },
-    { label: courseManifest.title, href: `#/course/${id}` },
+    { label: 'Catalog', href: '/' },
+    { label: courseManifest.title, href: `/${id}` },
     { label: modEntry.title },
   ]);
 
   const storageKey = `${id}_${mid}`;
-  const base = `#/course/${id}/module/${mid}`;
+  const base = `/${id}/${mid}`;
 
   const readingsHTML = (module.readings || []).map((r, i) => {
     const done = isReadingRead(storageKey, r.id);
@@ -905,7 +941,7 @@ async function renderModuleOverview(params, root) {
   root.innerHTML = `
     <div class="course-overview">
       <div class="course-ov-header">
-        <button class="course-ov-back" data-nav="#/course/${id}">← ${courseManifest.title}</button>
+        <button class="course-ov-back" data-nav="/${id}">← ${courseManifest.title}</button>
         <div class="course-ov-kicker">Module ${modEntry.order}</div>
         <h1 class="course-ov-title">${modEntry.title}</h1>
         <p class="course-ov-desc">${modEntry.description || ''}</p>
@@ -1049,11 +1085,11 @@ async function renderReading(params, root) {
   const isCourse = seg === 'course';
   const kickerLabel = isCourse ? courseManifest.title : seg === 'supplement' ? 'Supplement' : 'Prerequisite';
   const storageKey = isCourse ? `${id}_${mid}` : id;
-  const overviewUrl = isCourse ? `#/course/${id}/module/${mid}` : `#/${seg}/${id}`;
+  const overviewUrl = isCourse ? `/${id}/${mid}` : `/${seg}/${id}`;
 
   setBreadcrumb([
-    { label: 'Catalog', href: '#/' },
-    ...(isCourse ? [{ label: courseManifest.title, href: `#/course/${id}` }, { label: modEntry.title, href: overviewUrl }] : [{ label: module.title, href: overviewUrl }]),
+    { label: 'Catalog', href: '/' },
+    ...(isCourse ? [{ label: courseManifest.title, href: `/${id}` }, { label: modEntry.title, href: overviewUrl }] : [{ label: module.title, href: overviewUrl }]),
     { label: reading.title },
   ]);
 
@@ -1098,7 +1134,7 @@ async function renderReading(params, root) {
     </div>` : '';
 
   // Sidebar items
-  const sidebarReadingUrl = r => isCourse ? `#/course/${id}/module/${mid}/reading/${r.id}` : `#/${seg}/${id}/reading/${r.id}`;
+  const sidebarReadingUrl = r => isCourse ? `/${id}/${mid}/reading/${r.id}` : `/${seg}/${id}/reading/${r.id}`;
   const sidebarItems = module.readings.map((r, i) => {
     const active = r.id === rid ? ' active' : '';
     return `<button class="sidebar-reading-item${active}" data-nav="${sidebarReadingUrl(r)}">
@@ -1357,7 +1393,7 @@ async function renderQuiz(params, root) {
 
   const seg = courseSegment(courseRef);
   const isCourse = seg === 'course';
-  const overviewUrl = isCourse ? `#/course/${id}/module/${mid}` : `#/${seg}/${id}`;
+  const overviewUrl = isCourse ? `/${id}/${mid}` : `/${seg}/${id}`;
   params._seg = seg;
   params._mid = mid;
   params._overviewUrl = overviewUrl;
@@ -1366,8 +1402,8 @@ async function renderQuiz(params, root) {
   params._courseTitle = isCourse ? courseManifest.title : null;
 
   setBreadcrumb([
-    { label: 'Catalog', href: '#/' },
-    ...(isCourse ? [{ label: courseManifest.title, href: `#/course/${id}` }, { label: modEntry.title, href: overviewUrl }] : [{ label: module.title, href: overviewUrl }]),
+    { label: 'Catalog', href: '/' },
+    ...(isCourse ? [{ label: courseManifest.title, href: `/${id}` }, { label: modEntry.title, href: overviewUrl }] : [{ label: module.title, href: overviewUrl }]),
     { label: quiz.title },
   ]);
 
@@ -1380,7 +1416,7 @@ function renderQuizBody(params, root, module, quiz) {
   const mid = params._mid || null;
   const isCourse = seg === 'course';
   const storageKey = params._storageKey || id;
-  const overviewUrl = params._overviewUrl || `#/${seg}/${id}`;
+  const overviewUrl = params._overviewUrl || `/${seg}/${id}`;
   const modTitle = params._modTitle || module.title;
   const kickerLabel = isCourse ? (params._courseTitle || modTitle) : seg === 'supplement' ? 'Supplement' : 'Prerequisite';
   const prevRecord = store.get(`quiz:${storageKey}`)?.[qid];
@@ -1389,8 +1425,8 @@ function renderQuizBody(params, root, module, quiz) {
     ? `<span class="reading-meta-sep">·</span><span>Best: ${Math.round(prevRecord.bestScore * 100)}% · ${prevRecord.attempts} attempt${prevRecord.attempts !== 1 ? 's' : ''}</span>`
     : '';
 
-  const readingUrl = r => isCourse ? `#/course/${id}/module/${mid}/reading/${r.id}` : `#/${seg}/${id}/reading/${r.id}`;
-  const quizUrl   = q => isCourse ? `#/course/${id}/module/${mid}/quiz/${q.id}`    : `#/${seg}/${id}/quiz/${q.id}`;
+  const readingUrl = r => isCourse ? `/${id}/${mid}/reading/${r.id}` : `/${seg}/${id}/reading/${r.id}`;
+  const quizUrl   = q => isCourse ? `/${id}/${mid}/quiz/${q.id}`    : `/${seg}/${id}/quiz/${q.id}`;
 
   const sidebarHTML = (() => {
     const readingItems = module.readings.map((r, i) =>
@@ -1548,21 +1584,21 @@ async function renderLab(params, root) {
   const seg = courseSegment(courseRef);
   const isCourse = seg === 'course';
   const storageKey = isCourse ? `${id}_${mid}` : id;
-  const overviewUrl = isCourse ? `#/course/${id}/module/${mid}` : `#/${seg}/${id}`;
+  const overviewUrl = isCourse ? `/${id}/${mid}` : `/${seg}/${id}`;
   const modTitle = isCourse ? modEntry.title : module.title;
   const kickerLabel = isCourse ? courseManifest.title : seg === 'supplement' ? 'Supplement' : 'Prerequisite';
 
   setBreadcrumb([
-    { label: 'Catalog', href: '#/' },
-    ...(isCourse ? [{ label: courseManifest.title, href: `#/course/${id}` }, { label: modEntry.title, href: overviewUrl }] : [{ label: module.title, href: overviewUrl }]),
+    { label: 'Catalog', href: '/' },
+    ...(isCourse ? [{ label: courseManifest.title, href: `/${id}` }, { label: modEntry.title, href: overviewUrl }] : [{ label: module.title, href: overviewUrl }]),
     { label: lab.title },
   ]);
 
   markLabVisited(storageKey, lid);
 
-  const readingUrl = r => isCourse ? `#/course/${id}/module/${mid}/reading/${r.id}` : `#/${seg}/${id}/reading/${r.id}`;
-  const quizUrl   = q => isCourse ? `#/course/${id}/module/${mid}/quiz/${q.id}`    : `#/${seg}/${id}/quiz/${q.id}`;
-  const labUrl    = l => isCourse ? `#/course/${id}/module/${mid}/lab/${l.id}`     : `#/${seg}/${id}/lab/${l.id}`;
+  const readingUrl = r => isCourse ? `/${id}/${mid}/reading/${r.id}` : `/${seg}/${id}/reading/${r.id}`;
+  const quizUrl   = q => isCourse ? `/${id}/${mid}/quiz/${q.id}`    : `/${seg}/${id}/quiz/${q.id}`;
+  const labUrl    = l => isCourse ? `/${id}/${mid}/lab/${l.id}`     : `/${seg}/${id}/lab/${l.id}`;
 
   const labsArr = module.labs || (module.lab ? [module.lab] : []);
 
@@ -1896,7 +1932,7 @@ async function buildCatalogIndex(platform) {
         Search.index.push({
           title: course.title,
           subtitle: section.title,
-          url: `#/course/${course.id}`,
+          url: `/${course.id}`,
           type: 'course',
           paragraphs: [course.description || course.title],
         });
@@ -1909,7 +1945,7 @@ async function buildCatalogIndex(platform) {
                 Search.index.push({
                   title: modEntry.title,
                   subtitle: course.title,
-                  url: `#/course/${course.id}/module/${modEntry.id}`,
+                  url: `/${course.id}/${modEntry.id}`,
                   type: 'course',
                   paragraphs: [modEntry.description || modEntry.title],
                 });
@@ -1920,7 +1956,7 @@ async function buildCatalogIndex(platform) {
                   const item = {
                     title: r.title,
                     subtitle: modEntry.title,
-                    url: `#/course/${course.id}/module/${modEntry.id}/reading/${r.id}`,
+                    url: `/${course.id}/${modEntry.id}/reading/${r.id}`,
                     type: 'reading',
                     paragraphs: [r.description || r.title],
                   };
@@ -1931,7 +1967,7 @@ async function buildCatalogIndex(platform) {
                   Search.index.push({
                     title: q.title,
                     subtitle: modEntry.title,
-                    url: `#/course/${course.id}/module/${modEntry.id}/quiz/${q.id}`,
+                    url: `/${course.id}/${modEntry.id}/quiz/${q.id}`,
                     type: 'quiz',
                     paragraphs: [q.title],
                   });
@@ -1941,7 +1977,7 @@ async function buildCatalogIndex(platform) {
                   Search.index.push({
                     title: l.title,
                     subtitle: modEntry.title,
-                    url: `#/course/${course.id}/module/${modEntry.id}/lab/${l.id}`,
+                    url: `/${course.id}/${modEntry.id}/lab/${l.id}`,
                     type: 'lab',
                     paragraphs: [l.description || l.title],
                   });
@@ -1956,7 +1992,7 @@ async function buildCatalogIndex(platform) {
       Search.index.push({
         title: course.title,
         subtitle: section.title,
-        url: `#/${seg}/${course.id}`,
+        url: `/${seg}/${course.id}`,
         type: 'course',
         paragraphs: [course.description || course.title],
       });
@@ -1970,7 +2006,7 @@ async function buildCatalogIndex(platform) {
             const item = {
               title: r.title,
               subtitle: course.title,
-              url: `#/${seg}/${course.id}/reading/${r.id}`,
+              url: `/${seg}/${course.id}/reading/${r.id}`,
               type: 'reading',
               paragraphs: [r.description || r.title],
             };
@@ -1981,7 +2017,7 @@ async function buildCatalogIndex(platform) {
             Search.index.push({
               title: q.title,
               subtitle: course.title,
-              url: `#/${seg}/${course.id}/quiz/${q.id}`,
+              url: `/${seg}/${course.id}/quiz/${q.id}`,
               type: 'quiz',
               paragraphs: [q.title],
             });
@@ -1990,7 +2026,7 @@ async function buildCatalogIndex(platform) {
             Search.index.push({
               title: l.title,
               subtitle: course.title,
-              url: `#/${seg}/${course.id}/lab/${l.id}`,
+              url: `/${seg}/${course.id}/lab/${l.id}`,
               type: 'lab',
               paragraphs: [l.description || l.title],
             });
@@ -2003,8 +2039,8 @@ async function buildCatalogIndex(platform) {
 
 function courseBase(seg, courseRef, module) {
   return seg === 'course'
-    ? `#/course/${courseRef.id}/module/${module.id}`
-    : `#/${seg}/${module.id}`;
+    ? `/${courseRef.id}/${module.id}`
+    : `/${seg}/${module.id}`;
 }
 
 function buildCourseIndex(module, courseRef, seg) {
@@ -2424,7 +2460,7 @@ function _syllabusModuleSection(courseId, modEntry, modData, allModuleData, thre
     });
   }
 
-  const base = `#/course/${courseId}/module/${mid}`;
+  const base = `/${courseId}/${mid}`;
   const readingRows = readings.map(r => _syllabusItemRow(
     'reading', r.title,
     locked ? null : `${base}/reading/${r.id}`,
@@ -2492,8 +2528,8 @@ async function renderSyllabus(params, root) {
   }
 
   setBreadcrumb([
-    { label: 'Catalog', href: '#/' },
-    { label: courseManifest.title, href: `#/course/${id}` },
+    { label: 'Catalog', href: '/' },
+    { label: courseManifest.title, href: `/${id}` },
     { label: 'Syllabus' },
   ]);
 
@@ -2506,7 +2542,7 @@ async function renderSyllabus(params, root) {
   root.innerHTML = `
     <div class="outline-page" id="outline-page">
       <div class="outline-header">
-        <button class="course-ov-back" data-nav="#/course/${id}">← ${_escHtml(courseManifest.title)}</button>
+        <button class="course-ov-back" data-nav="/${id}">← ${_escHtml(courseManifest.title)}</button>
         <div class="outline-header-title">
           <h1 class="course-ov-title" style="margin:12px 0 4px">Syllabus</h1>
           ${devUnlock ? '<span class="admin-badge">ADMIN</span>' : ''}
@@ -2554,10 +2590,10 @@ async function renderDrill(params, root) {
   }
 
   const seg = courseSegment(courseRef);
-  const backUrl = `#/${seg}/${id}`;
+  const backUrl = `/${seg}/${id}`;
 
   setBreadcrumb([
-    { label: 'Catalog', href: '#/' },
+    { label: 'Catalog', href: '/' },
     { label: module.title, href: backUrl },
     { label: deck.title },
   ]);
@@ -2729,10 +2765,10 @@ async function renderDrill(params, root) {
   document.addEventListener('keydown', keyHandler);
 
   // Clean up listener when navigating away
-  const origHashChange = window._drillKeyCleanup;
-  if (origHashChange) window.removeEventListener('hashchange', origHashChange);
+  const origPopState = window._drillKeyCleanup;
+  if (origPopState) window.removeEventListener('popstate', origPopState);
   window._drillKeyCleanup = () => document.removeEventListener('keydown', keyHandler);
-  window.addEventListener('hashchange', window._drillKeyCleanup, { once: true });
+  window.addEventListener('popstate', window._drillKeyCleanup, { once: true });
 
   renderCard();
   setSearchContext('none');
@@ -2808,13 +2844,13 @@ async function renderPrereqSyllabus(params, root) {
   });
 
   setBreadcrumb([
-    { label: 'Catalog', href: '#/' },
-    { label: module.title, href: `#/${seg}/${id}` },
+    { label: 'Catalog', href: '/' },
+    { label: module.title, href: `/${seg}/${id}` },
     { label: 'Syllabus' },
   ]);
 
   const accent = module.color || '#2a5757';
-  const base   = `#/${seg}/${id}`;
+  const base   = `/${seg}/${id}`;
 
   const sectionsHTML = sequence.map((item, idx) => {
     const accessible = accessibility[idx];
@@ -2990,9 +3026,9 @@ addRoute('/supplement/:id/reading/:rid', renderReading);
 addRoute('/supplement/:id/quiz/:qid', renderQuiz);
 addRoute('/supplement/:id/lab/:lid', renderLab);
 addRoute('/supplement/:id/drill/:did', renderDrill);
-addRoute('/course/:id', renderCourseHome);
-addRoute('/course/:id/module/:mid', renderModuleOverview);
-addRoute('/course/:id/module/:mid/reading/:rid', renderReading);
-addRoute('/course/:id/module/:mid/quiz/:qid', renderQuiz);
-addRoute('/course/:id/module/:mid/lab/:lid', renderLab);
-addRoute('/course/:id/syllabus', renderSyllabus);
+addRoute('/:id', renderCourseHome);
+addRoute('/:id/syllabus', renderSyllabus);
+addRoute('/:id/:mid', renderModuleOverview);
+addRoute('/:id/:mid/reading/:rid', renderReading);
+addRoute('/:id/:mid/quiz/:qid', renderQuiz);
+addRoute('/:id/:mid/lab/:lid', renderLab);
