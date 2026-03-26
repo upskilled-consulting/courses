@@ -1,0 +1,100 @@
+{
+  "id": "r4",
+  "moduleId": "matrix-algebra",
+  "title": "Determinants and Matrix Rank",
+  "estimatedMinutes": 13,
+  "learningObjectives": [
+    {
+      "id": "r4-lo1",
+      "verb": "Compute",
+      "description": "Compute the determinant of a 2x2 and 3x3 matrix using the cofactor expansion",
+      "skillTags": [
+        "matrix-structure"
+      ]
+    },
+    {
+      "id": "r4-lo2",
+      "verb": "Interpret",
+      "description": "Interpret the determinant as a signed volume scaling factor and use it to determine whether a matrix is invertible",
+      "skillTags": [
+        "matrix-structure",
+        "spectral-analysis"
+      ]
+    },
+    {
+      "id": "r4-lo3",
+      "verb": "Compute",
+      "description": "Compute the rank of a matrix via row reduction and apply the rank-nullity theorem",
+      "skillTags": [
+        "matrix-structure",
+        "dimensionality-reduction"
+      ]
+    },
+    {
+      "id": "r4-lo4",
+      "verb": "Explain",
+      "description": "Explain the trace, its cyclic property tr(ABC) = tr(CAB), and its connection to the eigenvalue sum",
+      "skillTags": [
+        "spectral-analysis"
+      ]
+    }
+  ],
+  "content": "## The Determinant\n\nThe **determinant** of a square matrix \\(A\\), written \\(\\det(A)\\) or \\(|A|\\), is a scalar that encodes whether \\(A\\) is invertible and by how much it stretches or compresses space.\n\n### 2×2 Case\n\nFor a \\(2 \\times 2\\) matrix:\n\n$$\\det\\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix} = ad - bc$$\n\nGeometrically: if the two rows are interpreted as vectors in \\(\\mathbb{R}^2\\), the determinant equals the **signed area** of the parallelogram they span. If the rows are parallel (linearly dependent), the parallelogram collapses to a line — area zero, determinant zero.\n\n### 3×3 Case (Cofactor Expansion)\n\nFor a \\(3 \\times 3\\) matrix, expand along the first row:\n\n$$\\det(A) = a_{11}(a_{22}a_{33} - a_{23}a_{32}) - a_{12}(a_{21}a_{33} - a_{23}a_{31}) + a_{13}(a_{21}a_{32} - a_{22}a_{31})$$\n\nThis pattern — alternating signs, each term multiplying a row element by the determinant of the submatrix formed by deleting that element's row and column — is **cofactor expansion** and generalizes to any \\(n \\times n\\) matrix.\n\n### Properties\n\n- \\(\\det(I) = 1\\)\n- \\(\\det(A') = \\det(A)\\)\n- \\(\\det(AB) = \\det(A)\\det(B)\\)\n- \\(\\det(cA) = c^n \\det(A)\\) for an \\(n \\times n\\) matrix\n- Swapping two rows **negates** the determinant\n- Adding a multiple of one row to another **leaves** the determinant unchanged\n- A matrix with two identical rows has determinant zero\n\n### Geometric interpretation in \\(n\\) dimensions\n\nFor an \\(n \\times n\\) matrix \\(A\\), \\(|\\det(A)|\\) is the \\(n\\)-dimensional volume of the parallelepiped formed by the rows (or columns) of \\(A\\). The sign encodes orientation. A linear transformation \\(\\mathbf{x} \\mapsto A\\mathbf{x}\\) scales all volumes by \\(|\\det(A)|\\).\n\n## Invertibility and the Determinant\n\nA square matrix \\(A\\) is **invertible** (also called **non-singular**) if and only if \\(\\det(A) \\neq 0\\).\n\nWhen \\(\\det(A) = 0\\):\n- \\(A\\) is **singular** — it cannot be inverted\n- The columns of \\(A\\) are linearly dependent\n- The transformation \\(A\\mathbf{x}\\) maps all of \\(\\mathbb{R}^n\\) into a lower-dimensional subspace\n- The system \\(A\\mathbf{x} = \\mathbf{b}\\) either has no solution or infinitely many\n\nIn ML: a singular covariance matrix signals that your data lives in a lower-dimensional subspace than assumed — some features are exact linear combinations of others.\n\n## Matrix Rank\n\nThe **rank** of a matrix \\(A\\), written \\(\\text{rank}(A)\\), is the dimension of its column space — equivalently, the number of linearly independent columns (which always equals the number of linearly independent rows).\n\nFor an \\(n \\times K\\) matrix:\n- \\(\\text{rank}(A) \\leq \\min(n, K)\\)\n- If \\(\\text{rank}(A) = \\min(n, K)\\), the matrix has **full rank**\n- For a square \\(n \\times n\\) matrix: \\(A\\) is invertible \\(\\iff \\text{rank}(A) = n\\)\n\n### Rank-Nullity Theorem\n\nFor an \\(n \\times K\\) matrix \\(A\\):\n\n$$\\text{rank}(A) + \\text{nullity}(A) = K$$\n\nwhere \\(\\text{nullity}(A) = \\dim(\\mathcal{N}(A))\\) is the dimension of the null space. Every column \"direction\" either contributes to the output (rank) or gets killed to zero (null space) — the two together always account for all \\(K\\) input dimensions.\n\n## Idempotent Matrices\n\nA matrix \\(M\\) is **idempotent** if \\(M^2 = MM = M\\). Idempotent matrices represent **projections**: applying the transformation twice gives the same result as applying it once, because the output is already in the target subspace.\n\nThe **mean-deviation matrix**\n\n$$M^0 = I - \\frac{1}{n}\\mathbf{i}\\mathbf{i}'$$\n\n(where \\(\\mathbf{i}\\) is the \\(n\\times 1\\) vector of ones) is a symmetric idempotent matrix. Pre-multiplying a data vector \\(\\mathbf{x}\\) by \\(M^0\\) produces the mean-deviation form \\(\\mathbf{x} - \\bar{x}\\mathbf{i}\\). This matrix appears throughout regression and ANOVA.\n\nFor any symmetric idempotent matrix \\(M\\):\n- \\(\\text{rank}(M) = \\text{tr}(M)\\) (trace equals rank)\n- Its eigenvalues are all 0 or 1\n- It represents an orthogonal projection onto its column space\n\n## Trace\n\nThe **trace** of a square matrix is the sum of its diagonal elements:\n\n$$\\text{tr}(A) = \\sum_{i=1}^n a_{ii}$$\n\nKey properties:\n- \\(\\text{tr}(A + B) = \\text{tr}(A) + \\text{tr}(B)\\)\n- \\(\\text{tr}(AB) = \\text{tr}(BA)\\) (cyclic property — even when \\(AB \\neq BA\\))\n- \\(\\text{tr}(A) = \\sum_i \\lambda_i\\) where \\(\\lambda_i\\) are the eigenvalues of \\(A\\)\n\nThe cyclic property makes trace useful for simplifying quadratic forms: \\(\\mathbf{x}'A\\mathbf{x} = \\text{tr}(A\\mathbf{x}\\mathbf{x}')\\), which can be easier to differentiate.",
+  "equationBreakdowns": [
+    {
+      "label": "2×2 Determinant",
+      "terms": [
+        {
+          "symbol": "ad - bc",
+          "name": "Determinant of 2×2 matrix",
+          "desc": "The product of the main diagonal (top-left × bottom-right) minus the product of the anti-diagonal (top-right × bottom-left). Zero when one row is a scalar multiple of the other — i.e., the rows are linearly dependent."
+        },
+        {
+          "symbol": "|\\det(A)|",
+          "name": "Absolute determinant = volume scaling",
+          "desc": "For any linear transformation x → Ax, all volumes are scaled by |det(A)|. A det of 2 means the transformation doubles areas/volumes; a det of 0 collapses space to a lower dimension."
+        }
+      ]
+    },
+    {
+      "label": "Rank-Nullity Theorem",
+      "terms": [
+        {
+          "symbol": "\\text{rank}(A)",
+          "name": "Rank",
+          "desc": "The number of linearly independent columns (= linearly independent rows). Equivalently, the dimension of the output space that the transformation can actually reach."
+        },
+        {
+          "symbol": "\\text{nullity}(A)",
+          "name": "Nullity",
+          "desc": "The dimension of the null space — the number of independent directions that get mapped to zero. Vectors in the null space carry no information through A."
+        },
+        {
+          "symbol": "K",
+          "name": "Total input dimensions",
+          "desc": "The number of columns of A. Every input direction either passes through to the output (contributing to rank) or is annihilated (contributing to nullity). The two counts always sum to K."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Strang 2016",
+      "title": "Introduction to Linear Algebra, 5th ed., Ch. 4–5",
+      "url": null
+    },
+    {
+      "label": "Greene 2003",
+      "title": "Econometric Analysis, 5th ed., Appendix A.4–A.5",
+      "url": null
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r3"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r5"
+  }
+}

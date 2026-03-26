@@ -1,0 +1,201 @@
+{
+  "id": "r1",
+  "moduleId": "m6",
+  "title": "Structure from Motion: Camera Registration & Bundle Adjustment",
+  "estimatedMinutes": 18,
+  "learningObjectives": [
+    {
+      "id": "m6r1-lo1",
+      "verb": "Explain",
+      "description": "Explain how COLMAP solves the SfM problem via feature extraction, essential matrix estimation, incremental registration, and bundle adjustment using Schur complement sparse factorization",
+      "skillTags": [
+        "sfm-pipeline"
+      ]
+    },
+    {
+      "id": "m6r1-lo2",
+      "verb": "Distinguish",
+      "description": "Distinguish COLMAP's incremental SfM from GLOMAP's global SfM in terms of pipeline structure, failure modes, and computational scaling",
+      "skillTags": [
+        "sfm-pipeline"
+      ]
+    },
+    {
+      "id": "m6r1-lo3",
+      "verb": "Explain",
+      "description": "Explain how bundle adjustment uses the Schur complement to exploit camera-point sparsity and state the resulting computational cost reduction compared to dense Gauss-Newton",
+      "skillTags": [
+        "sfm-pipeline"
+      ]
+    },
+    {
+      "id": "m6r1-lo4",
+      "verb": "Identify",
+      "description": "Identify how SfM output quality (point track length, reprojection error, point density) propagates to 3DGS initialization quality and downstream reconstruction performance",
+      "skillTags": [
+        "sfm-pipeline",
+        "3dgs-fundamentals"
+      ]
+    }
+  ],
+  "content": "## The Structure from Motion Problem\n\nGiven a set of \\(m\\) unordered images \\(\\{I_1, \\ldots, I_m\\}\\), Structure from Motion (SfM) simultaneously recovers:\n\n- **Camera intrinsics** \\(K_i\\) — focal length, principal point, distortion coefficients for each camera\n- **Camera extrinsics** \\(\\{R_i, \\mathbf{t}_i\\}\\) — rotation and translation of each camera in world coordinates\n- **3D point cloud** \\(\\{\\mathbf{X}_j\\}\\) — world-frame 3D positions of distinctive scene features\n\nFor a PINHOLE camera (the model used in the Bamburgh Castle pipeline), the projection of world point \\(\\mathbf{X} \\in \\mathbb{R}^3\\) to image coordinates \\(\\mathbf{p} \\in \\mathbb{R}^2\\) is:\n\n$$\\lambda \\begin{pmatrix} u \\\\ v \\\\ 1 \\end{pmatrix} = K \\begin{bmatrix} R \\mid \\mathbf{t} \\end{bmatrix} \\begin{pmatrix} X \\\\ Y \\\\ Z \\\\ 1 \\end{pmatrix}, \\quad K = \\begin{pmatrix} f & 0 & c_x \\\\ 0 & f & c_y \\\\ 0 & 0 & 1 \\end{pmatrix}$$\n\nwhere \\(\\lambda\\) is the projective depth (not to be confused with the 3DGS transmittance accumulator). SfM must estimate all unknowns jointly — this is a highly nonlinear problem with \\(O(m \\cdot 6 + n \\cdot 3)\\) unknowns for \\(m\\) cameras and \\(n\\) 3D points.\n\n## Feature Extraction and Matching\n\nSfM begins by detecting and describing local feature points in each image. COLMAP uses **SIFT** (Scale-Invariant Feature Transform), which detects DoG extrema across scale-space and describes each keypoint with a 128-dimensional histogram of gradient orientations. For \\(m\\) images, matching is \\(O(m^2)\\) pairs.\n\nIn the Bamburgh Castle pipeline, COLMAP's `feature_extractor` and `exhaustive_matcher` process 1,179 images, producing 133,000 image pairs to evaluate. Of those, 6,058 are flagged as geometrically invalid before the relative pose stage even begins — a 4.5% pruning that eliminates degenerate pairs (panoramic rotation, repetitive textures, low overlap).\n\n## Relative Pose Estimation and the Essential Matrix\n\nFor each candidate image pair \\((i, j)\\), SfM estimates the **relative pose** \\((R_{ij}, \\mathbf{t}_{ij})\\) from point correspondences \\(\\{(\\mathbf{p}_k, \\mathbf{p}_k')\\}\\).\n\nThe **essential matrix** \\(E = [\\mathbf{t}]_\\times R\\) encodes this relationship in normalized (undistorted) image coordinates \\(\\hat{\\mathbf{p}} = K^{-1}\\mathbf{p}\\):\n\n$$\\hat{\\mathbf{p}}'^\\top E\\, \\hat{\\mathbf{p}} = 0$$\n\nFor calibrated cameras, the **5-point algorithm** (Nister 2004) recovers \\(E\\) from exactly 5 point correspondences. In practice, **RANSAC** wraps this solver:\n\n1. Draw 5 random correspondences; solve for \\(E\\) candidates.\n2. For each candidate, count inliers (pairs satisfying \\(|\\hat{\\mathbf{p}}'^\\top E\\, \\hat{\\mathbf{p}}| < \\epsilon\\)).\n3. Keep the \\(E\\) with the most inliers. Repeat until the probability of missing the true model falls below \\(\\delta\\).\n\nThe GLOMAP output reports a key filtering step: of 121,023 pairs that entered relative pose estimation, **19,797 were rejected** for having fewer than 30 inlier correspondences, and **0 were rejected** for low inlier ratio. This confirms the matching stage already filtered the worst pairs — only inlier *count*, not inlier *fraction*, discriminates between them.\n\n## COLMAP vs. GLOMAP: Incremental vs. Global SfM\n\n**COLMAP (incremental SfM)**:\n\n1. Select a seed image pair with high overlap and wide baseline.\n2. Triangulate an initial point cloud from the seed pair.\n3. Register new cameras one at a time via PnP (Perspective-n-Point).\n4. Run bundle adjustment after each batch of new cameras.\n5. Repeat until all cameras are registered.\n\nThis is robust but slow for large scenes: each registration triggers a new BA solve, and the error can propagate as the reconstruction grows. COLMAP is the commented-out alternative in the Bamburgh pipeline (`#!colmap mapper`).\n\n**GLOMAP (global SfM)** — used in the Bamburgh Castle pipeline:\n\n1. **Rotation averaging**: estimate all absolute rotations \\(\\{R_i\\}\\) globally from relative rotations \\(\\{R_{ij}\\}\\). GLOMAP uses an iterative L1 synchronization that is robust to outlier relative poses.\n2. **Track establishment**: merge 2D correspondences across images into 3D *tracks* — sets of observations that refer to the same world point. Of 22,813 candidate tracks, 705 are discarded for inconsistency (observations from the same image assigned to the same track), leaving 16,451.\n3. **Global positioning**: estimate all camera translations \\(\\{\\mathbf{t}_i\\}\\) jointly by solving a large sparse linear system. The Ceres report shows: Initial cost \\(1.9 \\times 10^6\\) → Final cost \\(1.3 \\times 10^1\\) in 54 iterations — a \\(10^5\\)× cost reduction, indicating very tight convergence.\n4. **Bundle adjustment**: refine all poses and 3D points jointly.\n\nFor 1,179 images, GLOMAP registers **585 cameras** — 49.6% of the input. The remaining images fail because they have insufficient feature overlap with registered cameras, or their features were entirely in the rejected tracks.\n\n## Bundle Adjustment\n\nBundle adjustment (BA) is the core optimization in all SfM pipelines. It minimizes the total **reprojection error**:\n\n$$\\mathcal{E}_{BA} = \\sum_{i,j} \\rho\\!\\left( \\left\\| \\pi(K_i, R_i, \\mathbf{t}_i, \\mathbf{X}_j) - \\mathbf{p}_{ij} \\right\\|^2 \\right)$$\n\nwhere \\(\\pi\\) is the projection function, \\(\\mathbf{p}_{ij}\\) is the observed 2D keypoint, and \\(\\rho\\) is a robust loss (Huber or Cauchy) that down-weights outlier correspondences.\n\nThe Jacobian \\(J\\) is large but **sparse**: each 3D point \\(\\mathbf{X}_j\\) only appears in the cameras that observe it. The normal equations \\(J^\\top J\\, \\delta = -J^\\top r\\) are solved using the **Schur complement trick**:\n\n$$\\left( B - C A^{-1} C^\\top \\right) \\delta_c = -(\\mathbf{g}_c - C A^{-1} \\mathbf{g}_p)$$\n\nwhere \\(A\\) is the block-diagonal point sub-matrix (trivially invertible), \\(B\\) is the camera sub-matrix, and \\(C\\) couples them. This reduces the solve from \\(O(n^3)\\) in the full system to \\(O(m^3)\\) in the camera system — practical for thousands of cameras with millions of points.\n\nGLOMAP runs 3 iterations of bundle adjustment, each with a position-only sub-stage followed by a full-parameter stage. From the log:\n\n| BA Iteration | Initial Cost | Final Cost | Convergence |\n|---|---|---|---|\n| 1 (pos-only) | 2.80 × 10⁵ | 1.37 × 10⁵ | 138 iters |\n| 1 (full) | 1.37 × 10⁵ | 1.27 × 10⁵ | 85 iters |\n| 2 (pos-only) | 7.60 × 10⁴ | 7.27 × 10⁴ | 21 iters |\n| 3 (full) | 6.08 × 10⁴ | 6.07 × 10⁴ | 13 iters |\n\nCost reduction per iteration decreases as the solution tightens — a signature of Gauss-Newton convergence near a minimum.\n\n## Track Filtering and Triangulation Angle\n\nAfter each BA iteration, GLOMAP filters tracks by reprojection error (removing points with high residuals) and by **triangulation angle**. Two cameras observing the same point form a baseline; the angle between the two rays to the point is the triangulation angle:\n\n$$\\theta = \\arccos\\left( \\frac{\\mathbf{r}_i \\cdot \\mathbf{r}_j}{\\|\\mathbf{r}_i\\| \\|\\mathbf{r}_j\\|} \\right)$$\n\nA small \\(\\theta\\) (nearly parallel rays) produces a poorly conditioned triangulation — the estimated 3D point is sensitive to small errors in the ray directions. GLOMAP discards 4,549 of 16,451 tracks with \\(\\theta\\) below a threshold (~1°), retaining 11,902 high-confidence 3D points.\n\nThe final SfM output — `sparse/0/` — contains the camera model files (`cameras.txt`, `images.txt`, `points3D.txt`) that initialize the 3DGS training point cloud with **14,452 structured seed points**.\n\n## Why This Matters for 3DGS\n\nThe quality of the SfM reconstruction directly determines 3DGS training quality:\n\n- **Poor camera pose estimates** → the photometric loss gradient is incoherent across views → slow convergence, floater artifacts\n- **Dense, accurate 3D points** → better initial Gaussian placement → fewer densification iterations needed\n- **Correct camera intrinsics** → the rasterizer projects Gaussians correctly → sharp renders vs. systematically blurred\n\nThe Bamburgh Castle pipeline achieves 29.0 dB PSNR at 30k iterations — a strong result for an unconstrained video capture with varying lighting and motion blur — largely because GLOMAP delivers a robust reconstruction from 585 well-registered cameras.",
+  "equationBreakdowns": [
+    {
+      "label": "Pinhole Camera Projection",
+      "terms": [
+        {
+          "symbol": "\\lambda",
+          "name": "Projective depth",
+          "desc": "A scalar that accounts for the projective (homogeneous) division. After dividing both sides by λ, you recover the 2D pixel coordinates (u, v). It is not stored — only u and v matter."
+        },
+        {
+          "symbol": "K",
+          "name": "Camera intrinsic matrix",
+          "desc": "A 3×3 upper-triangular matrix encoding the camera's internal optics: focal length f (in pixels), and principal point (c_x, c_y) — the pixel where the optical axis hits the image plane. K is shared across all images from the same camera model."
+        },
+        {
+          "symbol": "[R \\mid \\mathbf{t}]",
+          "name": "Camera extrinsic matrix",
+          "desc": "A 3×4 matrix combining rotation R (3×3) and translation t (3×1) that transforms a world-frame 3D point into the camera's coordinate frame. Each camera has its own extrinsics; recovering them is the central goal of SfM."
+        },
+        {
+          "symbol": "(X, Y, Z, 1)^\\top",
+          "name": "Homogeneous world point",
+          "desc": "The 3D scene point in homogeneous coordinates — appending a 1 enables the affine translation via matrix multiplication. Recovering these 3D positions from 2D observations is the 'Structure' in Structure from Motion."
+        },
+        {
+          "symbol": "f,\\, c_x,\\, c_y",
+          "name": "Focal length and principal point",
+          "desc": "f is the effective focal length in pixels (typically 1000–4000 for modern cameras). c_x, c_y are usually near the image centre. Errors in these values cause systematic radial distortion in the rendered 3DGS output."
+        }
+      ]
+    },
+    {
+      "label": "Essential Matrix Epipolar Constraint",
+      "terms": [
+        {
+          "symbol": "\\hat{\\mathbf{p}},\\, \\hat{\\mathbf{p}}'",
+          "name": "Normalised image coordinates",
+          "desc": "2D feature locations divided by the intrinsic matrix K: p̂ = K⁻¹p. Working in normalised coordinates removes the camera-specific scaling, making E depend only on the relative pose — not on focal lengths."
+        },
+        {
+          "symbol": "E",
+          "name": "Essential matrix",
+          "desc": "A 3×3 rank-2 matrix encoding the relative rotation and translation between two calibrated cameras: E = [t]×R. It constrains where a point seen in one image can appear in the other — along the epipolar line."
+        },
+        {
+          "symbol": "\\hat{\\mathbf{p}}'^\\top E\\, \\hat{\\mathbf{p}} = 0",
+          "name": "Epipolar constraint",
+          "desc": "Any true correspondence (p̂, p̂') from the same 3D point must satisfy this equation exactly. RANSAC uses it as a fitness test: pairs with |p̂'ᵀEp̂| < ε are inliers; larger residuals indicate mismatches or outliers."
+        }
+      ]
+    },
+    {
+      "label": "Bundle Adjustment Objective",
+      "terms": [
+        {
+          "symbol": "\\mathcal{E}_{BA}",
+          "name": "Total reprojection error",
+          "desc": "The scalar objective minimised by bundle adjustment. It accumulates the (robustified) squared distance between each observed 2D keypoint and its predicted projection across all cameras and all 3D points."
+        },
+        {
+          "symbol": "\\pi(K_i, R_i, \\mathbf{t}_i, \\mathbf{X}_j)",
+          "name": "Projection function",
+          "desc": "Applies the pinhole model to predict where 3D point X_j should appear in camera i, given that camera's intrinsics and pose. The residual is how far the prediction is from the actual detected keypoint."
+        },
+        {
+          "symbol": "\\mathbf{p}_{ij}",
+          "name": "Observed 2D keypoint",
+          "desc": "The pixel location where feature j was actually detected in image i by SIFT. This is the ground truth that the reprojected point is compared against."
+        },
+        {
+          "symbol": "\\rho(\\cdot)",
+          "name": "Robust loss function",
+          "desc": "A function like Huber or Cauchy that grows slower than quadratic for large residuals. This down-weights outlier correspondences (mismatches, moving objects) so they do not dominate the optimisation and corrupt the camera poses."
+        }
+      ]
+    },
+    {
+      "label": "Schur Complement — Efficient BA Solve",
+      "terms": [
+        {
+          "symbol": "B - C A^{-1} C^\\top",
+          "name": "Schur complement (reduced camera system)",
+          "desc": "The effective Hessian for camera parameters alone, after analytically eliminating the 3D point variables. Its size is O(m²) in the number of cameras — far smaller than the full O((m+n)²) system."
+        },
+        {
+          "symbol": "A",
+          "name": "Point sub-matrix (block-diagonal)",
+          "desc": "The block of the Hessian corresponding to 3D point parameters. It is block-diagonal because each point only appears in a small subset of cameras, making A⁻¹ trivially computed as independent 3×3 block inverses."
+        },
+        {
+          "symbol": "B",
+          "name": "Camera sub-matrix",
+          "desc": "The block of the Hessian for camera pose parameters. Dense because a single camera observes many points. Solving for δ_c in the Schur system gives the camera update; 3D point updates follow by back-substitution."
+        },
+        {
+          "symbol": "C",
+          "name": "Cross-coupling block",
+          "desc": "Off-diagonal block coupling camera and point parameters. Its structure reflects the observation graph: C_{ij} is nonzero only when camera i observes point j."
+        },
+        {
+          "symbol": "\\delta_c",
+          "name": "Camera parameter update step",
+          "desc": "The Newton step for all camera poses simultaneously. After solving the Schur system (O(m³) instead of O((m+n)³)), point updates δ_p are recovered via: δ_p = A⁻¹(g_p − Cᵀδ_c)."
+        }
+      ]
+    },
+    {
+      "label": "Triangulation Angle",
+      "terms": [
+        {
+          "symbol": "\\theta",
+          "name": "Triangulation angle",
+          "desc": "The angle between the two camera rays to a 3D point. Small θ (nearly parallel rays, e.g. < 1°) means the intersection point is poorly determined — tiny errors in ray direction cause huge errors in depth. GLOMAP discards such points."
+        },
+        {
+          "symbol": "\\mathbf{r}_i,\\, \\mathbf{r}_j",
+          "name": "Ray direction vectors",
+          "desc": "Unit vectors from each camera centre toward the observed 3D point, in world coordinates. Computed from the camera poses and the observed 2D keypoint locations."
+        },
+        {
+          "symbol": "\\mathbf{r}_i \\cdot \\mathbf{r}_j",
+          "name": "Dot product of rays",
+          "desc": "Equals cos(θ) when the vectors are unit-normalised. A value near 1 means nearly parallel rays (small baseline) — poor triangulation. A value near 0 means the rays are nearly perpendicular — ideal geometry."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Lowe 2004",
+      "title": "Distinctive Image Features from Scale-Invariant Keypoints (SIFT)",
+      "url": "https://link.springer.com/article/10.1023/B:VISI.0000029664.99615.94"
+    },
+    {
+      "label": "Nistér 2004",
+      "title": "An Efficient Solution to the Five-Point Relative Pose Problem",
+      "url": "https://ieeexplore.ieee.org/document/1288525/"
+    },
+    {
+      "label": "Triggs et al. 2000",
+      "title": "Bundle Adjustment — A Modern Synthesis",
+      "url": "https://link.springer.com/chapter/10.1007/3-540-44480-7_21"
+    },
+    {
+      "label": "Schönberger & Frahm 2016",
+      "title": "Structure-from-Motion Revisited (COLMAP)",
+      "url": "https://arxiv.org/abs/1511.07531"
+    },
+    {
+      "label": "Wang et al. 2024",
+      "title": "GLOMAP: Global Structure from Motion",
+      "url": "https://arxiv.org/abs/2407.20219"
+    }
+  ],
+  "nextItem": {
+    "type": "reading",
+    "id": "r2"
+  },
+  "prevItem": null
+}

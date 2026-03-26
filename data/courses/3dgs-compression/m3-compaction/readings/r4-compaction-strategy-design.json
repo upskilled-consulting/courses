@@ -1,0 +1,96 @@
+{
+  "id": "r4",
+  "moduleId": "m3",
+  "title": "Designing a Compaction Strategy",
+  "estimatedMinutes": 12,
+  "learningObjectives": [
+    {
+      "id": "m3r4-lo1",
+      "verb": "Apply",
+      "description": "Apply the five-step decision framework (audit → SH reduction → prune → structural decision → coding-aware training) to design a compaction strategy for a given scene type and file size target",
+      "skillTags": [
+        "compaction",
+        "compression"
+      ]
+    },
+    {
+      "id": "m3r4-lo2",
+      "verb": "Explain",
+      "description": "Explain why SH reduction should precede pruning in the compaction pipeline and how the ordering of steps affects what appears redundant at each stage",
+      "skillTags": [
+        "compaction"
+      ]
+    },
+    {
+      "id": "m3r4-lo3",
+      "verb": "Identify",
+      "description": "Identify the Gaussian count threshold above which structural modifications (ScaffoldGS, HAC) justify their added training complexity over simpler per-Gaussian approaches",
+      "skillTags": [
+        "compaction",
+        "compression"
+      ]
+    },
+    {
+      "id": "m3r4-lo4",
+      "verb": "Diagnose",
+      "description": "Diagnose common compaction pitfalls — aggressive background pruning on unbounded scenes, over-reducing SH in specular environments, ignoring interaction effects — and propose targeted corrections",
+      "skillTags": [
+        "compaction",
+        "evaluation"
+      ]
+    }
+  ],
+  "content": "## The Decision Problem\n\nThe earlier readings catalogued the compaction toolkit — SH reduction, improved pruning, ScaffoldGS, HAC. This reading is about *choosing*: given a trained 3DGS model, a file-size budget, and a quality floor, how do you decide what to apply and in what order?\n\nThis is the **rate-distortion (R-D) optimization** problem in disguise. The formal statement:\n\n$$\\min_{\\theta \\in \\Theta} \\; D(\\theta) + \\lambda \\, R(\\theta)$$\n\nwhere \\(D(\\theta)\\) is the quality loss (distortion) under strategy \\(\\theta\\), \\(R(\\theta)\\) is the resulting representation size (rate), and \\(\\lambda \\geq 0\\) is a Lagrange multiplier encoding your operating point on the quality–size tradeoff curve. A high \\(\\lambda\\) prioritizes compression; a low \\(\\lambda\\) prioritizes quality.\n\nMost practitioners choose \\(\\lambda\\) implicitly by naming a target file size. Making it explicit reveals what you're actually trading — and makes it easier to reason about whether a proposed technique is worth its distortion cost.\n\n## The Lever Inventory\n\nBefore designing a strategy, enumerate what you have to work with. The compaction levers from this module divide into four categories:\n\n| Category | Lever | Params removed | Re-training needed? |\n|---|---|---|---|\n| Attribute reduction | SH degree 3→1 | 36/Gaussian (61%) | No |\n| Attribute reduction | SH degree 3→0 | 45/Gaussian (76%) | No |\n| Attribute reduction | Rotation 4→3 params | 1/Gaussian (1.7%) | No |\n| Attribute reduction | Isotropic scale (AtomGS) | 2/Gaussian for small splats | Optional |\n| Density control | Opacity pruning | removes whole Gaussians | No |\n| Density control | Visibility pruning (EAGLES) | removes whole Gaussians | No |\n| Density control | Spectral pruning (SUNDAE) | removes whole Gaussians | No |\n| Structural | ScaffoldGS anchors | ~7× effective reduction | Yes — full retrain |\n| Structural | HAC entropy model | +3–10× on top of ScaffoldGS | Yes — added to training loss |\n\nA critical observation: **the levers interact**. SH reduction changes the value distribution of color attributes, which in turn affects how well they quantize. Pruning changes the spatial density of remaining Gaussians, which affects anchor correlation. You cannot optimize each lever independently.\n\n## Scene Taxonomy\n\nThe optimal strategy is scene-dependent. Five dimensions drive the decision:\n\n| Dimension | Low complexity | High complexity | Implication |\n|---|---|---|---|\n| View dependence | Matte / diffuse | Specular / glossy | High → need higher SH degree |\n| Geometry | Simple objects | Urban, foliage | High → pruning hurts more |\n| Scene scale | Object-level | Unbounded outdoor | Large → LOD and anchors worth the cost |\n| Texture density | Smooth surfaces | High-frequency texture | Dense texture → SH reduction hurts more |\n| Bit-rate target | Very tight (< 5 MB) | Relaxed (> 50 MB) | Tight → structural changes required |\n\n## A Five-Step Decision Framework\n\n### Step 1: Audit the parameter budget\n\nBefore touching anything, compute where the bits actually live. A quick PLY audit:\n\n```python\ndef audit_budget(ply_path):\n    from plyfile import PlyData\n    ply = PlyData.read(ply_path)\n    verts = ply['vertex']\n    N = len(verts)\n    names = verts.data.dtype.names\n\n    sh_ac = sum(1 for n in names if n.startswith('f_rest'))\n    dc    = sum(1 for n in names if n.startswith('f_dc'))\n    rot   = sum(1 for n in names if 'rot' in n)\n    scale = sum(1 for n in names if 'scale' in n)\n    other = 3 + 1  # xyz + opacity\n    total = sh_ac + dc + rot + scale + other\n\n    for label, count in [('SH AC', sh_ac), ('DC color', dc),\n                          ('Rotation', rot), ('Scale', scale), ('Other', other)]:\n        print(f'{label:10s}: {count:3d} params  {count/total*100:5.1f}%')\n    print(f'Baseline: {N:,} Gaussians × {total} params × 4 B = {N*total*4/1e6:.1f} MB')\n```\n\nThe audit almost always reveals that SH AC dominates. Don't skip this step — it sets the prior for every decision that follows.\n\n### Step 2: Apply SH degree reduction first\n\nSH reduction is the highest-leverage, lowest-risk lever because it requires no retraining and degrades gracefully on diffuse scenes. The only question is *which degree to target*.\n\n**Decision rule**: render two held-out validation views at your target degree and at degree 3. Measure the PSNR gap.\n\n- Gap < 0.5 dB: target degree is fine — proceed\n- Gap 0.5–2 dB: acceptable for most applications — proceed with caution\n- Gap > 2 dB: the scene has significant view-dependent content; consider degree 2 as a compromise, or accept the quality cost explicitly\n\nFor scenes with strong specular highlights (polished metal, glass, wet pavement), dropping below degree 2 typically produces visible artefacts on reflective surfaces that no downstream compression step can recover.\n\n### Step 3: Prune low-contribution Gaussians\n\nAfter SH reduction, examine the opacity distribution. Plot a histogram of \\(\\sigma(o_i) = 1/(1+e^{-o_i})\\) where \\(o_i\\) is the raw stored logit:\n\n```python\nimport numpy as np\nimport matplotlib.pyplot as plt\n\ndef opacity_analysis(opacity_logits):\n    opacities = 1 / (1 + np.exp(-opacity_logits))\n    thresholds = [0.01, 0.05, 0.1, 0.2]\n    for t in thresholds:\n        kept = (opacities >= t).mean() * 100\n        print(f'threshold {t:.2f}: retain {kept:.1f}% of Gaussians')\n    plt.hist(opacities, bins=100, log=True)\n    plt.xlabel('Opacity'); plt.ylabel('Count (log)')\n```\n\nLook for the **retention knee** — the threshold at which the retention curve bends sharply. Beyond that knee, each small increase in threshold eliminates many Gaussians that were genuinely contributing. Stay above the knee.\n\n**When pruning is risky**: if the scene was trained to convergence with a tight Gaussian budget (e.g., Mini-Splatting), every Gaussian is load-bearing and the opacity distribution will be bimodal (near-zero and near-one, few in between). Here the knee is at a very low threshold and pruning above 0.01 will hurt quality noticeably.\n\n### Step 4: Decide whether structural changes are justified\n\nIf SH reduction + pruning have already met the bit-rate target: stop. Structural changes (ScaffoldGS, HAC) add training time, implementation complexity, and a retrain requirement. Apply them only when simpler levers are exhausted.\n\nUse this guide:\n\n- **< 500K Gaussians**: ScaffoldGS's fixed MLP overhead (~100 KB) may exceed the savings. Prefer post-hoc quantization (Module 5).\n- **500K–2M Gaussians**: ScaffoldGS is worth evaluating. The breakeven point depends on scene smoothness — smoother anchor neighborhoods compress better.\n- **> 2M Gaussians or unbounded scenes**: ScaffoldGS + HAC is the strongest combination available. At this scale the MLP overhead is negligible and anchor features exhibit strong spatial correlations that HAC's hash-grid exploits well.\n\n### Step 5: Add coding-aware training only if retraining is feasible\n\nRate-distortion training (HAC's \\(\\lambda R\\) loss term) gives the best results but requires training from scratch or extended fine-tuning. It's the right choice when you control the training pipeline. For fixed PLY inputs from an external source, skip ahead to Module 5's post-hoc quantization.\n\n## Interaction Effects You Must Anticipate\n\n**SH reduction before pruning, not after**: reducing SH degree first changes which Gaussians look redundant. A Gaussian with low positional importance but meaningful view-dependent color will appear worthless after its SH is removed — it becomes a valid pruning candidate that wasn't visible before. Always re-audit the opacity distribution after SH reduction.\n\n**Prune before structural encoding**: ScaffoldGS fits anchor neighborhoods to the remaining Gaussians. If you prune after building anchors, the anchor groupings become stale — some anchors will have lost most of their Gaussians, making the MLP overhead unrecoverable. Establish the final Gaussian count first, then build the structural representation.\n\n**Spectral pruning (SUNDAE) pairs with grid sorting (Modules 4–5)**: SUNDAE removes Gaussians that would produce high-frequency variation in the sorted grid. If your downstream encoder uses SOGS or SOG ordering, apply SUNDAE before sorting — the grid will be smoother and entropy coding will achieve a larger gain.\n\n## Worked Example\n\n**Scenario**: outdoor city-block scene, trained with COLMAP + 3DGS. 3.8M Gaussians, 843 MB. Target: ≤ 50 MB at ≥ 25 dB PSNR.\n\n**Audit**: SH AC = 643 MB (76.2%). Scene has glass facades and wet pavement — non-trivial view dependence.\n\n**Step 2 — SH degree**: validation shows a 1.8 dB PSNR gap between degree 0 and degree 3. Choose **degree 1** (9 AC params total). Parameters: 59 − 36 = 23. Size: 3.8M × 23 × 4 B ≈ **350 MB**. ❌\n\n**Step 3 — Pruning**: opacity histogram shows 31% of Gaussians below \\(\\sigma = 0.05\\) (floaters from early training). Apply threshold. Retained: 2.62M Gaussians. Size: 2.62M × 23 × 4 B ≈ **241 MB**. ❌\n\n**Step 4 — Structure**: 2.6M Gaussians is well above the ScaffoldGS breakeven. Apply ScaffoldGS (\\(K=8\\) Gaussians per anchor, \\(F=32\\) feature floats). Storage per anchor: 32 features + 24 offsets = 56 floats. Anchors: 2.62M / 8 = 328K. Anchor storage: 328K × 56 × 4 B + MLP ≈ **74 MB**. Apply HAC entropy coding (typical ≈3× reduction on smooth outdoor scenes): ≈ **25 MB**. ✓\n\n**Outcome**: 843 MB → 25 MB (34× compression). Measured PSNR on held-out views: 26.1 dB. Both constraints met.\n\n**Key lesson**: attribute reduction alone (step 2) gave 2.4× compression. Pruning added another 1.5×. The structural step (ScaffoldGS + HAC) delivered the final 14×. The dramatic gains were only available because the earlier steps reduced the problem to a size where ScaffoldGS's overhead was well-amortized.\n\n## Common Pitfalls\n\n**Pruning a scene that needs more Gaussians**: if PSNR is already low (< 22 dB on training views), the model is underfitted — pruning will make things worse. Compact only when the baseline quality is acceptable.\n\n**SH reduction without visual spot-checking**: PSNR averages over the whole image. Specular highlights occupy a small number of pixels and may not move PSNR much even when visually striking. Always render a specular-heavy crop at the target SH degree.\n\n**Applying ScaffoldGS to sparse or disjoint scenes**: ScaffoldGS assumes the \\(K\\) nearest-neighbor anchors lie on a coherent surface. In a CAD model with isolated objects or a scene with large empty regions, k-NN neighborhoods span unrelated geometry and the MLP underfits. The anchor approach works best on scenes with continuous surfaces.\n\n**Forgetting the downstream quantization step**: after SH reduction, the remaining AC coefficients are still float32. Quantizing them to int8 (Module 5) typically yields another 4× reduction at near-zero quality cost. Don't declare the compression budget exhausted before accounting for this stage.",
+  "equationBreakdowns": [
+    {
+      "label": "Rate–Distortion Lagrangian",
+      "terms": [
+        {
+          "symbol": "D(\\theta)",
+          "name": "Distortion",
+          "desc": "The quality loss incurred by strategy θ — typically measured as PSNR difference (lower is better) or LPIPS delta on a held-out validation set. D is what the user perceives; it should be measured on representative views, not just averaged over training views."
+        },
+        {
+          "symbol": "\\lambda",
+          "name": "Lagrange multiplier",
+          "desc": "A non-negative scalar encoding the operating point on the rate-distortion curve. λ=0 means minimize distortion regardless of size (no compression). λ→∞ means minimize size regardless of quality. In practice, λ is chosen to hit a target file size, but naming it explicitly makes the tradeoff legible."
+        },
+        {
+          "symbol": "R(\\theta)",
+          "name": "Rate (coded size)",
+          "desc": "The number of bits (or bytes) needed to store the representation under strategy θ. For float32 storage, R is simply param_count × 4 × N. For entropy-coded representations (HAC), R is the expected code length under the learned entropy model — a function of the attribute distribution."
+        },
+        {
+          "symbol": "\\Theta",
+          "name": "Strategy space",
+          "desc": "The set of all valid compaction strategies: every combination of SH degree, pruning threshold, structural architecture, and training objective. Optimizing over Θ is generally intractable in closed form; in practice you navigate it greedily using the five-step decision framework."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Bagdasarian et al. 2025",
+      "title": "3DGS.zip: A Survey on 3D Gaussian Splatting Compression Methods",
+      "url": "https://arxiv.org/abs/2407.09510"
+    },
+    {
+      "label": "Chen et al. 2024",
+      "title": "HAC: Hash-grid Assisted Context for 3D Gaussian Splatting Compression",
+      "url": "https://arxiv.org/abs/2403.14530"
+    },
+    {
+      "label": "Niemeyer et al. 2024",
+      "title": "RaDe-GS: Rasterizing Depth in Gaussian Splatting",
+      "url": "https://arxiv.org/abs/2406.01467"
+    }
+  ],
+  "nextItem": {
+    "type": "quiz",
+    "id": "q1"
+  },
+  "prevItem": {
+    "type": "reading",
+    "id": "r3"
+  }
+}

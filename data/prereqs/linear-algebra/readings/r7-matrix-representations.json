@@ -1,0 +1,89 @@
+{
+  "id": "r7",
+  "moduleId": "linear-algebra",
+  "title": "Matrix Representations and Change of Basis",
+  "estimatedMinutes": 17,
+  "learningObjectives": [
+    {
+      "id": "r7-lo1",
+      "verb": "Construct",
+      "description": "Construct the matrix of a linear map in given bases by applying the map to each basis vector and converting to output-basis coordinates",
+      "skillTags": [
+        "coordinate-frames"
+      ]
+    },
+    {
+      "id": "r7-lo2",
+      "verb": "Compute",
+      "description": "Compute the matrix of a composed map as the product of individual matrices in the correct order",
+      "skillTags": [
+        "coordinate-frames"
+      ]
+    },
+    {
+      "id": "r7-lo3",
+      "verb": "Perform",
+      "description": "Perform a change of basis using the transition matrix and verify the result by converting coordinates",
+      "skillTags": [
+        "coordinate-frames"
+      ]
+    },
+    {
+      "id": "r7-lo4",
+      "verb": "Explain",
+      "description": "Explain similarity (B = P-inv AP) as the same map viewed in a different basis and list the invariants it preserves",
+      "skillTags": [
+        "coordinate-frames",
+        "spectral-analysis"
+      ]
+    }
+  ],
+  "content": "## Representing a Linear Map as a Matrix\n\nEvery linear map $h: V \\to W$ between finite-dimensional spaces can be encoded as a matrix once bases are chosen for both spaces.\n\n**Construction**: fix a basis $B = \\langle\\vec{\\beta}_1, \\ldots, \\vec{\\beta}_n\\rangle$ for $V$ and $D = \\langle\\vec{\\delta}_1, \\ldots, \\vec{\\delta}_m\\rangle$ for $W$. The **matrix representation** $\\mathrm{Rep}_{B,D}(h)$ is the $m \\times n$ matrix whose $j$-th column is the coordinate vector of $h(\\vec{\\beta}_j)$ with respect to $D$:\n\n$$\\mathrm{Rep}_{B,D}(h) = \\left[\\, \\mathrm{Rep}_D(h(\\vec{\\beta}_1)) \\;\\big|\\; \\cdots \\;\\big|\\; \\mathrm{Rep}_D(h(\\vec{\\beta}_n)) \\,\\right]$$\n\nApplying the map becomes matrix-vector multiplication: if $\\vec{v}$ has coordinates $\\mathrm{Rep}_B(\\vec{v}) = \\vec{c}$, then\n\n$$\\mathrm{Rep}_D(h(\\vec{v})) = \\mathrm{Rep}_{B,D}(h) \\cdot \\vec{c}$$\n\nThe representation depends on the choice of bases. Same map, different bases, different matrix.\n\n## Matrix of a Composition\n\nIf $g: V \\to W$ and $f: W \\to X$ are linear maps with bases $B, D, E$ respectively, the matrix of the composition is the product of the matrices:\n\n$$\\mathrm{Rep}_{B,E}(f \\circ g) = \\mathrm{Rep}_{D,E}(f) \\cdot \\mathrm{Rep}_{B,D}(g)$$\n\n**This is why matrix multiplication is defined the way it is.** The non-obvious definition of matrix multiplication $(AB)_{ik} = \\sum_j A_{ij}B_{jk}$ is precisely what is required for the composition law to hold.\n\n## Change of Basis\n\nSuppose you have two bases $B$ and $\\hat{B}$ for the same space $V$. The **change-of-basis matrix** $\\mathrm{Rep}_{B,\\hat{B}}(\\text{id}_V)$ converts coordinates: if $\\vec{v}$ has coordinates $\\vec{c}$ in basis $B$, its coordinates in $\\hat{B}$ are\n\n$$\\hat{\\vec{c}} = \\mathrm{Rep}_{B,\\hat{B}}(\\text{id}_V) \\cdot \\vec{c}$$\n\nConstructing this matrix: column $j$ is the coordinate expression of $\\vec{\\beta}_j$ (the $j$-th $B$-basis vector) in terms of $\\hat{B}$.\n\n**In $\\mathbb{R}^n$**: if $B$ is the standard basis and $\\hat{B}$ is any other basis (columns of matrix $P$), then the change-of-basis matrix from $\\hat{B}$ to $B$ is $P$ itself (since the columns of $P$ are the $\\hat{B}$-basis vectors expressed in standard coordinates). The inverse $P^{-1}$ converts from $B$ to $\\hat{B}$.\n\n## Similarity\n\nTwo matrices $A$ and $\\hat{A}$ are **similar** if there exists an invertible matrix $P$ such that:\n\n$$\\hat{A} = P^{-1}AP$$\n\nSimilar matrices represent the *same linear transformation* with respect to *different bases*. The matrix $P$ is the change-of-basis matrix between the two coordinate systems.\n\n**Properties preserved under similarity** (invariants of the transformation, independent of basis):\n- Determinant: $\\det(\\hat{A}) = \\det(A)$\n- Trace: $\\text{tr}(\\hat{A}) = \\text{tr}(A)$\n- Eigenvalues (same set of eigenvalues)\n- Rank and nullity\n- Characteristic polynomial\n\nWhen we diagonalize a matrix — find $P^{-1}AP = \\Lambda$ where $\\Lambda$ is diagonal — we are finding the basis in which the transformation acts most simply: pure scaling along independent axes.\n\n## Inverse of a Map\n\nIf $h: V \\to W$ is an isomorphism, its inverse $h^{-1}: W \\to V$ is also a linear map (it can be checked directly from the axioms). Its matrix representation satisfies:\n\n$$\\mathrm{Rep}_{D,B}(h^{-1}) = \\left[\\mathrm{Rep}_{B,D}(h)\\right]^{-1}$$\n\nThe matrix inverse corresponds to the inverse map. Computing the inverse of a matrix $A$ by row-reducing $[A \\mid I]$ to $[I \\mid A^{-1}]$ is equivalent to finding the change-of-basis from the identity to $A$.",
+  "equationBreakdowns": [
+    {
+      "label": "Matrix Representation",
+      "terms": [
+        {
+          "symbol": "\\mathrm{Rep}_{B,D}(h)",
+          "name": "Matrix of map h in bases B, D",
+          "desc": "An m×n matrix (m = dim W, n = dim V) encoding the linear map h. Column j contains the D-coordinates of h(βⱼ). Different choices of B and D give different but similar matrices."
+        },
+        {
+          "symbol": "j\\text{-th column}",
+          "name": "Image of j-th basis vector",
+          "desc": "The j-th column of the matrix is the representation of where the j-th input basis vector βⱼ goes under h, expressed in the output basis D. This is why you form the matrix by applying h to each basis vector in turn."
+        }
+      ]
+    },
+    {
+      "label": "Similarity Transform",
+      "terms": [
+        {
+          "symbol": "\\hat{A} = P^{-1}AP",
+          "name": "Similarity transformation",
+          "desc": "A represents a transformation in one basis; Â represents the same transformation in another. P converts from the new basis to the old; P⁻¹ converts back. The transformation itself is unchanged — only the coordinate system differs."
+        },
+        {
+          "symbol": "P",
+          "name": "Change-of-basis matrix",
+          "desc": "The invertible matrix whose columns are the new basis vectors expressed in the old coordinate system. For diagonalization, P's columns are the eigenvectors of A — the natural basis for a transformation that scales independently along each axis."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Hefferon 2020",
+      "title": "Linear Algebra, Ch. Three §III–V: Computing Linear Maps, Change of Basis",
+      "url": null
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r6"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r8"
+  }
+}

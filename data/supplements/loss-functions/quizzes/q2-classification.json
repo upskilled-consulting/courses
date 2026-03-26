@@ -1,0 +1,91 @@
+{
+  "id": "q2",
+  "moduleId": "loss-functions",
+  "title": "Classification & Metric Losses",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "type": "reading", "id": "r6" },
+  "nextItem": { "type": "lab", "id": "lab1" },
+  "questions": [
+    {
+      "id": "q2_1",
+      "type": "multiple-choice",
+      "prompt": "You have raw logits from a model for a binary classification task. Which loss should you use and why?",
+      "options": [
+        { "id": "a", "text": "$\\text{BCELoss}$ — it handles raw logits directly", "correct": false },
+        { "id": "b", "text": "$\\text{BCEWithLogitsLoss}$ — it applies sigmoid internally using a numerically stable formula", "correct": true },
+        { "id": "c", "text": "$\\text{CrossEntropyLoss}$ with $C=2$", "correct": false },
+        { "id": "d", "text": "$\\text{NLLLoss}$ after applying $\\log(\\text{sigmoid}(x))$", "correct": false }
+      ],
+      "explanation": "BCEWithLogitsLoss combines sigmoid + BCE using the log-sum-exp trick: $\\max(x,0) - xy + \\log(1+e^{-|x|})$. This avoids float32 overflow that occurs when computing $e^x$ for large $x$ in BCELoss. BCELoss requires probabilities in (0,1) — you must apply sigmoid separately, losing numerical stability.",
+      "hint": "BCELoss expects probabilities (output of sigmoid). BCEWithLogitsLoss expects raw logits and handles sigmoid internally with a stable formula."
+    },
+    {
+      "id": "q2_2",
+      "type": "multiple-choice",
+      "prompt": "$\\text{CrossEntropyLoss}$ in PyTorch is equivalent to which two operations applied in sequence?",
+      "options": [
+        { "id": "a", "text": "$\\text{Softmax}$ then $\\text{NLLLoss}$", "correct": false },
+        { "id": "b", "text": "$\\text{LogSoftmax}$ then $\\text{NLLLoss}$", "correct": true },
+        { "id": "c", "text": "$\\text{Sigmoid}$ then $\\text{BCELoss}$", "correct": false },
+        { "id": "d", "text": "$\\text{LogSoftmax}$ then $\\text{MSELoss}$", "correct": false }
+      ],
+      "explanation": "CrossEntropyLoss = LogSoftmax + NLLLoss. NLLLoss expects log-probabilities; applying Softmax then NLLLoss would give log(probability) only in name — actually it would be log(softmax(x)) only if you first took log, which is what LogSoftmax does. The PyTorch docs explicitly state this equivalence.",
+      "hint": "NLLLoss requires log-probabilities as input, not probabilities. Which normalisation function outputs log-probabilities directly?"
+    },
+    {
+      "id": "q2_3",
+      "type": "multiple-choice",
+      "prompt": "Label smoothing with $\\varepsilon = 0.1$ for a 10-class problem changes the true label distribution from a one-hot vector to what?",
+      "options": [
+        { "id": "a", "text": "Target class probability becomes $0.9$; all others become $0.01$", "correct": true },
+        { "id": "b", "text": "Target class probability becomes $0.1$; all others become $0.9/9$", "correct": false },
+        { "id": "c", "text": "All classes get equal probability $0.1$", "correct": false },
+        { "id": "d", "text": "Target class probability stays $1.0$; noise is added to logits", "correct": false }
+      ],
+      "explanation": "With label smoothing $\\varepsilon$, the true class gets $1 - \\varepsilon + \\varepsilon/C = 1 - 0.1 + 0.01 = 0.91 \\approx 0.9$, and each non-target class gets $\\varepsilon/C = 0.1/10 = 0.01$. Sum: $0.9 + 9 \\times 0.01 = 0.9 + 0.09 = 0.99 \\approx 1$ (small rounding). This prevents overconfident predictions.",
+      "hint": "The formula is: true-class probability = $1 - \\varepsilon + \\varepsilon/C$; all others = $\\varepsilon/C$. With C=10 and ε=0.1, compute each."
+    },
+    {
+      "id": "q2_4",
+      "type": "multiple-choice",
+      "prompt": "$\\text{TripletMarginLoss}$ with margin $m=1$ has a loss value of **zero** when:",
+      "options": [
+        { "id": "a", "text": "$d(a,p) = 0$ (anchor and positive are identical)", "correct": false },
+        { "id": "b", "text": "$d(a,p) - d(a,n) + 1 \\le 0$, i.e., $d(a,n) \\ge d(a,p) + 1$", "correct": true },
+        { "id": "c", "text": "$d(a,n) = 0$ (anchor and negative are identical)", "correct": false },
+        { "id": "d", "text": "$d(a,p) = d(a,n)$", "correct": false }
+      ],
+      "explanation": "The triplet loss is $\\max(0, d(a,p) - d(a,n) + m)$. This is zero when $d(a,p) - d(a,n) + m \\le 0$, i.e., $d(a,n) \\ge d(a,p) + m$. The anchor-negative distance must exceed the anchor-positive distance by at least the margin. When $d(a,p)=0$ but $d(a,n) < m$, the loss would still be positive.",
+      "hint": "The hinge function max(0, ·) is zero when its argument is ≤ 0. When is d(a,p) − d(a,n) + m ≤ 0?"
+    },
+    {
+      "id": "q2_5",
+      "type": "multiple-choice",
+      "prompt": "$\\text{MarginRankingLoss}$ with $y = +1$ and $m = 0.5$: the loss is zero when:",
+      "options": [
+        { "id": "a", "text": "$x_1 > x_2$", "correct": false },
+        { "id": "b", "text": "$x_1 \\ge x_2 + 0.5$", "correct": true },
+        { "id": "c", "text": "$x_2 > x_1 + 0.5$", "correct": false },
+        { "id": "d", "text": "$x_1 = x_2$", "correct": false }
+      ],
+      "explanation": "With $y = +1$, the loss is $\\max(0, -(x_1 - x_2) + 0.5) = \\max(0, x_2 - x_1 + 0.5)$. This is zero when $x_2 - x_1 + 0.5 \\le 0$, i.e., $x_1 \\ge x_2 + 0.5$. $x_1$ must exceed $x_2$ by the margin, not just be greater.",
+      "hint": "MarginRankingLoss = max(0, −y(x₁−x₂) + m). Substitute y=+1 and m=0.5, then find when the argument is ≤ 0."
+    },
+    {
+      "id": "q2_6",
+      "type": "code-completion",
+      "prompt": "Complete the function that computes binary cross-entropy from scratch using only PyTorch operations (equivalent to `nn.BCEWithLogitsLoss`):",
+      "codeTemplate": "import torch\nimport torch.nn.functional as F\n\ndef my_bce_with_logits(logits, targets):\n    \"\"\"BCE loss from raw logits, using the numerically stable formula.\"\"\"\n    return ___BLANK___",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "F.binary_cross_entropy_with_logits(logits, targets)",
+        "torch.mean(torch.clamp(logits, min=0) - logits * targets + torch.log(1 + torch.exp(-torch.abs(logits))))",
+        "(-targets * F.logsigmoid(logits) - (1 - targets) * F.logsigmoid(-logits)).mean()"
+      ],
+      "explanation": "The stable form is: $\\max(x,0) - xy + \\log(1+e^{-|x|})$, averaged over all elements. F.binary_cross_entropy_with_logits implements this exactly. The clamp+exp form and the logsigmoid form are equivalent manual implementations.",
+      "hint": "The numerically stable formula avoids computing exp(x) for large x by using |x| in the exponent. F.binary_cross_entropy_with_logits is the direct functional equivalent."
+    }
+  ]
+}

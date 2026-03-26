@@ -1,0 +1,79 @@
+{
+  "id": "d2",
+  "moduleId": "matrix-algebra",
+  "title": "Decompositions, Norms & Spectral Structure",
+  "description": "Flashcards covering the determinant, rank, eigendecomposition, SVD, matrix norms, positive definiteness, and Cholesky factorisation.",
+  "estimatedMinutes": 10,
+  "cards": [
+    {
+      "id": "c01",
+      "front": "**Eigenvalue equation**",
+      "back": "$$A\\mathbf{q} = \\lambda\\mathbf{q}, \\quad \\mathbf{q} \\neq \\mathbf{0}$$\n\n$\\lambda$ = eigenvalue (scalar stretch factor); $\\mathbf{q}$ = eigenvector (direction preserved under $A$).\n\n*Usage: find $\\lambda$ from $\\det(A - \\lambda I) = 0$, then $\\mathbf{q}$ from the null space of $A - \\lambda I$*"
+    },
+    {
+      "id": "c02",
+      "front": "**Spectral decomposition** of a symmetric matrix",
+      "back": "$$A = Q\\Lambda Q^T, \\quad Q^T Q = I$$\n\n- $Q$: orthogonal matrix of eigenvectors (columns)\n- $\\Lambda = \\mathrm{diag}(\\lambda_1,\\ldots,\\lambda_n)$: eigenvalues\n\nGuaranteed to exist for any symmetric matrix (Spectral Theorem).\n\n*Usage: PCA, covariance geometry, quadratic forms $\\mathbf{x}^T A \\mathbf{x}$*"
+    },
+    {
+      "id": "c03",
+      "front": "**SVD** — $A = U\\Sigma V^T$",
+      "back": "$$A \\in \\mathbb{R}^{m \\times n} = U_{m\\times m}\\;\\Sigma_{m\\times n}\\;V^T_{n\\times n}$$\n\n- $U$, $V$: orthogonal; $\\Sigma$: diagonal, $\\sigma_1 \\geq \\sigma_2 \\geq \\cdots \\geq 0$\n- Always exists — unlike eigendecomposition, requires no symmetry or squareness\n- $\\mathrm{rank}(A)$ = number of nonzero $\\sigma_i$\n\n*Usage: low-rank approximation, pseudoinverse, PCA, condition number*"
+    },
+    {
+      "id": "c04",
+      "front": "**Eckart-Young** best rank-$r$ approximation",
+      "back": "$$A_r = \\sum_{i=1}^r \\sigma_i \\mathbf{u}_i \\mathbf{v}_i^T$$\n\nMinimises $\\|A - B\\|_F$ over all rank-$r$ matrices $B$.\n\n*Usage: image compression, noise reduction; truncated SVD in scikit-learn / `torch.linalg.svd`*"
+    },
+    {
+      "id": "c05",
+      "front": "When is $A$ **positive definite** (PD)?",
+      "back": "$$A \\succ 0 \\iff \\mathbf{x}^T A \\mathbf{x} > 0 \\text{ for all } \\mathbf{x} \\neq \\mathbf{0}$$\n\nEquivalently: all eigenvalues $\\lambda_i > 0$.\n\n**Positive semi-definite (PSD):** $\\lambda_i \\geq 0$.\n\n*Usage: covariance matrices are always PSD; loss Hessians at a local minimum are PD; Cholesky requires PD*"
+    },
+    {
+      "id": "c06",
+      "front": "**Cholesky decomposition** $A = LL^T$",
+      "back": "For any positive definite $A$, there exists a unique lower triangular $L$ with positive diagonal such that $A = LL^T$.\n\nFaster and more stable than full eigendecomposition.\n\n*Usage: sampling from $\\mathcal{N}(\\mu, \\Sigma)$: draw $\\mathbf{z} \\sim \\mathcal{N}(0,I)$, return $\\mu + L\\mathbf{z}$; solving $Ax = b$ for PD $A$*"
+    },
+    {
+      "id": "c07",
+      "front": "**Determinant** — key facts",
+      "back": "$$\\det(A) = \\prod_i \\lambda_i$$\n\n- $\\det(A) = 0 \\iff A$ is singular (non-invertible)\n- $\\det(AB) = \\det(A)\\det(B)$\n- $\\det(A^T) = \\det(A)$\n- $\\det(A^{-1}) = 1/\\det(A)$\n\n*Geometric meaning: signed volume scale factor — how much $A$ stretches/shrinks and possibly flips space*"
+    },
+    {
+      "id": "c08",
+      "front": "**Matrix rank** — definition and key fact",
+      "back": "$$\\mathrm{rank}(A) = \\dim(\\text{column space}) = \\dim(\\text{row space})$$\n\nAlso equals the number of nonzero singular values.\n\n**Rank-Nullity:** $\\mathrm{rank}(A) + \\mathrm{nullity}(A) = n$ (number of columns).\n\n*Usage: rank $< n$ means $A$ has a null space — solutions to $A\\mathbf{x}=\\mathbf{b}$ are non-unique or nonexistent*"
+    },
+    {
+      "id": "c09",
+      "front": "**Frobenius norm** $\\|A\\|_F$",
+      "back": "$$\\|A\\|_F = \\sqrt{\\sum_{i,j} a_{ij}^2} = \\sqrt{\\mathrm{tr}(A^T A)} = \\sqrt{\\sum_i \\sigma_i^2}$$\n\nThe entry-wise $\\ell^2$ norm of the matrix.\n\n*Usage: L2 regularisation on weight matrices; measuring reconstruction error in SVD truncation*"
+    },
+    {
+      "id": "c10",
+      "front": "**Spectral norm** $\\|A\\|_2$",
+      "back": "$$\\|A\\|_2 = \\sigma_1 \\quad (\\text{largest singular value})$$\n\nThe maximum factor by which $A$ can stretch a unit vector.\n\n*Usage: spectral normalisation in GANs; Lipschitz constraint; condition number $\\kappa = \\sigma_1 / \\sigma_n$*"
+    },
+    {
+      "id": "c11",
+      "front": "**Condition number** $\\kappa(A)$",
+      "back": "$$\\kappa(A) = \\frac{\\sigma_1}{\\sigma_n} = \\|A\\|_2 \\|A^{-1}\\|_2$$\n\nMeasures how sensitive the solution of $A\\mathbf{x} = \\mathbf{b}$ is to perturbations in $\\mathbf{b}$.\n\n$\\kappa \\approx 1$ = well-conditioned; $\\kappa \\gg 1$ = ill-conditioned.\n\n*Usage: gradient explosion/vanishing in deep nets; numerical instability in float16; why you should use `solve` not `inv`*"
+    },
+    {
+      "id": "c12",
+      "front": "**Pseudoinverse** $A^+$",
+      "back": "$$A^+ = V\\Sigma^+ U^T$$\n\n$\\Sigma^+$: replace each nonzero $\\sigma_i$ with $1/\\sigma_i$, keep zeros as zero.\n\nMinimum-norm least-squares solution: $\\hat{\\mathbf{x}} = A^+ \\mathbf{b}$.\n\n*Usage: when $A$ is rank-deficient or non-square; `torch.linalg.lstsq`; never form $A^+$ explicitly — use `lstsq` instead*"
+    },
+    {
+      "id": "c13",
+      "front": "**$\\det A = \\prod_i \\lambda_i$** — what does $\\lambda_i = 0$ imply?",
+      "back": "If any eigenvalue is zero, $\\det A = 0$ and $A$ is **singular** (not invertible).\n\nEquivalently: $A$ has a nontrivial null space — there exists $\\mathbf{x} \\neq \\mathbf{0}$ with $A\\mathbf{x} = \\mathbf{0}$.\n\n*Usage: checking invertibility; a weight matrix with zero eigenvalues has redundant directions that contribute nothing to the output*"
+    },
+    {
+      "id": "c14",
+      "front": "**PCA** via eigendecomposition — what are the principal components?",
+      "back": "Given mean-centred data $X$ ($n \\times d$), form the covariance:\n\n$$S = \\frac{1}{n-1}X^T X$$\n\nDecompose $S = Q\\Lambda Q^T$. The columns of $Q$ are the **principal components** (directions of maximum variance); $\\lambda_i$ is the variance along component $i$.\n\n*Projection to $r$ dims: $Z = XQ_r$, where $Q_r$ keeps the top $r$ columns of $Q$*"
+    }
+  ]
+}

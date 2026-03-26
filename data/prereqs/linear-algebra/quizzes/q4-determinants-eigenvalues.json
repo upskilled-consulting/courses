@@ -1,0 +1,163 @@
+{
+  "id": "q4",
+  "moduleId": "linear-algebra",
+  "title": "Determinants, Eigenvalues, and Spectral Structure",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "questions": [
+    {
+      "id": "q4_1",
+      "type": "multiple-choice",
+      "prompt": "A $5\\times 5$ matrix $A$ has $\\det(A) = 0$. Which statement is necessarily true?",
+      "options": [
+        {
+          "id": "a",
+          "text": "All eigenvalues of $A$ are zero",
+          "correct": false
+        },
+        {
+          "id": "b",
+          "text": "$A$ has exactly one zero eigenvalue",
+          "correct": false
+        },
+        {
+          "id": "c",
+          "text": "$A$ is not invertible — its columns are linearly dependent",
+          "correct": true
+        },
+        {
+          "id": "d",
+          "text": "$A\\vec{x} = \\vec{b}$ has no solution for any $\\vec{b}$",
+          "correct": false
+        }
+      ],
+      "explanation": "$\\det(A) = 0 \\iff A$ is not invertible $\\iff \\text{rank}(A) < n \\iff$ the columns are linearly dependent $\\iff 0$ is an eigenvalue. It does NOT mean all eigenvalues are zero — only that zero is among them. It also doesn't mean $A\\vec{x}=\\vec{b}$ has no solution; for $\\vec{b} \\in \\mathcal{C}(A)$ solutions do exist (they're just not unique).",
+      "hint": "$\\det(A) = 0$ is equivalent to one specific item on the Invertible Matrix Theorem list. Which one?"
+    },
+    {
+      "id": "q4_2",
+      "type": "multiple-choice",
+      "prompt": "Training on a quadratic loss $L(\\vec{w}) = \\frac{1}{2}\\vec{w}^TH\\vec{w}$ with gradient descent. Convergence requires step-size $\\alpha < 2/\\lambda_{\\max}$ where $\\lambda_{\\max}$ is the largest eigenvalue of $H$. Why $\\lambda_{\\max}$?",
+      "options": [
+        {
+          "id": "a",
+          "text": "The largest eigenvalue equals the trace, setting the global scale",
+          "correct": false
+        },
+        {
+          "id": "b",
+          "text": "$\\lambda_{\\max}$ bounds the maximum curvature of $L$ — using a larger step overshoots the minimum in the steepest direction",
+          "correct": true
+        },
+        {
+          "id": "c",
+          "text": "The largest eigenvalue is always the most numerically stable to compute",
+          "correct": false
+        },
+        {
+          "id": "d",
+          "text": "$\\lambda_{\\max}$ equals the $\\ell^2$ norm of the gradient at the optimum",
+          "correct": false
+        }
+      ],
+      "explanation": "In the eigenbasis of $H$, each coordinate $c_i$ evolves as $c_i \\leftarrow c_i(1-\\alpha\\lambda_i)$. This converges iff $|1-\\alpha\\lambda_i|<1$ for all $i$, i.e., $\\alpha < 2/\\lambda_i$ for all $i$, i.e., $\\alpha < 2/\\lambda_{\\max}$. The largest eigenvalue sets the curvature bottleneck: the loss surface is sharpest in the direction of $\\lambda_{\\max}$, and that direction forces the smallest allowable step.",
+      "hint": "In the eigenbasis of $H$, each direction decouples. Which direction converges most slowly / diverges first as $\\alpha$ increases?"
+    },
+    {
+      "id": "q4_3",
+      "type": "code-completion",
+      "prompt": "Verify that $A = PDP^{-1}$ holds for a diagonalisable matrix `A` (i.e., that numpy's `eig` gives a valid diagonalisation).",
+      "codeTemplate": "import numpy as np\n\ndef verify_diagonalisation(A):\n    eigenvalues, P = np.linalg.eig(A)\n    D = np.diag(eigenvalues)\n    reconstructed = ___BLANK___\n    return np.allclose(A, reconstructed)",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "P @ D @ np.linalg.inv(P)",
+        "np.linalg.multi_dot([P, D, np.linalg.inv(P)])",
+        "P @ D @ np.linalg.inv(P)",
+        "P.dot(D).dot(np.linalg.inv(P))"
+      ],
+      "explanation": "$A = PDP^{-1}$ where columns of $P$ are eigenvectors and $D$ is diagonal with eigenvalues. In PyTorch: `vals, P = torch.linalg.eig(A); D = torch.diag(vals); recon = P @ torch.diag(vals) @ torch.linalg.inv(P)`. Note: for symmetric matrices prefer `torch.linalg.eigh` which returns real eigenvalues and guarantees orthonormal eigenvectors.",
+      "hint": "$A = PDP^{-1}$. You have $P$ and $D$; what is $P^{-1}$ in numpy?"
+    },
+    {
+      "id": "q4_4",
+      "type": "multiple-choice",
+      "prompt": "For a general matrix $A$ (not necessarily symmetric), how do its singular values relate to its eigenvalues?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Singular values $=$ eigenvalues of $A$",
+          "correct": false
+        },
+        {
+          "id": "b",
+          "text": "Singular values $=$ absolute values of eigenvalues of $A$",
+          "correct": false
+        },
+        {
+          "id": "c",
+          "text": "Singular values $=$ square roots of eigenvalues of $A^TA$",
+          "correct": true
+        },
+        {
+          "id": "d",
+          "text": "Singular values and eigenvalues are the same concept with different names",
+          "correct": false
+        }
+      ],
+      "explanation": "SVD: $A = U\\Sigma V^T$. So $A^TA = V\\Sigma^2 V^T$, meaning the eigenvalues of $A^TA$ are $\\sigma_i^2$. Singular values $\\sigma_i \\geq 0$ always. For symmetric PSD matrices singular values equal eigenvalues, but in general they differ. A counterexample: $A = \\begin{pmatrix}0&1\\0&0\\end{pmatrix}$ has eigenvalues $\\{0,0\\}$ but singular values $\\{1,0\\}$.",
+      "hint": "Compute $A^TA$ using $A = U\\Sigma V^T$ and see what its eigenvalues are."
+    },
+    {
+      "id": "q4_5",
+      "type": "code-completion",
+      "prompt": "Power iteration: repeatedly multiply by $A$ and renormalise to find the dominant eigenvector. Fill in the matrix-vector product.",
+      "codeTemplate": "import torch\n\ndef power_iteration(A, n_iter=100):\n    v = torch.randn(A.shape[0])\n    for _ in range(n_iter):\n        v = ___BLANK___\n        v = v / v.norm()\n    eigenvalue = v @ A @ v\n    return eigenvalue, v",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "A @ v",
+        "torch.mv(A, v)",
+        "torch.matmul(A, v)"
+      ],
+      "explanation": "Each iteration applies $A$ then normalises. In the eigenbasis of $A$, the component along $\\vec{v}_1$ (largest eigenvalue $\\lambda_1$) is amplified by $\\lambda_1$ relative to all others, so it dominates after enough iterations. Power iteration is the primitive behind the Lanczos algorithm used to compute top-$k$ eigenvalues of large, sparse matrices in ML.",
+      "hint": "You just need to multiply the current vector v by A. What's the PyTorch op for matrix-vector multiply?"
+    },
+    {
+      "id": "q4_6",
+      "type": "multiple-choice",
+      "prompt": "Trained transformer weight matrices empirically have a small number of large singular values and many near-zero ones. This is often called:",
+      "options": [
+        {
+          "id": "a",
+          "text": "Gradient vanishing in the spectral domain",
+          "correct": false
+        },
+        {
+          "id": "b",
+          "text": "Implicit low-rank regularisation — gradient descent on overparameterised models biases toward low-rank solutions",
+          "correct": true
+        },
+        {
+          "id": "c",
+          "text": "Spectral normalisation applied during training",
+          "correct": false
+        },
+        {
+          "id": "d",
+          "text": "Eigenvalue clipping from the Adam optimiser's second moment",
+          "correct": false
+        }
+      ],
+      "explanation": "Several theoretical results (Gunasekar et al. 2017, Arora et al. 2019) show that gradient descent on matrix factorisation problems implicitly minimises nuclear norm (sum of singular values), biasing toward low-rank solutions even without explicit regularisation. This explains why LoRA and other low-rank adaptation methods work: the pre-trained weights are already near a low-rank manifold.",
+      "hint": "This phenomenon is about what gradient descent implicitly minimises — not an explicit algorithm choice."
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r10"
+  },
+  "nextItem": {
+    "type": "lab",
+    "id": "lab2"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "lab1",
+  "moduleId": "optimizers",
+  "title": "Optimizers in PyTorch",
+  "estimatedMinutes": 55,
+  "prevItem": {
+    "type": "quiz",
+    "id": "q2"
+  },
+  "nextItem": {
+    "type": "lab",
+    "id": "lab2"
+  },
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/supplements/optimizers/lab_optimizers_pytorch.ipynb",
+  "description": "## Lab Overview\n\nThis lab gives you hands-on experience with all 13 PyTorch optimizers and 15 learning rate schedulers through a series of experiments with increasing complexity.\n\n## What You'll Build\n\n1. **Optimizer trajectory visualization** — plot gradient descent paths on the 2D Rosenbrock function for SGD, Adam, AdamW, and RMSprop\n2. **Convergence speed comparison** — train a 4-layer MLP on synthetic regression data with every optimizer; plot loss curves\n3. **Adaptive vs. SGD on sparse inputs** — compare Adagrad, RMSprop, and Adam on a sparse NLP bag-of-words task\n4. **L-BFGS with closure** — fit a physics curve with LBFGS and compare convergence to Adam\n5. **Param groups and LLRD** — fine-tune a pretrained ResNet-18 with layer-wise learning rate decay; measure accuracy vs. uniform LR\n6. **Gradient clipping experiment** — induce gradient explosion in a deep ReLU net; compare unclipped, clip_grad_value_, and clip_grad_norm_\n7. **Scheduler comparison** — train the same network with StepLR, CosineAnnealingLR, OneCycleLR, and ReduceLROnPlateau; plot LR curves and final accuracy\n8. **Super-convergence with OneCycleLR** — reproduce Smith's fast training result on CIFAR-10 ResNet-18: 93% accuracy in 30 epochs\n9. **SequentialLR warmup + cosine** — implement the standard transformer training recipe and compare to no-warmup baseline\n\n## Prerequisites\n\n- Familiarity with PyTorch autograd and `nn.Module`\n- Basic understanding of gradient descent\n- Access to a GPU runtime (recommended for sections 8–9)\n\n## Key Concepts Reinforced\n\n- How the optimizer interface (`zero_grad`, `step`, `state_dict`) works\n- Why decoupled weight decay (AdamW) matters in practice\n- The closure pattern required by LBFGS\n- Layer-wise learning rate decay for fine-tuning\n- Per-batch vs. per-epoch scheduler calling conventions\n- OneCycleLR peak LR selection via the LR range test",
+  "objectives": [
+    "Implement all 13 PyTorch optimizers and observe their update dynamics",
+    "Visualize optimizer trajectories on a non-convex 2D loss surface",
+    "Diagnose and fix gradient explosion using clip_grad_norm_",
+    "Build a param-group config with layer-wise learning rate decay",
+    "Compare StepLR, CosineAnnealingLR, OneCycleLR, and ReduceLROnPlateau empirically",
+    "Reproduce super-convergence on CIFAR-10 using OneCycleLR + SGD",
+    "Implement the warmup + cosine decay recipe with SequentialLR"
+  ]
+}

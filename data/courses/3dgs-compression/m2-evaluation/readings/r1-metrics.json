@@ -1,0 +1,155 @@
+{
+  "id": "r1",
+  "moduleId": "m2",
+  "title": "Image Quality Metrics: PSNR, SSIM, and LPIPS",
+  "estimatedMinutes": 14,
+  "learningObjectives": [
+    {
+      "id": "m2r1-lo1",
+      "verb": "Compute",
+      "description": "Compute PSNR from MSE and interpret what a 3 dB difference means in terms of relative signal quality; identify the typical PSNR range for 3DGS reconstructions",
+      "skillTags": [
+        "evaluation"
+      ]
+    },
+    {
+      "id": "m2r1-lo2",
+      "verb": "Explain",
+      "description": "Explain how SSIM measures local luminance, contrast, and structural similarity, and identify the types of distortion (blur, edge shift) that SSIM detects but PSNR misses",
+      "skillTags": [
+        "evaluation"
+      ]
+    },
+    {
+      "id": "m2r1-lo3",
+      "verb": "Distinguish",
+      "description": "Distinguish LPIPS from PSNR and SSIM in terms of what it measures (perceptual deep features vs. pixel statistics), and identify when LPIPS should take priority as the evaluation criterion",
+      "skillTags": [
+        "evaluation"
+      ]
+    },
+    {
+      "id": "m2r1-lo4",
+      "verb": "Select",
+      "description": "Select the appropriate metric or metric combination given a specific evaluation goal — detecting compression artifacts, measuring perceptual quality, or tracking pixel-level fidelity",
+      "skillTags": [
+        "evaluation"
+      ]
+    }
+  ],
+  "content": "## Why Metrics Matter\n\nEvaluating a 3DGS compression method requires comparing rendered images against ground-truth photographs. Three metrics dominate the literature: **PSNR**, **SSIM**, and **LPIPS**. Each captures a different aspect of image quality and they are often complementary — a method can improve one while degrading another.\n\n## PSNR — Peak Signal-to-Noise Ratio\n\nPSNR measures average pixel-level error in log scale:\n\n\\[\\text{PSNR} = 10 \\log_{10}\\!\\left(\\frac{\\text{MAX}^2}{\\text{MSE}}\\right)\\]\n\nwhere \\(\\text{MAX} = 1.0\\) for float images (or 255 for uint8) and MSE is the mean squared error over all pixels and channels.\n\nExpanded:\n\\[\\text{MSE} = \\frac{1}{HWC}\\sum_{h,w,c}\\bigl(\\hat{I}_{h,w,c} - I_{h,w,c}\\bigr)^2\\]\n\n**Interpreting PSNR:**\n- < 20 dB: visibly poor quality\n- 25–30 dB: acceptable for compressed video\n- 30–35 dB: good quality (typical baseline 3DGS on standard scenes)\n- &gt; 35 dB: excellent quality\n\n**Limitations**: PSNR is purely pixel-wise. Two images with the same PSNR can have completely different perceptual quality — a blurry image and a sharp-but-shifted image can score identically. It also treats all spatial locations equally, ignoring perceptual importance.\n\n## SSIM — Structural Similarity Index\n\nSSIM compares images along three dimensions: **luminance**, **contrast**, and **structure**.\n\n\\[\\text{SSIM}(x, y) = \\frac{(2\\mu_x\\mu_y + c_1)(2\\sigma_{xy} + c_2)}{(\\mu_x^2 + \\mu_y^2 + c_1)(\\sigma_x^2 + \\sigma_y^2 + c_2)}\\]\n\nwhere \\(\\mu_x, \\mu_y\\) are local means, \\(\\sigma_x^2, \\sigma_y^2\\) are local variances, \\(\\sigma_{xy}\\) is the local covariance, and \\(c_1, c_2\\) are stability constants.\n\nSSIM is computed locally over 11×11 Gaussian-weighted patches, then averaged. The result is in \\([0, 1]\\), with 1.0 meaning identical images.\n\n**Why SSIM matters for 3DGS**: Compression artifacts often smear or blur texture detail. SSIM's structure term penalizes loss of local correlation patterns (edges, textures) even when mean values match, catching the kinds of degradation that PSNR misses.\n\n## LPIPS — Learned Perceptual Image Patch Similarity\n\nLPIPS (Zhang et al. 2018) measures perceptual similarity using features extracted from a pretrained deep network (typically AlexNet or VGG):\n\n\\[\\text{LPIPS}(x, y) = \\sum_l \\frac{1}{H_l W_l} \\sum_{h,w} \\|w_l \\odot (\\hat{f}_l^{hw} - f_l^{hw})\\|_2^2\\]\n\nwhere \\(f_l\\) are feature maps at layer \\(l\\), \\(\\hat{f}_l\\) are unit-normalized, and \\(w_l\\) are learned channel weights.\n\n**Key property**: LPIPS is trained to match human perceptual judgments. Two images that look identical to humans but differ in pixel values (e.g., a slight spatial offset) will have low LPIPS but high MSE. **Lower LPIPS = more perceptually similar.**\n\nTypical values for 3DGS:\n- < 0.05: excellent perceptual quality\n- 0.05–0.15: good, minor perceptual degradation\n- &gt; 0.2: noticeable degradation\n\n## How the Three Metrics Complement Each Other\n\n| Metric | Measures | Blind To | Scale |\n|--------|----------|----------|-------|\n| PSNR | Pixel MSE | Structure, perception | dB, higher better |\n| SSIM | Luminance/contrast/structure | Semantic content | 0–1, higher better |\n| LPIPS | Perceptual features | Exact pixel values | 0–∞, lower better |\n\nIn 3DGS compression papers, all three are reported. A method that only optimizes for PSNR can produce blurry results that score well on MSE but poorly on SSIM and LPIPS. The standard evaluation includes all three on the same test set.",
+  "references": [
+    {
+      "label": "Wang et al. 2004",
+      "title": "Image Quality Assessment: From Error Visibility to Structural Similarity",
+      "url": "https://doi.org/10.1109/TIP.2003.819861"
+    },
+    {
+      "label": "Zhang et al. 2018",
+      "title": "The Unreasonable Effectiveness of Deep Features as a Perceptual Metric",
+      "url": "https://arxiv.org/abs/1801.03924"
+    }
+  ],
+  "equationBreakdowns": [
+    {
+      "label": "PSNR Definition",
+      "terms": [
+        {
+          "symbol": "10 \\log_{10}(\\cdot)",
+          "name": "Decibel conversion",
+          "desc": "Converts a power ratio to a log scale. Each +10 dB represents a ×10 improvement in SNR; each +3 dB is roughly ×2. Log scale is used because human perception of quality is roughly logarithmic."
+        },
+        {
+          "symbol": "\\text{MAX}^2",
+          "name": "Peak signal power",
+          "desc": "The square of the maximum possible pixel value — 1² = 1 for float images, 255² = 65025 for uint8. Anchors the ratio: if MSE equals MAX², PSNR is 0 dB (worst case)."
+        },
+        {
+          "symbol": "\\text{MSE}",
+          "name": "Mean squared error",
+          "desc": "Average squared difference between predicted and ground-truth pixels across the entire image. Small MSE → high PSNR. Defined in the equation immediately below."
+        }
+      ]
+    },
+    {
+      "label": "MSE (Mean Squared Error)",
+      "terms": [
+        {
+          "symbol": "\\frac{1}{HWC}",
+          "name": "Normalisation",
+          "desc": "Averages the error over all H×W pixels and all C colour channels (typically 3 for RGB). Without this, larger images would always have larger total error."
+        },
+        {
+          "symbol": "\\sum_{h,w,c}",
+          "name": "Sum over all pixels and channels",
+          "desc": "Iterates over every spatial location (h, w) and every colour channel c, accumulating the squared per-channel error."
+        },
+        {
+          "symbol": "\\hat{I}_{h,w,c} - I_{h,w,c}",
+          "name": "Per-pixel residual",
+          "desc": "Difference between the rendered (predicted) pixel value and the ground-truth photograph value. Squaring makes it always positive and penalises large errors more than small ones."
+        }
+      ]
+    },
+    {
+      "label": "SSIM — Structural Similarity Index",
+      "terms": [
+        {
+          "symbol": "\\mu_x,\\, \\mu_y",
+          "name": "Local means",
+          "desc": "Gaussian-weighted average intensity in an 11×11 patch around the current pixel, for the rendered image x and the reference y. Capture the luminance component."
+        },
+        {
+          "symbol": "\\sigma_x^2,\\, \\sigma_y^2",
+          "name": "Local variances",
+          "desc": "Spread of intensities within the patch. High variance means high-contrast texture; low variance is a flat region. Used in the contrast term."
+        },
+        {
+          "symbol": "\\sigma_{xy}",
+          "name": "Local covariance",
+          "desc": "Measures how similarly x and y vary together within the patch — the structure term. High positive covariance means the two images have matching edges and textures at this location."
+        },
+        {
+          "symbol": "c_1,\\, c_2",
+          "name": "Stability constants",
+          "desc": "Small positive numbers (c₁ = (0.01·255)², c₂ = (0.03·255)² for uint8) added to numerator and denominator to avoid division by zero in near-zero regions like black backgrounds."
+        }
+      ]
+    },
+    {
+      "label": "LPIPS — Learned Perceptual Similarity",
+      "terms": [
+        {
+          "symbol": "\\sum_l",
+          "name": "Sum over network layers",
+          "desc": "Accumulates perceptual differences across multiple feature extraction layers (e.g., conv1–conv5 of AlexNet). Early layers capture low-level edges; deeper layers capture textures and object parts."
+        },
+        {
+          "symbol": "\\frac{1}{H_l W_l}",
+          "name": "Spatial normalisation",
+          "desc": "Averages the feature-space error over the H_l×W_l spatial grid of layer l. Deeper layers have smaller spatial grids due to pooling, so their maps are automatically up-weighted per location."
+        },
+        {
+          "symbol": "\\hat{f}_l^{hw},\\, f_l^{hw}",
+          "name": "Unit-normalised feature vectors",
+          "desc": "Feature activations at position (h,w) in layer l, L2-normalised to unit length. Normalisation removes brightness and contrast effects, making the metric focus on structural/perceptual content."
+        },
+        {
+          "symbol": "w_l",
+          "name": "Learned channel weights",
+          "desc": "A small linear layer trained on human perceptual judgement data (two-alternative forced-choice experiments). It re-weights feature channels so that perceptually important ones contribute more to the final score."
+        },
+        {
+          "symbol": "\\odot",
+          "name": "Element-wise product",
+          "desc": "Applies the channel weights w_l to the feature difference before computing the L2 norm. This is a weighted feature distance, not a plain Euclidean distance."
+        }
+      ]
+    }
+  ],
+  "nextItem": {
+    "type": "reading",
+    "id": "r2"
+  },
+  "prevItem": null
+}

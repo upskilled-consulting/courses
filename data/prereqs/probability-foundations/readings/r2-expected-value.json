@@ -1,0 +1,103 @@
+{
+  "id": "r2",
+  "moduleId": "probability-foundations",
+  "title": "Expected Value, Variance, and Standard Deviation",
+  "estimatedMinutes": 14,
+  "learningObjectives": [
+    {
+      "id": "r2-lo1",
+      "verb": "Compute",
+      "description": "Compute the expected value of a discrete or continuous random variable and apply the linearity of expectation to simplify E[aX + bY + c]",
+      "skillTags": ["probability-foundations"]
+    },
+    {
+      "id": "r2-lo2",
+      "verb": "Compute",
+      "description": "Compute variance using both Var(X) = E[(X−μ)²] and the shortcut Var(X) = E[X²] − (E[X])², and derive standard deviation from variance",
+      "skillTags": ["probability-foundations"]
+    },
+    {
+      "id": "r2-lo3",
+      "verb": "Explain",
+      "description": "Explain why Var(X + Y) = Var(X) + Var(Y) only when X and Y are independent, and define covariance and correlation as measures of linear dependence",
+      "skillTags": ["probability-foundations"]
+    },
+    {
+      "id": "r2-lo4",
+      "verb": "Identify",
+      "description": "Identify where expected value and variance appear in ML: loss as E[ℓ], gradient variance in SGD, and weight initialization schemes derived from variance preservation",
+      "skillTags": ["probability-foundations", "training-dynamics"]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r1"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r3"
+  },
+  "content": "## Expected Value\n\nThe **expected value** (or **expectation**, or **mean**) of a random variable $X$ is its probability-weighted average. It answers: if I were to draw $X$ many times and average the results, what number would the average converge to?\n\n**Discrete:**\n\n$$\\mathbb{E}[X] = \\sum_x x \\cdot p(x)$$\n\n**Continuous:**\n\n$$\\mathbb{E}[X] = \\int_{-\\infty}^{\\infty} x \\cdot f(x)\\, dx$$\n\n**Example:** For a fair die with $p(x) = 1/6$ for $x \\in \\{1,\\ldots,6\\}$:\n\n$$\\mathbb{E}[X] = 1 \\cdot \\tfrac{1}{6} + 2 \\cdot \\tfrac{1}{6} + \\cdots + 6 \\cdot \\tfrac{1}{6} = \\frac{21}{6} = 3.5$$\n\n### Expectation of a Function\n\nFor a function $g(X)$, you do not need to first compute the distribution of $g(X)$:\n\n$$\\mathbb{E}[g(X)] = \\sum_x g(x)\\, p(x) \\qquad \\text{(discrete)}$$\n\nThis is the **Law of the Unconscious Statistician (LOTUS)** — useful for computing moments like $\\mathbb{E}[X^2]$ directly.\n\n---\n\n## Linearity of Expectation\n\nThis is one of the most useful facts in probability:\n\n$$\\mathbb{E}[aX + bY + c] = a\\,\\mathbb{E}[X] + b\\,\\mathbb{E}[Y] + c$$\n\n**This holds for any two random variables $X$ and $Y$, whether or not they are independent.**\n\nLinearity of expectation means you can break apart complex expressions into simpler pieces. For example, the expected loss over a batch of $N$ examples is:\n\n$$\\mathbb{E}\\!\\left[\\frac{1}{N}\\sum_{i=1}^N \\ell_i\\right] = \\frac{1}{N}\\sum_{i=1}^N \\mathbb{E}[\\ell_i] = \\mathbb{E}[\\ell]$$\n\nThe per-batch mean is an unbiased estimator of the true expected loss — this justifies training with mini-batches.\n\n---\n\n## Variance\n\nExpected value tells you where the distribution is centered. **Variance** tells you how spread out it is.\n\n$$\\text{Var}(X) = \\mathbb{E}\\!\\left[(X - \\mathbb{E}[X])^2\\right]$$\n\nVariance is the average squared deviation from the mean. By LOTUS:\n\n$$\\text{Var}(X) = \\mathbb{E}[X^2] - (\\mathbb{E}[X])^2$$\n\nThis shortcut is often easier to compute: find $\\mathbb{E}[X^2]$ and subtract the square of the mean.\n\n**Example — fair die:**\n\n$$\\mathbb{E}[X^2] = \\frac{1^2 + 2^2 + \\cdots + 6^2}{6} = \\frac{91}{6} \\approx 15.17$$\n\n$$\\text{Var}(X) = 15.17 - 3.5^2 = 15.17 - 12.25 = 2.92$$\n\n### Standard Deviation\n\nVariance is in **squared units**, which is hard to interpret alongside the original scale. The **standard deviation** returns to the original units:\n\n$$\\sigma_X = \\sqrt{\\text{Var}(X)}$$\n\nFor the die: $\\sigma = \\sqrt{2.92} \\approx 1.71$. Roughly speaking, individual rolls are about 1.71 units away from the mean of 3.5.\n\n---\n\n## Variance of Linear Combinations\n\nVariance is **not** linear — squaring introduces cross terms.\n\n$$\\text{Var}(aX + b) = a^2 \\text{Var}(X)$$\n\nAdding a constant $b$ shifts the distribution but does not change its spread; scaling by $a$ scales variance by $a^2$.\n\n$$\\text{Var}(X + Y) = \\text{Var}(X) + \\text{Var}(Y) + 2\\,\\text{Cov}(X, Y)$$\n\n**If $X$ and $Y$ are independent:** $\\text{Cov}(X,Y) = 0$, so\n\n$$\\text{Var}(X + Y) = \\text{Var}(X) + \\text{Var}(Y) \\qquad (X \\perp Y)$$\n\nThis is why variances **add** for independent random variables — including independent gradient estimates in mini-batch SGD.\n\n---\n\n## Covariance and Correlation\n\n**Covariance** measures how two random variables move together:\n\n$$\\text{Cov}(X, Y) = \\mathbb{E}\\!\\left[(X - \\mu_X)(Y - \\mu_Y)\\right] = \\mathbb{E}[XY] - \\mathbb{E}[X]\\,\\mathbb{E}[Y]$$\n\n- $\\text{Cov}(X,Y) > 0$: $X$ and $Y$ tend to be large or small together\n- $\\text{Cov}(X,Y) < 0$: when $X$ is large, $Y$ tends to be small\n- $\\text{Cov}(X,Y) = 0$: no *linear* relationship (but they might still be dependent in a nonlinear way)\n\nNote: $\\text{Cov}(X,X) = \\text{Var}(X)$.\n\n**Correlation** normalizes covariance to $[-1, 1]$:\n\n$$\\rho_{X,Y} = \\frac{\\text{Cov}(X,Y)}{\\sigma_X \\sigma_Y}$$\n\n$\\rho = 1$ means perfect positive linear relationship; $\\rho = -1$ means perfect negative; $\\rho = 0$ means no linear relationship.\n\n---\n\n## Where These Appear in ML\n\n**Loss as expectation.** The training objective is an expected loss over the data distribution:\n\n$$\\mathcal{L}(\\theta) = \\mathbb{E}_{(x,y) \\sim p_{\\text{data}}}[\\ell(f_\\theta(x), y)]$$\n\nStochastic gradient descent approximates $\\nabla_\\theta \\mathcal{L}(\\theta)$ with a mini-batch estimate. This estimate is *unbiased* by linearity of expectation, but has *variance* that decreases as batch size grows.\n\n**Gradient variance.** High gradient variance in SGD causes noisy updates and slow convergence. Techniques like gradient clipping, batch normalization, and careful learning rate scheduling all address this variance.\n\n**Weight initialization.** The **Xavier/Glorot** initialization sets $\\text{Var}(W_{ij}) = 2/(n_{\\text{in}} + n_{\\text{out}})$ to preserve signal variance through layers. The **He initialization** sets $\\text{Var}(W_{ij}) = 2/n_{\\text{in}}$ for ReLU networks. Both are derived by asking: what variance should the weights have so that the output variance equals the input variance?\n\n**Adam optimizer.** Maintains $m_t = \\mathbb{E}[g_t]$ (first moment — mean) and $v_t = \\mathbb{E}[g_t^2]$ (second moment — uncentered variance) of the gradient to adapt the learning rate per parameter.",
+  "equationBreakdowns": [
+    {
+      "label": "Expected Value (Discrete)",
+      "heading": "Expected Value",
+      "terms": [
+        {
+          "symbol": "\\mathbb{E}[X]",
+          "name": "Expected value",
+          "desc": "The probability-weighted average of all possible values of X. The long-run average of many independent draws."
+        },
+        {
+          "symbol": "\\sum_x x \\cdot p(x)",
+          "name": "Weighted sum",
+          "desc": "Each value x is weighted by its probability p(x). Values that occur more often contribute more to the average."
+        }
+      ]
+    },
+    {
+      "label": "Variance Shortcut",
+      "heading": "Variance",
+      "terms": [
+        {
+          "symbol": "\\text{Var}(X)",
+          "name": "Variance",
+          "desc": "Average squared distance from the mean. Always non-negative; larger values mean more spread."
+        },
+        {
+          "symbol": "\\mathbb{E}[X^2]",
+          "name": "Second moment",
+          "desc": "Expected value of X squared. Computed by LOTUS: sum x² p(x) over all values."
+        },
+        {
+          "symbol": "(\\mathbb{E}[X])^2",
+          "name": "Square of the mean",
+          "desc": "The mean squared (not the mean of squares). Var = E[X²] − (E[X])² separates the two."
+        }
+      ]
+    },
+    {
+      "label": "Variance of a Sum",
+      "heading": "Variance of Linear Combinations",
+      "terms": [
+        {
+          "symbol": "\\text{Var}(X + Y)",
+          "name": "Variance of sum",
+          "desc": "Not simply Var(X) + Var(Y) unless X and Y are independent. The cross term 2 Cov(X,Y) accounts for how the variables move together."
+        },
+        {
+          "symbol": "2\\,\\text{Cov}(X,Y)",
+          "name": "Covariance cross term",
+          "desc": "Captures the joint variability. When X and Y are independent, Cov(X,Y) = 0 and variances add cleanly."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Downey — Think Stats 2e, Ch. 2, 6",
+      "title": "Distributions, Moments, and Summary Statistics",
+      "url": "https://greenteapress.com/thinkstats2/html/index.html"
+    }
+  ]
+}

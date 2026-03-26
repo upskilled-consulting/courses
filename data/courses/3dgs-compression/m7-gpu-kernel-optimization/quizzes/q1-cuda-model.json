@@ -1,0 +1,77 @@
+{
+  "id": "q1",
+  "moduleId": "m7",
+  "title": "CUDA Execution Model & Thread Divergence",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "questions": [
+    {
+      "id": "q7_q1_1",
+      "type": "code-completion",
+      "prompt": "A 3DGS rasterizer processes a 1280×720 image using 16×16 thread blocks (one per tile). Compute the grid dimensions and complete the kernel launch:",
+      "codeTemplate": "// Image dimensions\nconst int W = 1280, H = 720;\nconst int BLOCK_X = 16, BLOCK_Y = 16;\n\n// Grid: one block per tile, rounding up\ndim3 block(BLOCK_X, BLOCK_Y, 1);\ndim3 grid(\n    (W + BLOCK_X - 1) / BLOCK_X,\n    ___BLANK___,\n    1\n);\n// Total thread count = grid.x * grid.y * block.x * block.y\n// Expected: 80 * 45 * 16 * 16 = 921,600 threads",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "(H + BLOCK_Y - 1) / BLOCK_Y",
+        "(720 + 16 - 1) / 16",
+        "(720 + 15) / 16",
+        "45"
+      ],
+      "explanation": "The grid must cover the full image, rounding up to handle non-multiples of the block dimension. (H + BLOCK_Y - 1) / BLOCK_Y = (720 + 15) / 16 = 735 / 16 = 45 (integer division). Similarly (1280 + 15) / 16 = 80. Total: 80 × 45 = 3,600 blocks × 256 threads = 921,600 simultaneous threads. The ceiling-division pattern (N + B - 1) / B is universal in CUDA kernel launches — the kernel must guard against out-of-bounds accesses when N is not a multiple of B.",
+      "hint": "The formula for ceiling division is (N + B - 1) / B. Apply it to the height dimension just as it was applied to width."
+    },
+    {
+      "id": "q7_q1_2",
+      "type": "multiple-choice",
+      "prompt": "A CUDA block has 96 threads (a 1D block of 96). How many warps does this block contain, and what is the warp efficiency of the last warp?",
+      "options": [
+        { "id": "a", "text": "3 warps, 100% efficiency — 96 is a multiple of 32", "correct": false },
+        { "id": "b", "text": "3 warps, 100% efficiency — 96 / 32 = 3 exactly", "correct": true },
+        { "id": "c", "text": "4 warps, 75% efficiency — the last warp has only 24 active threads out of 32", "correct": false },
+        { "id": "d", "text": "3 warps, 66% efficiency — the scheduler rounds to the next power of two", "correct": false }
+      ],
+      "explanation": "96 = 3 × 32, so the block partitions exactly into 3 complete warps with no padding. Warp efficiency = 100%. Had the block been 100 threads, the result would be 4 warps where the last has only 4 active threads (12.5% warp efficiency) — 28 instruction slots wasted per cycle in that warp. This is why CUDA best practice is to choose block sizes that are multiples of 32.",
+      "hint": "Compute 96 / 32. Is there a remainder?"
+    },
+    {
+      "id": "q7_q1_3",
+      "type": "multiple-choice",
+      "prompt": "Consider this kernel fragment:\n\n```cuda\nif (blockIdx.x % 2 == 0) {\n    // Path A\n} else {\n    // Path B\n}\n```\n\nAnd this one:\n\n```cuda\nif (threadIdx.x % 2 == 0) {\n    // Path A\n} else {\n    // Path B\n}\n```\n\nWhich causes thread divergence, and why?",
+      "options": [
+        { "id": "a", "text": "Both cause divergence — any conditional in a kernel serializes execution", "correct": false },
+        { "id": "b", "text": "Neither causes divergence — the GPU handles all conditionals in hardware without penalty", "correct": false },
+        { "id": "c", "text": "Only the second causes divergence — blockIdx.x is uniform within a warp (all threads in a warp share the same blockIdx), but threadIdx.x varies by ±1 across adjacent threads, so adjacent threads in every warp take opposite branches", "correct": true },
+        { "id": "d", "text": "Only the first causes divergence — blockIdx.x changes across blocks, forcing the SM to handle multiple execution paths", "correct": false }
+      ],
+      "explanation": "Thread divergence occurs when threads within the *same warp* take different control paths. All threads in a warp share the same blockIdx, so `blockIdx.x % 2 == 0` evaluates identically for all 32 threads in the warp — no divergence, just different warps taking different paths (which is fine). But `threadIdx.x % 2 == 0` alternates true/false for consecutive threads: in warp 0 (threads 0–31), threads 0, 2, 4, ... take Path A and threads 1, 3, 5, ... take Path B. The hardware must run two serial passes for that warp, halving throughput for the divergent section.",
+      "hint": "Which variable is uniform across all threads in a single warp, and which varies within a warp?"
+    },
+    {
+      "id": "q7_q1_4",
+      "type": "multiple-choice",
+      "prompt": "The 3DGS rasterizer loads Gaussian data into shared memory in batches, followed by `__syncthreads()` before the 256 pixel threads read from it. What would happen if `__syncthreads()` were removed?",
+      "options": [
+        { "id": "a", "text": "Nothing — modern GPUs have sequential consistency guarantees that make __syncthreads() redundant", "correct": false },
+        { "id": "b", "text": "The kernel would silently produce wrong renders because some pixel threads could read stale or uninitialized shared memory values written by threads that haven't completed their global memory load yet", "correct": true },
+        { "id": "c", "text": "The kernel would crash with a CUDA error because shared memory requires explicit synchronization to be valid", "correct": false },
+        { "id": "d", "text": "Performance would improve because the synchronization barrier adds overhead — the barrier is only needed for correctness in multi-block scenarios", "correct": false }
+      ],
+      "explanation": "GPU memory model: a write by thread A to shared memory is NOT guaranteed to be visible to thread B until after both A and B have reached a __syncthreads() barrier. Without the barrier, pixel thread 5 might begin reading Gaussian k's color from shared memory while loading thread 5 (which also writes Gaussian k's color, depending on the distribution) is still fetching from global memory. The result is a data race: the render reads partially-loaded or previous-iteration data, producing incorrect pixel values without any error signal. This is a classic race condition — silent corruption rather than a crash.",
+      "hint": "What does __syncthreads() guarantee about the ordering of memory operations across threads in the same block?"
+    },
+    {
+      "id": "q7_q1_5",
+      "type": "multiple-choice",
+      "prompt": "A parallel reduction kernel processes 1024 elements using 512 threads (one block). The divergent implementation (threadIdx.x % (2*stride) == 0) is replaced with a divergence-free version where active threads occupy the low-numbered lanes. In the *divergent* version, what is the warp efficiency in the final non-trivial iteration (stride = 256, where only 1 thread is active)?",
+      "options": [
+        { "id": "a", "text": "100% — there is only 1 active thread so there is only one path to take", "correct": false },
+        { "id": "b", "text": "3.125% — only 1 of 32 threads in the first warp is active; all other warps are entirely idle and do not contribute to warp efficiency calculation", "correct": true },
+        { "id": "c", "text": "50% — half the threads are active because the reduction uses alternating active/idle patterns", "correct": false },
+        { "id": "d", "text": "6.25% — 2 threads out of 32 in the first warp execute the active branch", "correct": false }
+      ],
+      "explanation": "At stride=256, only threadIdx.x=0 satisfies the condition. This thread is in warp 0 (threads 0–31). The other 31 threads in warp 0 are inactive (masked). Warp efficiency for this pass = 1/32 = 3.125%. The remaining 15 warps (threads 32–511) are entirely idle. This is why the reduction's later iterations have terrible efficiency under the divergent implementation — and why the divergence-free version (which packs active threads into low lanes so fewer warps are partially active) is significantly faster per iteration, even though both do the same arithmetic work.",
+      "hint": "In the last meaningful iteration, how many threads satisfy threadIdx.x % (2*256) == 0? Which warp does that thread belong to, and how many threads in that warp are active?"
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "id": "r3",
+  "moduleId": "m4",
+  "title": "Algorithm Family: SOM → SSM → LAS → FLAS",
+  "estimatedMinutes": 14,
+  "learningObjectives": [
+    {
+      "id": "m4r3-lo1",
+      "verb": "Trace",
+      "description": "Trace the evolution from SOM to SSM to LAS to FLAS, identifying the specific computational or quality bottleneck each generation addresses and the mechanism used to resolve it",
+      "skillTags": [
+        "grid-sorting"
+      ]
+    },
+    {
+      "id": "m4r3-lo2",
+      "verb": "Explain",
+      "description": "Explain why FLAS achieves near-LAS quality (DPQ 0.89 vs. 0.91) at 60× speedup by comparing their assignment strategies (global Hungarian vs. local parallel swaps)",
+      "skillTags": [
+        "grid-sorting"
+      ]
+    },
+    {
+      "id": "m4r3-lo3",
+      "verb": "Explain",
+      "description": "Explain the role of the SOM neighborhood function and describe how the temporal decay schedule for learning rate and neighborhood radius affects final grid topology quality",
+      "skillTags": [
+        "grid-sorting"
+      ]
+    },
+    {
+      "id": "m4r3-lo4",
+      "verb": "Select",
+      "description": "Select the appropriate sorting algorithm (SOM, SSM, LAS, FLAS) given constraints on sorting time budget, quality target, spatial anchor requirements, and grid topology",
+      "skillTags": [
+        "grid-sorting",
+        "compression"
+      ]
+    }
+  ],
+  "content": "## Four Generations of Grid Sorting\n\nThe history of algorithms for placing high-dimensional data onto a 2D grid reads as a series of identifying and fixing bottlenecks. Each generation improves on its predecessor in a specific way.\n\n## Generation 1: Self-Organizing Maps (SOM)\n\n*Kohonen, 1982*\n\n**Idea**: Maintain a \\(\\sqrt{N} \\times \\sqrt{N}\\) grid of prototype vectors. Iteratively:\n1. Pick a random data point \\(x\\).\n2. Find the best-matching unit (BMU): the grid cell whose prototype is closest to \\(x\\).\n3. Update the BMU and its neighbors to move toward \\(x\\):\n   \\[w_i \\leftarrow w_i + \\alpha(t) \\cdot h(i, BMU, t) \\cdot (x - w_i)\\]\n   where \\(\\alpha(t)\\) is a decaying learning rate and \\(h\\) is a neighborhood kernel (Gaussian, decaying radius).\n\n**Result**: The grid prototypes form a continuous map of the data manifold. Data points are assigned to the grid cell whose prototype they are closest to.\n\n**Bottleneck**: Sequential updates force later data points to fill leftover grid positions after early points have claimed the best spots. This creates **isolated outliers** — data points assigned to grid cells that are far from similar points — because the grid has \"filled up\" in their region. For large, dense grids, the sequential nature becomes increasingly harmful.\n\n## Generation 2: Self-Sorting Map (SSM) and Projection Methods\n\n**SSM** (Self Sorting Map):\n- Start with a SOM initialization.\n- Refine by exhaustively testing all \\(4! = 24\\) permutations in overlapping 2×2 blocks of the grid.\n- Accept swaps that reduce the local error vs. the block average.\n\n**Bottleneck**: The brute-force 2×2 block search scales poorly to large grids (\\(O(N)\\) blocks, 24 tests each, repeated many times). The single block-average model cannot capture complex neighborhood relationships.\n\n**Projection + Assignment** methods (IsoMatch, t-SNE-to-grid):\n- Apply dimensionality reduction (t-SNE, PCA) to project data to continuous 2D coordinates.\n- Solve the **linear assignment problem** to snap projected points to discrete grid cells without overlap.\n\n**Bottleneck**: The linear assignment problem is \\(O(N^3)\\) with the Hungarian algorithm. For \\(N = 65536\\) Gaussians, this is \\(~10^{15}\\) operations — completely infeasible. Also, cluster collisions (many points projected to the same region) cause hard assignment conflicts.\n\n## Generation 3: Linear Assignment Sorting (LAS) and FLAS\n\n**LAS** (Linear Assignment Sorting):\n- **Filter**: apply a Gaussian low-pass filter to all grid vectors simultaneously, smoothing the current assignment.\n- **Assign**: solve the global linear assignment problem to re-assign all \\(N\\) data points to the \\(N\\) filtered prototype positions at once.\n- Repeat until convergence.\n\nThe filter step is the key innovation: it gives every grid cell a target position (the filtered average of its neighborhood) that reflects what a good assignment should look like. The global assignment then finds the permutation that best matches data to targets.\n\n**Bottleneck**: The global assignment is still \\(O(N^3)\\), making LAS impractical for \\(N > 10000\\).\n\n**FLAS** (Fast Linear Assignment Sorting, Barthel et al. 2023) fixes this:\n- Keep the filter-based smoothing.\n- **Replace the global assignment with many parallel local assignments** over small patches (e.g., 4×4 subgrids).\n- Each local assignment is \\(O(16^3) = O(4096)\\) — trivial — and can be solved independently in parallel.\n- Many local assignments together achieve near-global-assignment quality.\n\n### FLAS Quality vs. Speed\n\nOn 1024 colors sorted onto a 32×32 grid:\n\n| Method | DPQ (higher better) | Time |\n|---|---|---|\n| LAS | 0.91 | ~30 s |\n| FLAS | 0.89 | ~0.5 s |\n| SOM | 0.72 | ~2 s |\n| t-SNE-to-grid | 0.68 | ~5 s |\n\nFLAS achieves near-LAS quality at 60× the speed. For \\(N = 1M\\) Gaussians, LAS is infeasible while FLAS scales gracefully.\n\n## Spatial Constraints in FLAS\n\nFLAS supports several extensions:\n\n**Pinned anchors**: fix specific data points to specific grid locations. Implemented via weighted filters: pinned points have weight 10 (strong pull), normal points weight 1, empty holes weight 0.01.\n\n**Sparse grids**: use a grid larger than \\(N\\) with empty cells (holes). Useful when data forms a non-rectangular shape.\n\n**Non-rectangular topologies**: extend the bounding box to a rectangular grid; mark out-of-shape cells as holes with weight 0.01. Sort colors into an exclamation mark shape, a logo, etc.\n\n**Higher-dimensional grids**: the filter + local assignment approach generalizes to 1D and 3D grids with the same algorithm.",
+  "equationBreakdowns": [
+    {
+      "label": "SOM Weight Update Rule",
+      "terms": [
+        {
+          "symbol": "w_i",
+          "name": "Prototype vector at cell i",
+          "desc": "The learned representative value stored at grid cell i. After training, data points are assigned to the grid cell whose prototype they are closest to in attribute space."
+        },
+        {
+          "symbol": "\\alpha(t)",
+          "name": "Learning rate",
+          "desc": "A scalar that decreases over training iterations t — large at the start (coarse global organisation) and small at the end (fine local refinement). Prevents later updates from undoing earlier structure."
+        },
+        {
+          "symbol": "h(i, BMU, t)",
+          "name": "Neighbourhood kernel",
+          "desc": "How strongly cell i is updated based on its distance to the Best Matching Unit (BMU). Typically a Gaussian: h = exp(−dist(i,BMU)² / 2σ(t)²). The neighbourhood radius σ(t) also decays over time, so early iterations update large regions and later ones update only the BMU itself."
+        },
+        {
+          "symbol": "BMU",
+          "name": "Best Matching Unit",
+          "desc": "The grid cell whose current prototype is closest to the input data point x. It receives the largest update; its neighbors receive smaller updates scaled by h."
+        },
+        {
+          "symbol": "x - w_i",
+          "name": "Error signal",
+          "desc": "The direction from the current prototype toward the input data point. The update moves w_i a fraction α·h of the way toward x, pulling the prototype (and its neighbors) to better represent the local data distribution."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Kohonen 1982",
+      "title": "Self-organized formation of topologically correct feature maps",
+      "url": "https://doi.org/10.1007/BF00337288"
+    },
+    {
+      "label": "Strong & Gong 2014",
+      "title": "Self-Sorting Map: An Efficient Algorithm for Presenting Multimedia Data in Structured Layouts",
+      "url": "https://ieeexplore.ieee.org/document/6740001/"
+    },
+    {
+      "label": "Fried et al. 2015",
+      "title": "IsoMatch: Creating Informative Grid Layouts",
+      "url": "https://onlinelibrary.wiley.com/doi/10.1111/cgf.12549"
+    },
+    {
+      "label": "Barthel et al. 2023",
+      "title": "Improved Evaluation and Generation of Grid Layouts using Distance Preservation Quality and Linear Assignment Sorting",
+      "url": "https://arxiv.org/abs/2205.04255"
+    }
+  ],
+  "nextItem": {
+    "type": "quiz",
+    "id": "q1"
+  },
+  "prevItem": {
+    "type": "reading",
+    "id": "r2"
+  }
+}

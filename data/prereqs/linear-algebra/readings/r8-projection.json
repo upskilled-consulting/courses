@@ -1,0 +1,104 @@
+{
+  "id": "r8",
+  "moduleId": "linear-algebra",
+  "title": "Orthogonality and Projection",
+  "estimatedMinutes": 18,
+  "learningObjectives": [
+    {
+      "id": "r8-lo1",
+      "verb": "Compute",
+      "description": "Compute the orthogonal projection of a vector onto a line and verify that the residual is perpendicular to the line",
+      "skillTags": [
+        "embedding-geometry",
+        "linear-fitting"
+      ]
+    },
+    {
+      "id": "r8-lo2",
+      "verb": "Apply",
+      "description": "Apply Gram-Schmidt orthogonalisation to produce an orthonormal basis from an arbitrary spanning set",
+      "skillTags": [
+        "linear-fitting",
+        "dimensionality-reduction"
+      ]
+    },
+    {
+      "id": "r8-lo3",
+      "verb": "Build",
+      "description": "Build the projection matrix P = QQ^T for a subspace and verify it is idempotent and symmetric",
+      "skillTags": [
+        "embedding-geometry",
+        "linear-fitting"
+      ]
+    },
+    {
+      "id": "r8-lo4",
+      "verb": "Derive",
+      "description": "Derive the least-squares solution via the normal equations A^T A x = A^T b and interpret the residual geometrically",
+      "skillTags": [
+        "linear-fitting"
+      ]
+    },
+    {
+      "id": "r8-lo5",
+      "verb": "Interpret",
+      "description": "Interpret the hat matrix H = A(A^T A)^{-1} A^T as an orthogonal projector and explain what it means for fitted values and residuals",
+      "skillTags": [
+        "linear-fitting"
+      ]
+    }
+  ],
+  "content": "## Orthogonality\n\nTwo vectors $\\vec{u}, \\vec{v} \\in \\mathbb{R}^n$ are **orthogonal** if their dot product is zero:\n\n$$\\vec{u} \\perp \\vec{v} \\iff \\vec{u} \\cdot \\vec{v} = \\sum_{i=1}^n u_i v_i = 0$$\n\nThe **norm** (length) of a vector is $\\|\\vec{v}\\| = \\sqrt{\\vec{v} \\cdot \\vec{v}}$. A **unit vector** has $\\|\\hat{v}\\| = 1$; any nonzero vector can be normalized: $\\hat{v} = \\vec{v}/\\|\\vec{v}\\|$.\n\nA set $\\{\\vec{q}_1, \\ldots, \\vec{q}_k\\}$ is **orthonormal** if $\\vec{q}_i \\cdot \\vec{q}_j = \\delta_{ij}$ (1 if $i=j$, 0 otherwise). Orthonormal sets are automatically linearly independent.\n\n## Orthogonal Projection onto a Line\n\nGiven a line through the origin spanned by $\\vec{v}$, the **orthogonal projection** of $\\vec{u}$ onto this line is the point on the line closest to $\\vec{u}$:\n\n$$\\text{proj}_{\\vec{v}}(\\vec{u}) = \\frac{\\vec{u} \\cdot \\vec{v}}{\\vec{v} \\cdot \\vec{v}}\\,\\vec{v}$$\n\nThe scalar $\\frac{\\vec{u} \\cdot \\vec{v}}{\\|\\vec{v}\\|^2}$ is the **signed component** of $\\vec{u}$ along $\\vec{v}$. The **error** (residual) $\\vec{u} - \\text{proj}_{\\vec{v}}(\\vec{u})$ is orthogonal to $\\vec{v}$ — this is the defining geometric property of orthogonal projection.\n\n**As a matrix**: for a unit vector $\\hat{v}$, the projection is $\\hat{v}(\\hat{v}'\\vec{u}) = (\\hat{v}\\hat{v}')\\vec{u}$. The matrix $P = \\hat{v}\\hat{v}'$ is the rank-1 projection matrix onto the line. It satisfies $P^2 = P$ (idempotent) and $P = P'$ (symmetric).\n\n## Gram-Schmidt Orthogonalization\n\n**Gram-Schmidt** converts any basis $\\{\\vec{v}_1, \\ldots, \\vec{v}_n\\}$ into an orthonormal basis $\\{\\vec{q}_1, \\ldots, \\vec{q}_n\\}$ spanning the same space:\n\n**Step 1**: $\\vec{u}_1 = \\vec{v}_1$, then $\\vec{q}_1 = \\vec{u}_1/\\|\\vec{u}_1\\|$\n\n**Step $k$** (for $k = 2, 3, \\ldots, n$): subtract the projections onto all previous $\\vec{q}_i$:\n\n$$\\vec{u}_k = \\vec{v}_k - \\sum_{i=1}^{k-1} (\\vec{v}_k \\cdot \\vec{q}_i)\\,\\vec{q}_i, \\qquad \\vec{q}_k = \\vec{u}_k / \\|\\vec{u}_k\\|$$\n\nEach $\\vec{u}_k$ is the component of $\\vec{v}_k$ orthogonal to the subspace spanned by $\\vec{v}_1, \\ldots, \\vec{v}_{k-1}$.\n\n**QR decomposition**: Gram-Schmidt applied to the columns of $A$ produces $A = QR$ where $Q$ has orthonormal columns and $R$ is upper triangular. This is used in least-squares solvers and eigenvalue algorithms.\n\n## Projection into a Subspace\n\nLet $W$ be a subspace of $\\mathbb{R}^n$ with orthonormal basis $\\{\\vec{q}_1, \\ldots, \\vec{q}_k\\}$. The orthogonal projection of $\\vec{u}$ onto $W$ is:\n\n$$\\text{proj}_W(\\vec{u}) = \\sum_{i=1}^k (\\vec{u} \\cdot \\vec{q}_i)\\,\\vec{q}_i = QQ'\\vec{u}$$\n\nwhere $Q = [\\vec{q}_1 \\mid \\cdots \\mid \\vec{q}_k]$. The projection matrix $P_W = QQ'$ satisfies:\n- $P_W^2 = P_W$ (projecting twice does nothing)\n- $P_W' = P_W$ (it is symmetric)\n- $\\text{rank}(P_W) = k = \\dim(W)$\n\nThe **complement** $\\vec{u} - P_W \\vec{u}$ is orthogonal to every vector in $W$.\n\n## Least Squares: The Geometry\n\nWhen the system $A\\vec{x} = \\vec{b}$ has no solution (as happens in overdetermined systems with more equations than unknowns), the best we can do is find $\\hat{x}$ minimizing $\\|A\\hat{x} - \\vec{b}\\|^2$.\n\nGeometrically: $A\\hat{x}$ is the projection of $\\vec{b}$ onto the column space of $A$. The residual $\\vec{b} - A\\hat{x}$ must be orthogonal to all columns of $A$:\n\n$$A'(\\vec{b} - A\\hat{x}) = \\vec{0} \\implies A'A\\hat{x} = A'\\vec{b}$$\n\nThese are the **normal equations**. When $A$ has full column rank, $A'A$ is invertible and the unique least-squares solution is:\n\n$$\\hat{x} = (A'A)^{-1}A'\\vec{b}$$\n\nThe matrix $P = A(A'A)^{-1}A'$ is the projection matrix onto the column space of $A$ — the hat matrix familiar from regression. This is the linear algebra foundation of ordinary least squares, and by extension of any optimization problem whose solution is a projection.",
+  "equationBreakdowns": [
+    {
+      "label": "Orthogonal Projection (1D)",
+      "terms": [
+        {
+          "symbol": "\\frac{\\vec{u} \\cdot \\vec{v}}{\\vec{v} \\cdot \\vec{v}}\\,\\vec{v}",
+          "name": "Projection of u onto v",
+          "desc": "The unique point on the line spanned by v that is closest to u. The numerator is the inner product, the denominator normalizes for the length of v. If v is already a unit vector, this simplifies to (u·v)v."
+        },
+        {
+          "symbol": "\\vec{u} - \\text{proj}_{\\vec{v}}(\\vec{u})",
+          "name": "Residual (error) vector",
+          "desc": "The component of u orthogonal to v. By construction this residual is perpendicular to v — the defining property of orthogonal projection. In regression, this is the vector of residuals."
+        }
+      ]
+    },
+    {
+      "label": "Normal Equations (Least Squares)",
+      "terms": [
+        {
+          "symbol": "A'A\\hat{x} = A'\\vec{b}",
+          "name": "Normal equations",
+          "desc": "The system that the least-squares solution must satisfy. Derived by requiring the residual b − Ax̂ to be orthogonal to the column space of A (i.e., A'(b − Ax̂) = 0)."
+        },
+        {
+          "symbol": "(A'A)^{-1}A'",
+          "name": "Moore-Penrose pseudoinverse (full-rank case)",
+          "desc": "When A has full column rank, (A'A)⁻¹A' is the left pseudoinverse of A. Multiplying b by this matrix gives the least-squares solution directly."
+        },
+        {
+          "symbol": "A(A'A)^{-1}A'",
+          "name": "Hat matrix / projection matrix",
+          "desc": "Projects any vector b onto the column space of A. In regression, 'putting on the hat' maps the observed response vector to its fitted values. Idempotent and symmetric."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Hefferon 2020",
+      "title": "Linear Algebra, Ch. Three §VI: Projection, Gram-Schmidt",
+      "url": null
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r7"
+  },
+  "nextItem": {
+    "type": "quiz",
+    "id": "q3"
+  }
+}

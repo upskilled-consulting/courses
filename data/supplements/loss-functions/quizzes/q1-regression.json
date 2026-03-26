@@ -1,0 +1,91 @@
+{
+  "id": "q1",
+  "moduleId": "loss-functions",
+  "title": "Regression & Probabilistic Losses",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "type": "reading", "id": "r3" },
+  "nextItem": { "type": "reading", "id": "r4" },
+  "questions": [
+    {
+      "id": "q1_1",
+      "type": "multiple-choice",
+      "prompt": "A training dataset has a few samples with very large target values that are genuine outliers. Which loss function is **most robust** to these outliers?",
+      "options": [
+        { "id": "a", "text": "$\\text{MSELoss}$", "correct": false },
+        { "id": "b", "text": "$\\text{L1Loss}$", "correct": true },
+        { "id": "c", "text": "$\\text{GaussianNLLLoss}$", "correct": false },
+        { "id": "d", "text": "$\\text{PoissonNLLLoss}$", "correct": false }
+      ],
+      "explanation": "L1Loss computes the mean absolute error $\\frac{1}{N}\\sum|x_i - y_i|$. Its gradient w.r.t. the prediction is $\\pm 1/N$ regardless of error magnitude — an outlier contributes no more gradient than a small error. MSELoss squares the residual, so a large outlier dominates the gradient.",
+      "hint": "Consider how the gradient magnitude of each loss changes as the residual $|x - y|$ grows very large."
+    },
+    {
+      "id": "q1_2",
+      "type": "multiple-choice",
+      "prompt": "For $\\text{HuberLoss}$ with $\\delta = 1$, the per-sample loss for a residual of $|x - y| = 3$ is:",
+      "options": [
+        { "id": "a", "text": "$4.5$ &nbsp; (quadratic formula: $\\frac{1}{2}\\cdot 3^2$)", "correct": false },
+        { "id": "b", "text": "$2.5$ &nbsp; ($\\delta(|x-y| - \\delta/2) = 1\\cdot(3 - 0.5)$)", "correct": true },
+        { "id": "c", "text": "$9$ &nbsp; ($3^2$)", "correct": false },
+        { "id": "d", "text": "$3$ &nbsp; ($|x-y|$)", "correct": false }
+      ],
+      "explanation": "Since $|x - y| = 3 > \\delta = 1$, we use the linear branch: $\\ell = \\delta(|x-y| - \\delta/2) = 1 \\cdot (3 - 0.5) = 2.5$. The quadratic branch $\\frac{1}{2}(x-y)^2$ only applies when $|x-y| \\le \\delta$.",
+      "hint": "First check which branch of Huber applies. The threshold is $\\delta$; here $|x-y|=3 > \\delta=1$."
+    },
+    {
+      "id": "q1_3",
+      "type": "multiple-choice",
+      "prompt": "$\\text{PoissonNLLLoss}$ with `log_input=True` uses the formula $\\ell = e^x - y \\cdot x$. This expression derives from the negative log-likelihood of the Poisson distribution. What does $e^x$ represent?",
+      "options": [
+        { "id": "a", "text": "The target count $y$", "correct": false },
+        { "id": "b", "text": "The predicted Poisson rate $\\hat{\\lambda}$", "correct": true },
+        { "id": "c", "text": "The gradient of the loss w.r.t. $x$", "correct": false },
+        { "id": "d", "text": "The Stirling approximation of $y!$", "correct": false }
+      ],
+      "explanation": "The model predicts $x = \\log \\hat{\\lambda}$, so $\\hat{\\lambda} = e^x$. This log-link guarantees $\\hat{\\lambda} > 0$. The NLL of the Poisson is $\\hat{\\lambda} - y \\log \\hat{\\lambda} + \\log(y!) = e^x - y \\cdot x + \\text{const}$.",
+      "hint": "In PoissonNLLLoss with log_input=True, the network outputs $x = \\log(\\lambda)$ rather than $\\lambda$ directly. What does exponentiating $x$ give you?"
+    },
+    {
+      "id": "q1_4",
+      "type": "multiple-choice",
+      "prompt": "$\\text{GaussianNLLLoss}$ trains a model to predict both mean $\\mu$ and variance $\\sigma^2$. If a model predicts a very large variance $\\sigma^2 \\to \\infty$ for every sample, what happens to the loss?",
+      "options": [
+        { "id": "a", "text": "Loss → 0 (large variance absorbs any squared error)", "correct": false },
+        { "id": "b", "text": "Loss → $\\infty$ (the log-variance term $\\frac{1}{2}\\log\\sigma^2 \\to \\infty$ dominates)", "correct": true },
+        { "id": "c", "text": "Loss is unchanged — variance does not affect the gradient", "correct": false },
+        { "id": "d", "text": "Loss → $-\\infty$", "correct": false }
+      ],
+      "explanation": "The GaussianNLL loss is $\\frac{1}{2}[\\log\\sigma^2 + (\\mu - y)^2/\\sigma^2]$. As $\\sigma^2 \\to \\infty$: the squared-error term $(\\mu-y)^2/\\sigma^2 \\to 0$, but the log-variance term $\\frac{1}{2}\\log\\sigma^2 \\to +\\infty$. The log-variance acts as a regulariser that prevents the model from \"cheating\" by predicting infinite uncertainty.",
+      "hint": "Write out $\\frac{1}{2}[\\log\\sigma^2 + (\\mu-y)^2/\\sigma^2]$ and take each term to $\\infty$ separately."
+    },
+    {
+      "id": "q1_5",
+      "type": "multiple-choice",
+      "prompt": "Which `reduction` argument should you use with $\\text{KLDivLoss}$ to get the correct batch-averaged KL divergence $\\frac{1}{N}\\sum_i D_{\\text{KL}}(p_i \\| q_i)$?",
+      "options": [
+        { "id": "a", "text": "`reduction='mean'`", "correct": false },
+        { "id": "b", "text": "`reduction='sum'`", "correct": false },
+        { "id": "c", "text": "`reduction='batchmean'`", "correct": true },
+        { "id": "d", "text": "`reduction='none'`", "correct": false }
+      ],
+      "explanation": "`reduction='batchmean'` divides the sum by the batch size $N$, which gives the correct mean KL divergence across samples. `reduction='mean'` divides by the total number of elements $N \\times C$, producing a factor-of-$C$ error. This is a well-known PyTorch footgun documented in the official docs.",
+      "hint": "With a batch of N samples each having C classes, 'mean' divides by N×C while 'batchmean' divides by N. Which matches the mathematical definition of mean KL divergence?"
+    },
+    {
+      "id": "q1_6",
+      "type": "code-completion",
+      "prompt": "Complete the function that computes L1 loss without using `nn.L1Loss` — just PyTorch tensor operations:",
+      "codeTemplate": "import torch\n\ndef my_l1_loss(input, target):\n    \"\"\"Returns mean absolute error.\"\"\"\n    return ___BLANK___",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "torch.mean(torch.abs(input - target))",
+        "(input - target).abs().mean()",
+        "torch.abs(input - target).mean()"
+      ],
+      "explanation": "L1 loss is $\\frac{1}{N}\\sum|x_i - y_i|$ — take the element-wise absolute difference and then average. Any of the three forms above correctly computes this.",
+      "hint": "The formula is mean(|input − target|). What PyTorch functions compute absolute value and mean?"
+    }
+  ]
+}

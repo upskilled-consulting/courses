@@ -1,0 +1,193 @@
+{
+  "id": "r2",
+  "moduleId": "m1",
+  "title": "Gaussian Mathematics: Attributes, Covariance, and Spherical Harmonics",
+  "estimatedMinutes": 15,
+  "learningObjectives": [
+    {
+      "id": "m1r2-lo1",
+      "verb": "List",
+      "description": "List the 59 parameters of a single 3D Gaussian by category (position, rotation, scale, opacity, SH coefficients) and identify which category dominates the storage budget",
+      "skillTags": [
+        "gaussian-math",
+        "3dgs-fundamentals"
+      ]
+    },
+    {
+      "id": "m1r2-lo2",
+      "verb": "Derive",
+      "description": "Derive the covariance factorization Σ = RSS⊤R⊤ and explain why this parameterization guarantees positive semi-definiteness throughout gradient-based optimization",
+      "skillTags": [
+        "gaussian-math"
+      ]
+    },
+    {
+      "id": "m1r2-lo3",
+      "verb": "Explain",
+      "description": "Explain how spherical harmonics decompose view-dependent color into basis functions, identify which SH orders encode the DC color vs. view-dependent highlights, and state why the AC coefficients dominate the parameter budget",
+      "skillTags": [
+        "gaussian-math",
+        "3dgs-fundamentals"
+      ]
+    },
+    {
+      "id": "m1r2-lo4",
+      "verb": "Compute",
+      "description": "Compute the total uncompressed scene size in MB given a Gaussian count and float32 parameter budget, and identify which attribute categories offer the most leverage for reduction",
+      "skillTags": [
+        "gaussian-math",
+        "compression"
+      ]
+    }
+  ],
+  "content": "## The 59-Parameter Gaussian\n\nEvery 3D Gaussian splat carries a fixed set of attributes. Understanding what each encodes and how many parameters it contributes is essential for any compression discussion.\n\nThe full parameter budget per Gaussian:\n\n| Attribute | Parameters | Purpose |\n|---|---|---|\n| Position \\(\\mu\\) | 3 | Location in world space \\((x,y,z)\\) |\n| Scale \\(s\\) | 3 | Anisotropic extent along each axis |\n| Rotation \\(q\\) | 4 | Quaternion encoding orientation |\n| Opacity \\(\\sigma_\\alpha\\) | 1 | Base transparency (pre-sigmoid) |\n| DC color (SH order 0) | 3 | View-independent RGB color |\n| SH coefficients (orders 1–3) | 45 | View-dependent color variation |\n| **Total** | **59** | |\n\nAt float32 precision: **59 × 4 = 236 bytes per Gaussian**. A typical scene with 5 million Gaussians is ~1.2 GB.\n\n## Covariance Factorization: Why \\(\\Sigma = RSS^\\top R^\\top\\)\n\nA covariance matrix must be **positive semi-definite (PSD)** — this is a mathematical requirement for a valid Gaussian. Storing and optimizing a full 3×3 symmetric matrix is possible, but gradient descent will almost certainly produce non-PSD matrices at intermediate steps, breaking the Gaussian interpretation.\n\n3DGS avoids this by factoring:\n\n\\[\\Sigma = R S S^\\top R^\\top\\]\n\nwhere:\n- \\(R \\in SO(3)\\) is a rotation matrix (encoded as a quaternion \\(q \\in \\mathbb{R}^4\\), \\(\\|q\\|=1\\))\n- \\(S = \\text{diag}(s_1, s_2, s_3)\\) is a diagonal scale matrix with \\(s_i > 0\\)\n\n**Why is \\(\\Sigma\\) always PSD?** For any vector \\(v\\):\n\\[v^\\top \\Sigma v = v^\\top R S S^\\top R^\\top v = \\|S^\\top R^\\top v\\|^2 \\geq 0\\]\n\nThis is always non-negative by construction. The optimization landscape is unconstrained — you can apply gradient descent to \\(q\\) and \\(\\log s_i\\) (log to keep scale positive) without special projection steps.\n\nThe geometric interpretation: \\(S\\) stretches a unit sphere along three principal axes, and \\(R\\) rotates the result. The Gaussian ellipsoid is the image of this transformation.\n\n## Spherical Harmonics for View-Dependent Color\n\nReal surfaces exhibit view-dependent appearance: specular highlights, reflections, refractions, and subsurface scattering all change color based on the viewing direction. A single RGB color per Gaussian is insufficient.\n\n**Spherical harmonics (SH)** are an orthonormal basis of functions on the unit sphere. They decompose a directional function \\(f(\\theta, \\phi)\\) into frequency bands:\n\n\\[f(\\theta,\\phi) = \\sum_{l=0}^{L} \\sum_{m=-l}^{l} c_l^m Y_l^m(\\theta,\\phi)\\]\n\nwhere \\(Y_l^m\\) are the SH basis functions and \\(c_l^m\\) are learnable coefficients.\n\nThe number of coefficients per band:\n- Order 0 (DC): \\((0+1)^2 = 1\\) coefficient → view-independent color\n- Order 1: \\((1+1)^2 = 4\\) total → 3 new coefficients (linear variation)\n- Order 2: 9 total → 5 new coefficients\n- Order 3: \\((3+1)^2 = 16\\) total → 7 new coefficients\n\nSince 3DGS uses order 3 and stores **one SH expansion per color channel**, that's \\(16 \\times 3 = 48\\) SH parameters. Subtracting the DC term (already counted under \"DC color\"): **45 SH AC coefficients**.\n\n### Why SH Dominates the Bit Budget\n\nThe 45 SH coefficients represent \\(45/59 \\approx 76\\%\\) of all parameters per Gaussian. This immediately suggests SH degree reduction as the highest-leverage compaction strategy — a topic we will explore in Module 3.\n\nThe trade-off: dropping from order 3 to order 0 (DC only) halves the parameter count but eliminates all view-dependent effects. Intermediate degrees offer a smooth quality–size curve.\n\n## The Gaussian Density Function in Context\n\nPutting it together, the full density contribution of Gaussian \\(i\\) at point \\(\\mathbf{p}\\):\n\n\\[f_i(\\mathbf{p}) = \\sigma_\\alpha \\exp\\!\\left(-\\frac{1}{2}(\\mathbf{p}-\\mu_i)^\\top \\Sigma_i^{-1}(\\mathbf{p}-\\mu_i)\\right)\\]\n\nThe color seen along direction \\(\\mathbf{d}\\) is then:\n\n\\[c_i(\\mathbf{d}) = \\text{sigmoid}\\!\\left(\\sum_{l,m} c_l^m Y_l^m(\\mathbf{d})\\right)_{\\text{per channel}}\\]\n\nThe sigmoid maps the linear SH sum into \\([0,1]\\) for each of the three RGB channels.",
+  "references": [
+    {
+      "label": "Kerbl et al. 2023",
+      "title": "3D Gaussian Splatting for Real-Time Radiance Field Rendering",
+      "url": "https://arxiv.org/abs/2308.04079"
+    },
+    {
+      "label": "Bagdasarian et al. 2025",
+      "title": "3DGS.zip: A Survey on 3D Gaussian Splatting Compression Methods",
+      "url": "https://arxiv.org/abs/2407.09510"
+    }
+  ],
+  "nextItem": {
+    "type": "reading",
+    "id": "r3"
+  },
+  "prevItem": {
+    "type": "reading",
+    "id": "r1"
+  },
+  "equationBreakdowns": [
+    {
+      "label": "Covariance Matrix Factorization",
+      "terms": [
+        {
+          "symbol": "\\Sigma",
+          "name": "Covariance matrix",
+          "desc": "3×3 symmetric matrix encoding the Gaussian's shape, size, and orientation. Must be positive semi-definite (PSD) — negative eigenvalues have no geometric meaning."
+        },
+        {
+          "symbol": "R",
+          "name": "Rotation matrix",
+          "desc": "Derived from the stored unit quaternion. Encodes how the Gaussian's principal axes are oriented in 3D world space."
+        },
+        {
+          "symbol": "S",
+          "name": "Scale matrix",
+          "desc": "Diagonal matrix with entries exp(s₀), exp(s₁), exp(s₂). The exponential keeps all scales strictly positive regardless of what the optimiser does to the raw parameters."
+        },
+        {
+          "symbol": "S S^\\top",
+          "name": "Squared scales",
+          "desc": "Produces diag(s₀², s₁², s₂²) — the variance along each principal axis before the rotation is applied."
+        },
+        {
+          "symbol": "R S S^\\top R^\\top",
+          "name": "Rotated covariance",
+          "desc": "R^⊤ transforms a world-space vector into the ellipsoid's local frame; S S^⊤ scales it; R rotates back. The result is the axis-aligned ellipsoid expressed in world coordinates."
+        }
+      ]
+    },
+    {
+      "label": "Why the Covariance Is Always Valid (PSD Proof)",
+      "terms": [
+        {
+          "symbol": "v^\\top \\Sigma v",
+          "name": "Quadratic form",
+          "desc": "A matrix is positive semi-definite if this expression is ≥ 0 for every vector v. PSD is the mathematical requirement for Σ to be a valid covariance matrix."
+        },
+        {
+          "symbol": "S^\\top R^\\top v",
+          "name": "Transformed vector",
+          "desc": "The input vector v rotated into the ellipsoid frame and scaled. R^⊤ is a rotation (orthonormal), S^⊤ = S is diagonal positive — both preserve the vector's existence."
+        },
+        {
+          "symbol": "\\|\\cdots\\|^2",
+          "name": "Squared Euclidean norm",
+          "desc": "A squared length is always ≥ 0 by definition. This is the key insight: by rewriting the quadratic form as a squared norm, PSD is guaranteed structurally — no clamping or projection needed during training."
+        }
+      ]
+    },
+    {
+      "label": "Spherical Harmonics Decomposition",
+      "terms": [
+        {
+          "symbol": "f(\\theta, \\phi)",
+          "name": "Directional function",
+          "desc": "The colour (or any quantity) to represent as a function of viewing direction on the unit sphere. For 3DGS this is the RGB colour seen from direction (θ, φ)."
+        },
+        {
+          "symbol": "\\sum_{l=0}^{L}",
+          "name": "Sum over bands",
+          "desc": "l is the frequency band (0 = constant, 1 = linear, 2 = quadratic, …). Higher l captures finer directional variation. 3DGS uses up to degree 3 (16 basis functions per colour channel)."
+        },
+        {
+          "symbol": "c_l^m",
+          "name": "SH coefficients",
+          "desc": "Learned scalar weights, one per (l, m) pair. These are the stored parameters — optimised by gradient descent to best reproduce the observed colour from all training views."
+        },
+        {
+          "symbol": "Y_l^m(\\theta, \\phi)",
+          "name": "SH basis functions",
+          "desc": "Fixed, pre-computed functions on the sphere — the spherical analogue of Fourier sinusoids. Orthogonal: each captures a distinct directional frequency and can be evaluated with a few arithmetic ops."
+        }
+      ]
+    },
+    {
+      "label": "Full Gaussian Density Contribution",
+      "heading": "Gaussian Density Function",
+      "terms": [
+        {
+          "symbol": "f_i(\\mathbf{p})",
+          "name": "Density at point p",
+          "desc": "Combined contribution of Gaussian i at screen position p — opacity times geometric falloff. This is what gets alpha-composited in depth order to produce the final pixel colour."
+        },
+        {
+          "symbol": "\\sigma_\\alpha",
+          "name": "Learned opacity",
+          "desc": "Scalar in (0, 1) after sigmoid activation. Independent of geometry — two Gaussians with identical shapes can have very different opacity values."
+        },
+        {
+          "symbol": "\\mu_i",
+          "name": "Centre (mean)",
+          "desc": "The 3D position of Gaussian i, optimised during training. Initialised from the SfM sparse point cloud; updated freely by gradient descent and Adaptive Density Control."
+        },
+        {
+          "symbol": "\\Sigma_i^{-1}",
+          "name": "Precision matrix",
+          "desc": "Inverse covariance — encodes how quickly influence falls off in each direction. A tight Gaussian (small σ) has a large precision; a broad Gaussian has a small one."
+        },
+        {
+          "symbol": "-\\tfrac{1}{2}(\\cdots)^\\top \\Sigma_i^{-1}(\\cdots)",
+          "name": "Mahalanobis exponent",
+          "desc": "Shape-aware distance from p to the Gaussian centre. Equals 0 at p = μ_i (maximum influence). Grows negative as p moves away, exponentially suppressing influence — with rate controlled by Σ."
+        }
+      ]
+    },
+    {
+      "label": "View-Dependent Colour from Spherical Harmonics",
+      "heading": "Gaussian Density Function",
+      "terms": [
+        {
+          "symbol": "c_i(\\mathbf{d})",
+          "name": "View-dependent colour",
+          "desc": "RGB colour Gaussian i contributes when viewed from direction d. Different viewing angles yield different colours — enabling specular highlights and other non-Lambertian effects."
+        },
+        {
+          "symbol": "\\sum_{l,m} c_l^m Y_l^m(\\mathbf{d})",
+          "name": "SH evaluation",
+          "desc": "Dot product of stored coefficients with basis functions evaluated at direction d. Computationally cheap — a handful of multiplications and additions, no MLP forward pass."
+        },
+        {
+          "symbol": "\\text{sigmoid}(\\cdots)",
+          "name": "Colour activation",
+          "desc": "Maps the unbounded linear SH sum into [0, 1], producing a valid RGB value. Equivalent to 1 / (1 + exp(−x)). Applied independently to each channel."
+        }
+      ]
+    }
+  ]
+}

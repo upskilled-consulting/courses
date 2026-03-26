@@ -1,0 +1,110 @@
+{
+  "id": "r2b",
+  "moduleId": "linear-algebra",
+  "title": "Norms, Dot Products, and Angles",
+  "estimatedMinutes": 15,
+  "learningObjectives": [
+    {
+      "id": "r2b-lo1",
+      "verb": "Compute",
+      "description": "Compute the l1, l2, and l-inf norms of a vector and explain what each penalises geometrically",
+      "skillTags": [
+        "embedding-geometry"
+      ]
+    },
+    {
+      "id": "r2b-lo2",
+      "verb": "Calculate",
+      "description": "Calculate the dot product of two vectors and use it to find the angle between them",
+      "skillTags": [
+        "embedding-geometry"
+      ]
+    },
+    {
+      "id": "r2b-lo3",
+      "verb": "State",
+      "description": "State the Cauchy-Schwarz inequality and explain why it justifies defining angle via the dot product",
+      "skillTags": [
+        "embedding-geometry"
+      ]
+    },
+    {
+      "id": "r2b-lo4",
+      "verb": "Compute",
+      "description": "Compute cosine similarity as a normalised dot product and interpret the score for embedding retrieval tasks",
+      "skillTags": [
+        "embedding-geometry"
+      ]
+    },
+    {
+      "id": "r2b-lo5",
+      "verb": "Identify",
+      "description": "Identify orthogonality from a zero dot product and explain its significance for projections",
+      "skillTags": [
+        "embedding-geometry",
+        "linear-fitting"
+      ]
+    },
+    {
+      "id": "r2b-lo6",
+      "verb": "Contrast",
+      "description": "Contrast l1 and l2 regularisation in terms of sparsity, geometry, and gradient behaviour",
+      "skillTags": [
+        "linear-fitting"
+      ]
+    }
+  ],
+  "content": "## Length of a Vector\n\nGiven a vector $\\vec{v} = (v_1, v_2, \\ldots, v_n)^T \\in \\mathbb{R}^n$, its **Euclidean length** (or **$\\ell^2$ norm**) is:\n\n$$|\\vec{v}| = \\sqrt{v_1^2 + v_2^2 + \\cdots + v_n^2} = \\sqrt{\\sum_{i=1}^{n} v_i^2}$$\n\nThis generalises the familiar Pythagorean theorem to $n$ dimensions. A vector $\\vec{v}$ has $|\\vec{v}| = 0$ if and only if $\\vec{v} = \\vec{0}$.\n\n### Scaling and the Unit Vector\n\nFor any scalar $c \\geq 0$, scaling a vector scales its length: $|c\\vec{v}| = c|\\vec{v}|$. A **unit vector** has length exactly 1. Given any nonzero $\\vec{v}$, the vector\n\n$$\\hat{v} = \\frac{\\vec{v}}{|\\vec{v}|}$$\n\nis the unit vector in the same direction — this process is called **normalisation**. Unit vectors matter because they carry only directional information, with magnitude removed.\n\n## The Dot Product\n\nThe **dot product** of $\\vec{u}, \\vec{v} \\in \\mathbb{R}^n$ is:\n\n$$\\vec{u} \\cdot \\vec{v} = u_1 v_1 + u_2 v_2 + \\cdots + u_n v_n = \\sum_{i=1}^{n} u_i v_i$$\n\nNotice that $\\vec{v} \\cdot \\vec{v} = |\\vec{v}|^2$: the dot product of a vector with itself is the square of its length.\n\n### Algebraic Properties\n\nFor all $\\vec{u}, \\vec{v}, \\vec{w} \\in \\mathbb{R}^n$ and $c \\in \\mathbb{R}$:\n\n| Property | Statement |\n|---|---|\n| Commutativity | $\\vec{u} \\cdot \\vec{v} = \\vec{v} \\cdot \\vec{u}$ |\n| Distributivity | $(\\vec{u} + \\vec{v}) \\cdot \\vec{w} = \\vec{u} \\cdot \\vec{w} + \\vec{v} \\cdot \\vec{w}$ |\n| Scalar pull-out | $(c\\vec{u}) \\cdot \\vec{v} = c(\\vec{u} \\cdot \\vec{v})$ |\n| Positive-definiteness | $\\vec{v} \\cdot \\vec{v} \\geq 0$, with equality iff $\\vec{v} = \\vec{0}$ |\n\nThese four properties define a general **inner product** on a vector space. The Euclidean dot product is the canonical example.\n\n## The Cauchy–Schwarz Inequality\n\nFor any $\\vec{u}, \\vec{v} \\in \\mathbb{R}^n$:\n\n$$|\\vec{u} \\cdot \\vec{v}| \\leq |\\vec{u}|\\,|\\vec{v}|$$\n\nEquality holds if and only if one vector is a scalar multiple of the other (they are parallel). Cauchy–Schwarz is the foundational inequality of linear algebra — it underlies the triangle inequality, the definition of angles, and the theory of Fourier series.\n\n## Angles Between Vectors\n\nBecause $|\\vec{u} \\cdot \\vec{v}| \\leq |\\vec{u}||\\vec{v}|$, the ratio $\\frac{\\vec{u} \\cdot \\vec{v}}{|\\vec{u}||\\vec{v}|}$ always lies in $[-1, 1]$. The **angle** $\\theta$ between two nonzero vectors is the unique $\\theta \\in [0, \\pi]$ satisfying:\n\n$$\\cos\\theta = \\frac{\\vec{u} \\cdot \\vec{v}}{|\\vec{u}|\\,|\\vec{v}|}$$\n\nKey cases:\n- $\\theta = 0$: vectors point in the same direction, $\\vec{u} \\cdot \\vec{v} = |\\vec{u}||\\vec{v}|$\n- $\\theta = \\pi/2$: vectors are **orthogonal** (perpendicular), $\\vec{u} \\cdot \\vec{v} = 0$\n- $\\theta = \\pi$: vectors point in opposite directions, $\\vec{u} \\cdot \\vec{v} = -|\\vec{u}||\\vec{v}|$\n\n### Orthogonality\n\nTwo vectors are **orthogonal** if $\\vec{u} \\cdot \\vec{v} = 0$. Orthogonality is the algebraic definition of perpendicularity — it requires no notion of angle, just the dot product. A set of vectors is **orthogonal** if every pair is orthogonal, and **orthonormal** if additionally every vector has unit length.\n\nThe standard basis $\\{\\vec{e}_1, \\ldots, \\vec{e}_n\\}$ is orthonormal: $\\vec{e}_i \\cdot \\vec{e}_j = \\delta_{ij}$ (the Kronecker delta).\n\n## General Norms\n\nBeyond Euclidean length, ML regularly uses:\n\n| Norm | Formula | Intuition |\n|---|---|---|\n| $\\ell^1$ (Manhattan) | $\\|\\vec{v}\\|_1 = \\sum_i |v_i|$ | Sum of absolute values; sparsity-promoting |\n| $\\ell^2$ (Euclidean) | $\\|\\vec{v}\\|_2 = \\sqrt{\\sum_i v_i^2}$ | Geometric length |\n| $\\ell^\\infty$ (Max) | $\\|\\vec{v}\\|_\\infty = \\max_i |v_i|$ | Largest component |\n| $\\ell^p$ | $\\|\\vec{v}\\|_p = (\\sum_i |v_i|^p)^{1/p}$ | Continuous family; $\\ell^2$ is $p=2$ |\n\nAll norms satisfy the **triangle inequality** $\\|\\vec{u}+\\vec{v}\\| \\leq \\|\\vec{u}\\| + \\|\\vec{v}\\|$.\n\n## ML Connections\n\n### Cosine Similarity\n\nThe cosine of the angle between two vectors depends only on direction, not magnitude:\n\n$$\\text{cosine\\_sim}(\\vec{u}, \\vec{v}) = \\frac{\\vec{u} \\cdot \\vec{v}}{|\\vec{u}||\\vec{v}|} = \\hat{u} \\cdot \\hat{v}$$\n\nIn embedding models (word2vec, BERT, CLIP), each token or image is encoded as a high-dimensional vector. Cosine similarity measures semantic relatedness: $+1$ means identical direction (synonyms), $0$ means unrelated (orthogonal), $-1$ means opposite meaning (antonyms).\n\n### Regularisation\n\n$\\ell^2$ regularisation (weight decay) penalises $\\lambda\\|\\vec{w}\\|_2^2$ to prevent large weights. $\\ell^1$ regularisation penalises $\\lambda\\|\\vec{w}\\|_1$ and promotes sparsity (many weights exactly zero). Both are norm-based geometric constraints on the weight space.\n\n### Distance Metrics\n\nEuclidean distance between two points $\\vec{x}, \\vec{y}$ is $|\\vec{x} - \\vec{y}|$. $k$-NN, $k$-means, and many other algorithms are expressed in terms of Euclidean or $\\ell^p$ distances — which is why feature scaling (normalising columns to unit variance) matters: it prevents one feature's scale from dominating the norm.\n\n## Computing Norms and Similarities\n\n```python\nimport numpy as np\n\nu = np.array([3., 1., -2.])\nv = np.array([1., 4.,  1.])\n\n# L2 norm\nnorm_u = np.linalg.norm(u)          # sqrt(9+1+4) = sqrt(14)\nnorm_v = np.linalg.norm(v)          # sqrt(1+16+1) = sqrt(18)\nprint(f'|u| = {norm_u:.4f}')        # 3.7417\nprint(f'|v| = {norm_v:.4f}')        # 4.2426\n\n# Dot product\ndot = np.dot(u, v)                  # 3*1 + 1*4 + (-2)*1 = 5\nprint(f'u · v = {dot}')             # 5\n\n# Angle\ncosine = dot / (norm_u * norm_v)\nangle_rad = np.arccos(np.clip(cosine, -1, 1))\nangle_deg = np.degrees(angle_rad)\nprint(f'cos θ = {cosine:.4f}')      # 0.3143\nprint(f'θ     = {angle_deg:.2f}°') # 71.67°\n\n# Unit vectors (normalisation)\nu_hat = u / norm_u\nv_hat = v / norm_v\nprint(f'|û| = {np.linalg.norm(u_hat):.6f}')  # 1.000000\n\n# Cosine similarity via unit-vector dot product\ncos_sim = np.dot(u_hat, v_hat)\nprint(f'cosine similarity = {cos_sim:.4f}')  # 0.3143 (same as cosine above)\n\n# L1 and Linf norms\nprint(f'||u||_1   = {np.linalg.norm(u, ord=1)}')   # 6.0\nprint(f'||u||_inf = {np.linalg.norm(u, ord=np.inf)}') # 3.0\n\n# Cauchy-Schwarz check: |u · v| <= |u| * |v|\nprint(f'|u · v| = {abs(dot):.4f}  <=  |u||v| = {norm_u*norm_v:.4f}')  # True\n```",
+  "equationBreakdowns": [
+    {
+      "label": "Cauchy–Schwarz Inequality",
+      "terms": [
+        {
+          "symbol": "|\\vec{u} \\cdot \\vec{v}|",
+          "name": "Absolute dot product",
+          "desc": "The magnitude of the dot product. Taking the absolute value makes the inequality symmetric — it doesn't matter which vector is 'larger'."
+        },
+        {
+          "symbol": "|\\vec{u}|\\,|\\vec{v}|",
+          "name": "Product of lengths",
+          "desc": "The right-hand side is the product of the Euclidean lengths. When one vector is a scalar multiple of the other (parallel), equality holds. Otherwise the dot product is strictly smaller than this bound."
+        }
+      ]
+    },
+    {
+      "label": "Cosine Similarity",
+      "terms": [
+        {
+          "symbol": "\\vec{u} \\cdot \\vec{v}",
+          "name": "Dot product (numerator)",
+          "desc": "Measures how much the two vectors agree component-wise. Positive when they generally point the same way, negative when opposite."
+        },
+        {
+          "symbol": "|\\vec{u}|\\,|\\vec{v}|",
+          "name": "Normalising factor (denominator)",
+          "desc": "Dividing by the product of lengths removes the effect of magnitude, leaving only the directional agreement. The result is always in [−1, 1]."
+        },
+        {
+          "symbol": "\\cos\\theta",
+          "name": "Cosine of the angle",
+          "desc": "The resulting scalar is the cosine of the geometric angle between the two vectors. In NLP and vision, vectors with cosine similarity near 1 encode semantically similar concepts."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Hefferon 2020",
+      "title": "Linear Algebra, Ch. One §II: Linear Geometry of n-Space",
+      "url": null
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r2"
+  },
+  "nextItem": {
+    "type": "quiz",
+    "id": "q1"
+  }
+}

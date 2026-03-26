@@ -1,0 +1,69 @@
+{
+  "id": "d1",
+  "moduleId": "activation-functions",
+  "title": "ReLU Family & Saturating Activations",
+  "description": "Flashcards covering ReLU, LeakyReLU, PReLU, ReLU6, sigmoid, tanh, Hardsigmoid, and Hardtanh — formulas, gradients, and failure modes.",
+  "estimatedMinutes": 10,
+  "cards": [
+    {
+      "id": "c01",
+      "front": "**ReLU** — formula and gradient",
+      "back": "$$\\text{ReLU}(x) = \\max(0, x)$$\n\nGradient: $1$ if $x > 0$, else $0$.\n\nAvoids vanishing gradients in the positive region because the gradient is always 1 — it does not compress signal as depth increases.\n\n*PyTorch: `nn.ReLU()` · default activation in MLPs and CNNs*"
+    },
+    {
+      "id": "c02",
+      "front": "**Dying ReLU problem** — cause and two remedies",
+      "back": "**Cause:** if a neuron's pre-activation is always negative (e.g. after a large negative weight update), its gradient is permanently 0 and the neuron never updates.\n\n**Remedies:**\n1. **LeakyReLU** — fixed small slope $\\alpha$ (e.g. 0.01) for $x < 0$\n2. **PReLU** — $\\alpha$ is a learned parameter, allowing the network to choose the negative slope\n\n*Both ensure a non-zero gradient for all inputs, keeping dead neurons recoverable.*"
+    },
+    {
+      "id": "c03",
+      "front": "$$\\text{LeakyReLU}(x) = \\begin{cases} x & x \\geq 0 \\\\ \\alpha x & x < 0 \\end{cases}$$",
+      "back": "**LeakyReLU** with fixed negative slope $\\alpha$ (default 0.01).\n\nGradient: $1$ if $x > 0$; $\\alpha$ otherwise — never zero.\n\n*PyTorch: `nn.LeakyReLU(negative_slope=0.01)`*\n\n**PReLU** is identical but $\\alpha$ is a learned parameter per channel: `nn.PReLU()`\n\n**RReLU** uses a random $\\alpha$ sampled from $\\mathcal{U}(l, u)$ during training, then fixed at $(l+u)/2$ at inference."
+    },
+    {
+      "id": "c04",
+      "front": "**ReLU6** — formula and why the cap at 6 helps",
+      "back": "$$\\text{ReLU6}(x) = \\min(\\max(0, x),\\, 6)$$\n\nBounding the output at 6 keeps activations in a range that fits cleanly in fixed-point (e.g. 3-bit integer) representation, reducing quantisation error on mobile hardware.\n\n*Used in MobileNet and other efficient architectures. PyTorch: `nn.ReLU6()`*"
+    },
+    {
+      "id": "c05",
+      "front": "**Sigmoid** — formula, output range, and derivative",
+      "back": "$$\\sigma(x) = \\frac{1}{1+e^{-x}} \\quad \\in (0, 1)$$\n\nDerivative: $\\sigma'(x) = \\sigma(x)(1-\\sigma(x))$\n\nMaximum derivative = $0.25$ at $x=0$. In a depth-$L$ network, gradients shrink by at most $0.25^L$ — **vanishing gradient** problem.\n\n*Use only at output layer for binary classification; avoid in hidden layers of deep networks.*"
+    },
+    {
+      "id": "c06",
+      "front": "**Tanh vs Sigmoid** — key difference",
+      "back": "$$\\tanh(x) = \\frac{e^x - e^{-x}}{e^x + e^{-x}} \\quad \\in (-1, 1)$$\n\n| | Sigmoid | Tanh |\n|---|---|---|\n| Output range | $(0,1)$ | $(-1,1)$ |\n| Zero-centred | No | Yes |\n| Max gradient | 0.25 | 1.0 |\n\n**Zero-centring** matters: non-zero-centred outputs cause all weight gradients in the next layer to have the same sign, producing zig-zag gradient updates."
+    },
+    {
+      "id": "c07",
+      "front": "**Hardsigmoid** and **Hardtanh** — what are they and why use them?",
+      "back": "Piecewise-linear approximations that replace the expensive $e^x$ computation:\n\n$$\\text{Hardsigmoid}(x) = \\text{clamp}\\!\\left(\\tfrac{x+3}{6},\\, 0, 1\\right)$$\n\n$$\\text{Hardtanh}(x) = \\text{clamp}(x,\\, -1, 1)$$\n\n**Advantage:** no exponential — friendly for integer arithmetic on mobile/edge devices.\n\n*PyTorch: `nn.Hardsigmoid()`, `nn.Hardtanh(min_val=-1, max_val=1)`*"
+    },
+    {
+      "id": "c08",
+      "front": "Why does the **vanishing gradient** problem arise in sigmoid and tanh?",
+      "back": "Both functions **saturate** — output values flatten near ±1 (tanh) or 0/1 (sigmoid), making the derivative close to zero.\n\nChain rule: gradient of loss w.r.t. layer $k$ weights multiplies derivatives from all layers above. Each saturated activation contributes a factor near 0, so the product **exponentially shrinks** with depth.\n\n*Result: early layers learn extremely slowly or not at all.*\n\n*ReLU sidesteps this in the positive region: gradient is exactly 1, not compressed.*"
+    },
+    {
+      "id": "c09",
+      "front": "Compare **ReLU, LeakyReLU, and PReLU** — when to prefer each",
+      "back": "| Activation | Negative slope | When to use |\n|---|---|---|\n| ReLU | 0 (dead) | Default; fast; good for most CNNs |\n| LeakyReLU | Fixed $\\alpha=0.01$ | When dead neurons are a concern |\n| PReLU | Learned $\\alpha$ | When you can afford extra parameters and have enough data |\n\n*Empirically: ReLU is hard to beat for image tasks; LeakyReLU is a safe upgrade with no extra cost.*"
+    },
+    {
+      "id": "c10",
+      "front": "**Practical selection guide** — hidden layers in a deep network",
+      "back": "1. **Default:** ReLU — fast, well-understood, works well for CNNs and MLPs\n2. **Dead neurons present:** LeakyReLU or ELU\n3. **Need smooth gradients everywhere:** GELU or SiLU\n4. **Transformer FFN:** GELU (BERT, GPT-2) or SwiGLU (LLaMA, PaLM)\n5. **Mobile/quantised inference:** ReLU6 or Hardswish\n6. **Output layer — binary:** Sigmoid; **multi-class:** Softmax; **regression:** no activation\n\n*Avoid sigmoid/tanh in hidden layers of deep networks due to vanishing gradients.*"
+    },
+    {
+      "id": "c11",
+      "front": "What makes a network with **no activation functions** limited?",
+      "back": "Without activations, every layer is a linear transform $\\mathbf{y} = W\\mathbf{x} + \\mathbf{b}$.\n\nComposing linear functions gives another linear function: $W_2(W_1\\mathbf{x} + b_1) + b_2 = (W_2 W_1)\\mathbf{x} + \\text{const}$.\n\n**A deep linear network is equivalent to a single linear layer** — no matter how many layers you stack, it can only represent linear mappings.\n\n*Non-linear activations are what give neural networks their universal approximation capability.*"
+    },
+    {
+      "id": "c12",
+      "front": "**Chain rule through a ReLU** — trace the gradient",
+      "back": "Forward: $a = \\text{ReLU}(z) = \\max(0, z)$\n\nGradient of loss $\\mathcal{L}$ w.r.t. $z$:\n$$\\frac{\\partial \\mathcal{L}}{\\partial z} = \\frac{\\partial \\mathcal{L}}{\\partial a} \\cdot \\mathbf{1}[z > 0]$$\n\n- If $z > 0$: gradient passes through unchanged\n- If $z \\leq 0$: gradient is **zeroed** (potential dead neuron)\n\n*The indicator $\\mathbf{1}[z > 0]$ is the sub-gradient of ReLU at the kink.*"
+    }
+  ]
+}

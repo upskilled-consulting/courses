@@ -1,0 +1,97 @@
+{
+  "id": "r6",
+  "moduleId": "optimizers",
+  "title": "Advanced Schedulers & Composition",
+  "estimatedMinutes": 14,
+  "learningObjectives": [
+    {
+      "id": "r6-lo1",
+      "verb": "Explain",
+      "description": "Explain CosineAnnealingWarmRestarts and state how T_0 and T_mult control the restart period, cycle growth, and exploration behavior",
+      "skillTags": [
+        "lr-scheduling"
+      ]
+    },
+    {
+      "id": "r6-lo2",
+      "verb": "Configure",
+      "description": "Configure OneCycleLR for super-convergence, identifying the three training phases and the role of div_factor, pct_start, and final_div_factor",
+      "skillTags": [
+        "lr-scheduling",
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r6-lo3",
+      "verb": "Distinguish",
+      "description": "Distinguish CyclicLR's three modes (triangular, triangular2, exp_range) and explain why inverse momentum cycling reduces oscillations during the high-LR phase",
+      "skillTags": [
+        "lr-scheduling"
+      ]
+    },
+    {
+      "id": "r6-lo4",
+      "verb": "Compose",
+      "description": "Compose a warmup-then-cosine schedule using SequentialLR and trace the learning rate value through the transition milestone",
+      "skillTags": [
+        "lr-scheduling"
+      ]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r5"
+  },
+  "nextItem": {
+    "type": "quiz",
+    "id": "q2"
+  },
+  "content": "## CosineAnnealingWarmRestarts (SGDR)\n\nSGDR (Loshchilov & Hutter 2016) extends cosine annealing by periodically *restarting* the LR from its maximum. After each restart the period optionally grows by a factor $T_{\\text{mult}}$:\n$$\\eta_t = \\eta_{\\min} + \\frac{1}{2}(\\eta_{\\max} - \\eta_{\\min}) \\left(1 + \\cos\\left(\\frac{\\pi T_{\\text{cur}}}{T_i}\\right)\\right)$$\n\nwhere $T_i = T_0 \\cdot T_{\\text{mult}}^i$ is the length of the $i$-th cycle and $T_{\\text{cur}}$ resets to 0 at each restart.\n\n```python\nscheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(\n    optimizer,\n    T_0=10,      # length of first restart cycle (in epochs)\n    T_mult=2,    # each cycle is 2× longer: 10 → 20 → 40 ...\n    eta_min=1e-6\n)\n```\n\n**TensorFlow:**\n```python\nschedule = tf.keras.optimizers.schedules.CosineDecayRestarts(\n    initial_learning_rate=0.1,\n    first_decay_steps=10,    # T_0 in steps\n    t_mul=2.0,               # T_mult\n    alpha=1e-6 / 0.1         # eta_min / initial_lr\n)\noptimizer = tf.keras.optimizers.SGD(learning_rate=schedule)\n```\n\nThe restarts serve as exploration pulses: after annealing to a sharp minimum, the LR spikes again and the model can escape to a flatter (better-generalizing) basin. This is particularly effective when combined with model snapshot ensembling — saving the model at each restart and averaging their predictions.\n\n## CyclicLR\n\nCyclicLR (Smith 2017) cycles the LR between `base_lr` and `max_lr` using a triangular wave. It is typically applied **per batch** (not per epoch).\n\n### Modes\n\n| Mode | Behavior |\n|---|---|\n| `triangular` | Fixed triangle amplitude every cycle |\n| `triangular2` | Amplitude halves after each cycle |\n| `exp_range` | Amplitude decays by `gamma^iteration` |\n\n```python\nscheduler = torch.optim.lr_scheduler.CyclicLR(\n    optimizer,\n    base_lr=1e-4,\n    max_lr=1e-2,\n    step_size_up=2000,   # steps to go from base_lr → max_lr\n    mode='triangular2',\n    cycle_momentum=True, # SGD only: momentum cycles inversely to LR\n)\n# Step per batch:\nfor batch in dataloader:\n    train_batch()\n    scheduler.step()\n```\n\n**TensorFlow:** No built-in CyclicLR. Implement as a custom schedule:\n```python\nclass TriangularCyclicLR(tf.keras.optimizers.schedules.LearningRateSchedule):\n    def __init__(self, base_lr, max_lr, step_size):\n        self.base_lr, self.max_lr, self.step_size = base_lr, max_lr, step_size\n\n    def __call__(self, step):\n        cycle = tf.floor(1 + step / (2 * self.step_size))\n        x = tf.abs(step / self.step_size - 2 * cycle + 1)\n        return self.base_lr + (self.max_lr - self.base_lr) * tf.maximum(0.0, 1 - x)\n```\n\nThe inverse momentum cycling (`cycle_momentum=True`) is a key feature: as LR increases, momentum decreases, preventing oscillations during the high-LR phase.\n\n## OneCycleLR — Super-Convergence\n\nOneCycleLR (Smith & Topin 2018) is a single-cycle policy: LR rises from `base_lr` to `max_lr` over `pct_start` of training, then decays to near zero. Smith demonstrated that this enables *super-convergence* — reaching better accuracy in 10× fewer epochs than StepLR schedules.\n\n```python\nscheduler = torch.optim.lr_scheduler.OneCycleLR(\n    optimizer,\n    max_lr=0.1,\n    total_steps=len(dataloader) * epochs,  # total training steps\n    pct_start=0.3,           # 30% of steps for warmup (increase phase)\n    anneal_strategy='cos',   # 'cos' (smooth) or 'linear'\n    div_factor=25.0,         # base_lr = max_lr / div_factor\n    final_div_factor=1e4,    # min_lr = base_lr / final_div_factor\n)\n```\n\n**TensorFlow:** No built-in OneCycleLR. Approximate with warmup then cosine decay:\n```python\ntotal_steps = len(dataloader) * epochs\nwarmup_steps = int(0.3 * total_steps)\n\n# Phase 1: linear warmup from max_lr/25 to max_lr\n# Phase 2: cosine decay from max_lr to max_lr/25/10000\nschedule = tf.keras.optimizers.schedules.CosineDecay(\n    initial_learning_rate=0.1, decay_steps=total_steps - warmup_steps,\n    warmup_steps=warmup_steps, warmup_target=0.1  # TF 2.13+\n)\n```\n\n**Key parameters:**\n- `max_lr` — the peak LR; must be found via the LR range test\n- `pct_start=0.3` — first 30% of steps are warmup\n- `div_factor=25` — initial LR = max_lr/25\n- `final_div_factor=1e4` — final LR = initial_lr/10000 ≈ max_lr/250000\n\nOneCycleLR is called **per batch** and is the de-facto standard for fast training experiments.\n\n## SequentialLR — Compose Schedulers\n\nSequentialLR chains multiple schedulers, switching between them at specified milestones:\n\n```python\n# Warmup for 5 epochs, then cosine annealing for 95 epochs\nwarmup = torch.optim.lr_scheduler.LinearLR(\n    optimizer, start_factor=0.1, end_factor=1.0, total_iters=5\n)\ncosine = torch.optim.lr_scheduler.CosineAnnealingLR(\n    optimizer, T_max=95\n)\nscheduler = torch.optim.lr_scheduler.SequentialLR(\n    optimizer, schedulers=[warmup, cosine], milestones=[5]\n)\n```\n\nThe milestone `[5]` means: use `warmup` for epochs 0–4, then switch to `cosine` from epoch 5 onward.\n\n## ChainedScheduler (Deprecated)\n\n`ChainedScheduler` multiplies the LR factors from multiple schedulers together each step. It is deprecated in favor of SequentialLR and should not be used in new code.\n\n## The Warmup + Cosine Decay Pattern\n\nThe standard recipe for transformers and large vision models:\n\n```python\n# Total steps = epochs × steps_per_epoch\nwarmup_steps = 500\ntotal_steps = 10000\n\nwarmup = torch.optim.lr_scheduler.LinearLR(\n    optimizer, start_factor=1e-4, end_factor=1.0, total_iters=warmup_steps\n)\ncosine = torch.optim.lr_scheduler.CosineAnnealingLR(\n    optimizer, T_max=total_steps - warmup_steps, eta_min=1e-7\n)\nscheduler = torch.optim.lr_scheduler.SequentialLR(\n    optimizer, schedulers=[warmup, cosine], milestones=[warmup_steps]\n)\n```\n\n**TensorFlow:**\n```python\nclass WarmupCosineDecay(tf.keras.optimizers.schedules.LearningRateSchedule):\n    def __init__(self, base_lr, warmup_steps, total_steps, eta_min=1e-7):\n        self.base_lr = base_lr\n        self.warmup_steps = warmup_steps\n        self.total_steps = total_steps\n        self.eta_min = eta_min\n\n    def __call__(self, step):\n        warmup_lr = self.base_lr * (step / self.warmup_steps)\n        cos_steps = tf.cast(self.total_steps - self.warmup_steps, tf.float32)\n        cos_lr = self.eta_min + 0.5 * (self.base_lr - self.eta_min) * (\n            1 + tf.cos(3.14159 * (step - self.warmup_steps) / cos_steps)\n        )\n        return tf.where(step < self.warmup_steps, warmup_lr, cos_lr)\n\noptimizer = tf.keras.optimizers.AdamW(\n    learning_rate=WarmupCosineDecay(1e-3, 500, 10000)\n)\n```\n\n## Scheduler Selection Summary\n\n| Goal | Scheduler |\n|---|---|\n| Fastest training (single run) | OneCycleLR |\n| Best generalization (ensemble) | CosineAnnealingWarmRestarts |\n| Transformer / LLM fine-tuning | LinearLR warmup + CosineAnnealingLR |\n| Unknown plateau epochs | ReduceLROnPlateau |\n| Exploration during training | CyclicLR (triangular2) |\n| Fixed-epoch milestone curriculum | MultiStepLR |\n| Custom LR function | LambdaLR |\n\n## Calling scheduler.step() Correctly\n\n```python\n# CORRECT — optimizer.step() before scheduler.step()\noptimizer.step()\nscheduler.step()\n\n# WRONG — scheduler.step() before optimizer.step() causes off-by-one LR\nscheduler.step()  # Do not do this first\noptimizer.step()\n```\n\nFor per-batch schedulers (CyclicLR, OneCycleLR, CosineAnnealingWarmRestarts with `step(t_cur)`), call `scheduler.step()` after each batch's `optimizer.step()`. For epoch schedulers, call once per epoch after the training loop.\n",
+  "equationBreakdowns": [
+    {
+      "label": "SGDR Cosine Restart",
+      "terms": [
+        {
+          "symbol": "T_i",
+          "name": "Current cycle length",
+          "desc": "T₀ × T_mult^i — grows with each restart when T_mult > 1"
+        },
+        {
+          "symbol": "T_{\\text{cur}}",
+          "name": "Steps since last restart",
+          "desc": "Resets to 0 at each warm restart"
+        },
+        {
+          "symbol": "T_{\\text{mult}}",
+          "name": "Cycle multiplier",
+          "desc": "T_mult=2 doubles cycle length after each restart — coarser exploration over time"
+        },
+        {
+          "symbol": "\\eta_{\\min}",
+          "name": "Minimum LR (eta_min)",
+          "desc": "Floor between restarts; keep small (1e-6) rather than 0 to avoid dead updates"
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Loshchilov & Hutter 2016",
+      "title": "SGDR: Stochastic Gradient Descent with Warm Restarts",
+      "url": "https://arxiv.org/abs/1608.03983",
+      "note": "Cosine annealing with warm restarts and snapshot ensembling"
+    },
+    {
+      "label": "Smith & Topin 2018",
+      "title": "Super-Convergence: Very Fast Training of Neural Networks Using Large Learning Rates",
+      "url": "https://arxiv.org/abs/1708.07120",
+      "note": "OneCycleLR and the super-convergence phenomenon"
+    },
+    {
+      "label": "Smith 2017",
+      "title": "Cyclical Learning Rates for Training Neural Networks",
+      "url": "https://arxiv.org/abs/1506.01186",
+      "note": "Original CyclicLR paper — LR range test methodology"
+    }
+  ]
+}

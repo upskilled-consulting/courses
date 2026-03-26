@@ -1,0 +1,130 @@
+{
+  "id": "r5",
+  "moduleId": "loss-functions",
+  "title": "Distribution & Similarity Losses",
+  "estimatedMinutes": 12,
+  "learningObjectives": [
+    {
+      "id": "r5-lo1",
+      "verb": "Compute",
+      "description": "Compute KL divergence between two distributions and explain its asymmetry and why it diverges when the target distribution assigns zero probability",
+      "skillTags": [
+        "probabilistic-ml"
+      ]
+    },
+    {
+      "id": "r5-lo2",
+      "verb": "Apply",
+      "description": "Apply MarginRankingLoss to a pair of scores and verify the direction of the margin constraint",
+      "skillTags": [
+        "ranking"
+      ]
+    },
+    {
+      "id": "r5-lo3",
+      "verb": "Distinguish",
+      "description": "Distinguish HingeEmbeddingLoss (similar/dissimilar with {-1, +1} labels) from CosineEmbeddingLoss (cosine distance minimisation)",
+      "skillTags": [
+        "metric-learning",
+        "ranking"
+      ]
+    },
+    {
+      "id": "r5-lo4",
+      "verb": "Explain",
+      "description": "Explain when to prefer a distribution divergence loss (KLDiv) over a point-wise similarity loss (cosine, hinge)",
+      "skillTags": [
+        "probabilistic-ml",
+        "metric-learning"
+      ]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r4"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r6"
+  },
+  "content": "## nn.KLDivLoss — Kullback-Leibler Divergence\n\nThe KL divergence measures how much information is lost when using distribution $Q$ to approximate distribution $P$:\n\n$$D_{\\text{KL}}(P \\| Q) = \\sum_k P_k \\log \\frac{P_k}{Q_k} = \\sum_k P_k \\log P_k - \\sum_k P_k \\log Q_k$$\n\nIn PyTorch, $P$ is the `target` (the \"true\" distribution) and $Q$ is the model's predicted distribution. The input must be **log-probabilities**:\n\n$$\\ell_k = P_k \\bigl(\\log P_k - \\text{input}_k\\bigr)$$\n\nwhere `input` = $\\log Q$.\n\n```python\nkl = nn.KLDivLoss(reduction='batchmean')\nlog_q = F.log_softmax(torch.randn(4, 10), dim=1)  # log-probs from model\np     = F.softmax(torch.randn(4, 10),     dim=1)  # target distribution\noutput = kl(log_q, p)\n```\n\n**Reduction note:** Use `reduction='batchmean'` (divides by batch size $N$) for proper KL divergence. The legacy default `'mean'` divides by the total number of elements $N \\times C$, which gives a $1/C$ scaled version.\n\n**When to use:** Knowledge distillation (student learns from teacher's soft probabilities); variational autoencoders (regularise latent distribution toward prior); temperature scaling for calibration.\n\n---\n\n## nn.MarginRankingLoss — Pairwise Ranking\n\nGiven two scores $x_1, x_2$ and a label $y \\in \\{-1, +1\\}$, enforce that the better-ranked input exceeds the other by a margin $m$:\n\n$$\\ell = \\max\\bigl(0,\\; -y \\cdot (x_1 - x_2) + m\\bigr)$$\n\n- If $y = +1$: the loss is zero when $x_1 > x_2 + m$ (\"$x_1$ should rank higher and does\").\n- If $y = -1$: the loss is zero when $x_2 > x_1 + m$ (\"$x_2$ should rank higher and does\").\n\nThe loss is zero when the margin constraint is satisfied; otherwise it penalises the violation linearly.\n\n```python\nloss = nn.MarginRankingLoss(margin=1.0)\nx1 = torch.randn(5)\nx2 = torch.randn(5)\ny  = torch.sign(torch.randn(5))   # random ±1 labels\noutput = loss(x1, x2, y)\n```\n\n**When to use:** Learning-to-rank (search, recommendation); information retrieval; any task where relative ordering matters more than absolute scores.\n\n---\n\n## nn.HingeEmbeddingLoss — Similar vs. Dissimilar Inputs\n\nGiven a distance or similarity value $x$ (a scalar, typically $\\|\\mathbf{u} - \\mathbf{v}\\|$) and a label $y \\in \\{+1, -1\\}$:\n\n$$\\ell = \\begin{cases} x & \\text{if } y = +1 \\\\ \\max(0, m - x) & \\text{if } y = -1 \\end{cases}$$\n\n- When $y = +1$ (similar pair): minimising $\\ell = x$ pulls embeddings together.\n- When $y = -1$ (dissimilar pair): the loss is zero if the distance $x$ already exceeds the margin $m$; otherwise it pushes the embeddings apart.\n\n```python\nloss = nn.HingeEmbeddingLoss(margin=1.0)\nx = torch.tensor([0.3, 1.5, 0.8])   # distances\ny = torch.tensor([1., -1., 1.])     # +1=similar, -1=dissimilar\noutput = loss(x, y)\n```\n\n**When to use:** Siamese networks for verification (face verification, signature verification); one-shot learning.\n\n---\n\n## nn.CosineEmbeddingLoss — Directional Similarity\n\nMeasures similarity between two embedding vectors using cosine similarity $\\cos(\\mathbf{x}_1, \\mathbf{x}_2) = \\frac{\\mathbf{x}_1 \\cdot \\mathbf{x}_2}{\\|\\mathbf{x}_1\\| \\|\\mathbf{x}_2\\|}$:\n\n$$\\ell = \\begin{cases} 1 - \\cos(\\mathbf{x}_1, \\mathbf{x}_2) & \\text{if } y = +1 \\\\ \\max\\bigl(0, \\cos(\\mathbf{x}_1, \\mathbf{x}_2) - m\\bigr) & \\text{if } y = -1 \\end{cases}$$\n\n- When $y = +1$: loss is $1 - \\cos(\\cdot) \\in [0, 2]$. Minimising it makes the two vectors point in the same direction.\n- When $y = -1$: loss penalises the cosine similarity exceeding a margin $m$ (default 0). Dissimilar pairs should have $\\cos \\le m$.\n\n```python\nloss = nn.CosineEmbeddingLoss(margin=0.0)\nu = torch.randn(4, 128)\nv = torch.randn(4, 128)\ny = torch.sign(torch.randn(4))   # ±1 labels\noutput = loss(u, v, y)\n```\n\n**Why cosine vs. Euclidean?** Cosine similarity is scale-invariant — it depends only on the angle between vectors, not their magnitude. This is natural for text embeddings (TF-IDF, sentence embeddings) where vector norms encode term frequency artifacts, not semantic distance.\n\n**When to use:** Sentence embedding learning; semantic similarity; contrastive learning with unit-normalised representations.",
+  "equationBreakdowns": [
+    {
+      "label": "KLDivLoss",
+      "terms": [
+        {
+          "symbol": "D_{\\text{KL}}(P \\| Q)",
+          "name": "KL divergence from Q to P",
+          "desc": "Measures the extra bits needed to encode samples from P using code Q. It is NOT symmetric: D_KL(P‖Q) ≠ D_KL(Q‖P). Always non-negative; zero iff P=Q."
+        },
+        {
+          "symbol": "P_k \\log(P_k / Q_k)",
+          "name": "Per-token contribution",
+          "desc": "Positive when P_k > Q_k (the model underestimates this outcome's probability); negative when P_k < Q_k but the sum is always ≥ 0 by Jensen's inequality."
+        },
+        {
+          "symbol": "\\text{input}_k = \\log Q_k",
+          "name": "Log-probability input",
+          "desc": "PyTorch expects log-probabilities as the 'input' argument — apply F.log_softmax before passing. Passing raw probabilities instead is a common bug that gives incorrect gradients."
+        }
+      ]
+    },
+    {
+      "label": "MarginRankingLoss",
+      "terms": [
+        {
+          "symbol": "y \\cdot (x_1 - x_2)",
+          "name": "Signed score gap",
+          "desc": "When y=+1 and x₁ > x₂, this is positive (good). The loss penalises the negative of this quantity exceeding the margin m."
+        },
+        {
+          "symbol": "m",
+          "name": "Ranking margin",
+          "desc": "How much the winner's score must exceed the loser's. m=0 just requires the winner to be higher; m=1 requires it to be higher by at least 1 unit."
+        }
+      ]
+    },
+    {
+      "label": "CosineEmbeddingLoss",
+      "terms": [
+        {
+          "symbol": "\\cos(\\mathbf{x}_1, \\mathbf{x}_2)",
+          "name": "Cosine similarity",
+          "desc": "Dot product normalised by both vector norms. Always in [−1, 1]. Value 1 → identical direction; 0 → orthogonal; −1 → opposite direction."
+        },
+        {
+          "symbol": "1 - \\cos(\\mathbf{x}_1, \\mathbf{x}_2)",
+          "name": "Cosine distance (y=+1 case)",
+          "desc": "Always in [0, 2]. Zero when the vectors are identical in direction. Minimising this pulls the two embeddings to point the same way."
+        },
+        {
+          "symbol": "m",
+          "name": "Dissimilarity margin",
+          "desc": "For negative pairs (y=−1), the loss is zero if cos(x₁,x₂) ≤ m. Default m=0, so any positive cosine similarity is penalised. Raising m makes the constraint stricter."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "[1]",
+      "title": "nn.KLDivLoss — PyTorch docs",
+      "url": "https://pytorch.org/docs/stable/generated/torch.nn.KLDivLoss.html"
+    },
+    {
+      "label": "[2]",
+      "title": "nn.MarginRankingLoss — PyTorch docs",
+      "url": "https://pytorch.org/docs/stable/generated/torch.nn.MarginRankingLoss.html"
+    },
+    {
+      "label": "[3]",
+      "title": "nn.HingeEmbeddingLoss — PyTorch docs",
+      "url": "https://pytorch.org/docs/stable/generated/torch.nn.HingeEmbeddingLoss.html"
+    },
+    {
+      "label": "[4]",
+      "title": "nn.CosineEmbeddingLoss — PyTorch docs",
+      "url": "https://pytorch.org/docs/stable/generated/torch.nn.CosineEmbeddingLoss.html"
+    }
+  ]
+}

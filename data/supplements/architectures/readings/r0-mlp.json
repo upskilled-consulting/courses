@@ -1,0 +1,78 @@
+{
+  "id": "r0",
+  "moduleId": "architectures",
+  "title": "The MLP — Layers, Activations, and Universal Approximation",
+  "estimatedMinutes": 14,
+  "learningObjectives": [
+    {
+      "id": "r0-lo1",
+      "verb": "Trace",
+      "description": "Trace the forward pass of an L-layer MLP from input to output, identifying the affine transformation and non-linearity at each hidden layer",
+      "skillTags": ["architectures", "mlp"]
+    },
+    {
+      "id": "r0-lo2",
+      "verb": "Explain",
+      "description": "Explain what the Universal Approximation Theorem guarantees and what it does not guarantee about MLP expressivity",
+      "skillTags": ["architectures", "mlp"]
+    },
+    {
+      "id": "r0-lo3",
+      "verb": "Distinguish",
+      "description": "Distinguish the effects of adding depth vs. adding width to an MLP and identify scenarios where each is preferred",
+      "skillTags": ["architectures", "mlp"]
+    },
+    {
+      "id": "r0-lo4",
+      "verb": "Explain",
+      "description": "Explain why layer normalization and dropout are applied after (or within) MLP layers and state what problem each addresses",
+      "skillTags": ["architectures", "mlp", "training-dynamics"]
+    }
+  ],
+  "prevItem": null,
+  "nextItem": {
+    "type": "reading",
+    "id": "r1"
+  },
+  "content": "## The Foundation: Affine Transformation + Non-Linearity\n\nEvery modern deep learning architecture — transformers, ResNets, RNNs — is assembled from a small number of primitives. The most fundamental is a single **dense (fully connected) layer**: an affine transformation followed by a non-linearity.\n\nFor an input vector $\\mathbf{x} \\in \\mathbb{R}^{d_{\\text{in}}}$, a layer computes:\n\n$$\\mathbf{h} = \\phi(W\\mathbf{x} + \\mathbf{b})$$\n\nwhere $W \\in \\mathbb{R}^{d_{\\text{out}} \\times d_{\\text{in}}}$ is the weight matrix, $\\mathbf{b} \\in \\mathbb{R}^{d_{\\text{out}}}$ is the bias, and $\\phi$ is a pointwise non-linearity (ReLU, GELU, tanh, etc.).\n\n**Why the non-linearity?** Without $\\phi$, stacking multiple linear layers collapses: $W_2(W_1 \\mathbf{x} + \\mathbf{b}_1) + \\mathbf{b}_2 = W'\\mathbf{x} + \\mathbf{b}'$ — a single linear transformation. Non-linearities are what give depth its expressivity.\n\n---\n\n## The Multi-Layer Perceptron\n\nAn **MLP** (multi-layer perceptron) chains $L$ such layers:\n\n$$\\mathbf{h}^{(0)} = \\mathbf{x}$$\n$$\\mathbf{h}^{(\\ell)} = \\phi\\bigl(W^{(\\ell)}\\mathbf{h}^{(\\ell-1)} + \\mathbf{b}^{(\\ell)}\\bigr), \\quad \\ell = 1,\\ldots,L-1$$\n$$\\hat{\\mathbf{y}} = W^{(L)}\\mathbf{h}^{(L-1)} + \\mathbf{b}^{(L)}$$\n\nThe final layer is **linear** (no activation) — the appropriate output non-linearity (softmax, sigmoid) is applied by the loss function or separately.\n\nKey vocabulary:\n- **Input layer:** $\\mathbf{h}^{(0)} = \\mathbf{x}$\n- **Hidden layers:** $\\mathbf{h}^{(1)}, \\ldots, \\mathbf{h}^{(L-1)}$ — these are the learned representations\n- **Output layer:** $\\hat{\\mathbf{y}}$ — prediction in task-specific space\n- **Width:** $d_h$, the dimensionality of the hidden layers\n- **Depth:** $L$, the number of weight layers\n\n---\n\n## Universal Approximation\n\nThe **Universal Approximation Theorem** (Hornik 1989; Cybenko 1989) states that a single hidden layer MLP with a sufficient number of neurons can approximate any continuous function on a compact domain to arbitrary precision.\n\n**What this guarantees:** The function class of MLPs is expressive enough in principle.\n\n**What it does not guarantee:**\n- That shallow networks are *practical* — the required width may be exponential in the input dimension\n- That gradient descent will *find* the right parameters\n- That the network will *generalize* to unseen inputs\n\nThe theorem is primarily a theoretical existence result. In practice, depth is more important than width for most tasks.\n\n---\n\n## Depth vs. Width\n\n**Depth** (more layers, fixed width) offers:\n- **Compositional representations:** each layer builds on the previous one — edges → shapes → objects in vision; morphemes → words → phrases in NLP\n- **Parameter efficiency:** some functions require exponentially more neurons to represent in a shallow network than a deep one\n- **Better gradient flow with residual connections** (see the ResNet reading)\n\n**Width** (larger hidden dimension, fixed depth) offers:\n- **More capacity without gradient flow issues** — easier to train\n- **Direct expressivity gain** — more neurons in one layer\n\nPractical guidance: modern architectures prefer moderate depth (4–48 layers) with sufficient width. For structured data, 2–4 layers is often enough; for unstructured data (images, text), depth is essential.\n\n---\n\n## Layer Normalization\n\nRaw pre-activations can have very different scales across layers, which destabilizes training. **Layer normalization** normalizes within each example across features:\n\n$$\\text{LayerNorm}(\\mathbf{x}) = \\gamma \\odot \\frac{\\mathbf{x} - \\mu}{\\sigma} + \\beta$$\n\nwhere $\\mu$ and $\\sigma$ are the mean and standard deviation computed over the feature dimension of a single example, and $\\gamma$, $\\beta$ are learned scale and shift parameters.\n\n- **BatchNorm** (alternative) normalizes across the batch dimension — more common in CNNs\n- **LayerNorm** normalizes across the feature dimension of each example — standard in transformers and RNNs, where batch statistics are unreliable\n\n---\n\n## Dropout\n\n**Dropout** randomly zeros out neurons during training with probability $p$ (typically 0.1–0.5):\n\n$$\\mathbf{h}_{\\text{drop}} = \\mathbf{h} \\odot \\text{Bernoulli}(1-p) / (1-p)$$\n\nThe division by $(1-p)$ is **inverted dropout** — it preserves the expected sum of activations so the same network can be used at inference time without scaling.\n\n**Why it works:** Forces the network to learn redundant representations — no single neuron can be relied upon. Acts as a form of ensemble averaging over exponentially many sub-networks.\n\n**Where to apply:** After activation, before the next layer. Not typically used in the output layer. Often omitted entirely in modern transformers (replaced by layer norm).\n\n---\n\n## Parameter Count\n\nFor an MLP with input dim $d_{\\text{in}}$, $L-1$ hidden layers of width $d_h$, and output dim $d_{\\text{out}}$:\n\n$$\\text{params} = d_{\\text{in}} \\cdot d_h + (L-2) \\cdot d_h^2 + d_h \\cdot d_{\\text{out}} + \\text{biases}$$\n\nHidden layers dominate: each $d_h \\times d_h$ weight matrix has $d_h^2$ parameters. For $d_h = 1024$ and $L = 6$: ~4M parameters per hidden layer.\n\nThis quadratic scaling in $d_h$ is what makes MLPs expensive to widen and motivates sparse architectures (Mixture of Experts) for very large models.\n\n---\n\n## PyTorch and TensorFlow\n\n**PyTorch** — building MLPs with `nn.Sequential` and `nn.Module`:\n\n```python\nimport torch\nimport torch.nn as nn\n\n# Concise MLP with nn.Sequential\nmlp = nn.Sequential(\n    nn.Linear(784, 256),\n    nn.ReLU(),\n    nn.Linear(256, 256),\n    nn.ReLU(),\n    nn.Linear(256, 10),\n)\n\nx   = torch.randn(32, 784)   # batch of 32 flattened images\nout = mlp(x)                 # (32, 10) logits\n\n# Custom Module gives more control (separate forward logic, weight sharing, etc.)\nclass MLP(nn.Module):\n    def __init__(self, in_dim: int, hidden: int, out_dim: int, depth: int):\n        super().__init__()\n        layers = [nn.Linear(in_dim, hidden), nn.ReLU()]\n        for _ in range(depth - 1):\n            layers += [nn.Linear(hidden, hidden), nn.ReLU()]\n        layers.append(nn.Linear(hidden, out_dim))\n        self.net = nn.Sequential(*layers)\n\n    def forward(self, x):\n        return self.net(x)\n\nmodel = MLP(in_dim=784, hidden=512, out_dim=10, depth=4)\nprint(sum(p.numel() for p in model.parameters()))  # parameter count\n```\n\n**TensorFlow / Keras:**\n\n```python\nimport tensorflow as tf\n\n# Sequential API\nmlp = tf.keras.Sequential([\n    tf.keras.layers.Dense(256, activation='relu', input_shape=(784,)),\n    tf.keras.layers.Dense(256, activation='relu'),\n    tf.keras.layers.Dense(10),\n])\n\n# Functional API — preferred when you need multiple inputs/outputs or skip connections\ninputs  = tf.keras.Input(shape=(784,))\nx       = tf.keras.layers.Dense(256, activation='relu')(inputs)\nx       = tf.keras.layers.Dense(256, activation='relu')(x)\noutputs = tf.keras.layers.Dense(10)(x)\nmodel   = tf.keras.Model(inputs, outputs)\n\nmodel.summary()   # prints layer shapes and parameter counts\n```",
+  "equationBreakdowns": [
+    {
+      "label": "Single Dense Layer",
+      "heading": "The Affine + Non-Linearity Pattern",
+      "terms": [
+        {
+          "symbol": "W\\mathbf{x} + \\mathbf{b}",
+          "name": "Affine transformation",
+          "desc": "Projects the input from d_in dimensions to d_out dimensions. The weight matrix W learns a linear mixing of input features; the bias b shifts the result."
+        },
+        {
+          "symbol": "\\phi(\\cdot)",
+          "name": "Non-linearity",
+          "desc": "Pointwise activation function (ReLU, GELU, tanh). Without this, stacking layers collapses to a single linear map — no additional expressivity."
+        },
+        {
+          "symbol": "\\mathbf{h}",
+          "name": "Hidden representation",
+          "desc": "The output of the layer — a learned d_out-dimensional representation of the input. Subsequent layers operate on h, not on x directly."
+        }
+      ]
+    },
+    {
+      "label": "Layer Normalization",
+      "heading": "Layer Normalization",
+      "terms": [
+        {
+          "symbol": "\\mu,\\, \\sigma",
+          "name": "Per-example statistics",
+          "desc": "Mean and std computed over the feature dimension of a single example. Unlike BatchNorm, does not depend on other examples in the batch."
+        },
+        {
+          "symbol": "\\gamma,\\, \\beta",
+          "name": "Learned scale and shift",
+          "desc": "Allow the network to undo the normalization if needed. Without them, every layer's pre-activations would be forced to zero mean, unit variance."
+        }
+      ]
+    }
+  ],
+  "references": []
+}

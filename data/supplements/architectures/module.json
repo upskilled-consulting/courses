@@ -1,0 +1,79 @@
+{
+  "id": "architectures",
+  "type": "supplement",
+  "title": "Neural Network Architectures",
+  "description": "A bottom-up tour of the core neural network architectures — how they work, why they are designed the way they are, and when to use each. Covers MLPs, convolutional layers and ResNets, vanilla RNNs, LSTMs and GRUs, scaled dot-product and multi-head attention, and the transformer (encoder-only, decoder-only, encoder-decoder). Builds the architectural vocabulary assumed by every other supplement.",
+  "level": "Intermediate",
+  "estimatedHours": 7,
+  "color": "#1776a4",
+  "accentLight": "#63aac9",
+  "readings": [
+    {
+      "id": "r0",
+      "title": "The MLP — Layers, Activations, and Universal Approximation",
+      "estimatedMinutes": 14,
+      "description": "Affine + non-linearity, the MLP forward pass, Universal Approximation Theorem, depth vs. width, layer normalization, and dropout.",
+      "dataPath": "data/supplements/architectures/readings/r0-mlp.json"
+    },
+    {
+      "id": "r1",
+      "title": "Convolutional Layers and the Vision Inductive Bias",
+      "estimatedMinutes": 16,
+      "description": "Convolution operation, weight sharing, translation equivariance, kernel size / stride / padding, receptive fields, pooling variants, and depthwise separable convolutions.",
+      "dataPath": "data/supplements/architectures/readings/r1-conv-layers.json"
+    },
+    {
+      "id": "r2",
+      "title": "Going Deeper — ResNets and Residual Connections",
+      "estimatedMinutes": 14,
+      "description": "The degradation problem, residual blocks (F(x)+x), the gradient highway, basic vs. bottleneck blocks, projection shortcuts, and residual connections in transformers.",
+      "dataPath": "data/supplements/architectures/readings/r2-resnets.json"
+    },
+    {
+      "id": "r3",
+      "title": "Vanilla RNNs and the Vanishing Gradient",
+      "estimatedMinutes": 14,
+      "description": "Recurrent forward pass, weight sharing across time, BPTT, the vanishing and exploding gradient problems, gradient clipping, and RNN configurations (many-to-one, seq2seq).",
+      "dataPath": "data/supplements/architectures/readings/r3-rnn.json"
+    },
+    {
+      "id": "r4",
+      "title": "LSTM and GRU — Gating Solutions to Long-Range Memory",
+      "estimatedMinutes": 18,
+      "description": "LSTM's four gates, cell state as a gradient highway, GRU's reset and update gates, LSTM vs. GRU parameter count and performance comparison.",
+      "dataPath": "data/supplements/architectures/readings/r4-lstm-gru.json"
+    },
+    {
+      "id": "r5",
+      "title": "Attention Mechanisms",
+      "estimatedMinutes": 16,
+      "description": "Query-key-value abstraction, scaled dot-product attention, the √d_k scaling, multi-head attention, self-attention vs. masked self-attention vs. cross-attention.",
+      "dataPath": "data/supplements/architectures/readings/r5-attention.json"
+    },
+    {
+      "id": "r6",
+      "title": "The Transformer",
+      "estimatedMinutes": 18,
+      "description": "Encoder and decoder block structure, FFN sub-layer, positional encodings (sinusoidal, learned, RoPE), encoder-only / decoder-only / encoder-decoder families, and efficiency improvements (GQA, FlashAttention).",
+      "dataPath": "data/supplements/architectures/readings/r6-transformer.json"
+    }
+  ],
+  "drills": [
+    {
+      "id": "d1",
+      "title": "MLPs, CNNs, and ResNets",
+      "cardCount": 15,
+      "estimatedMinutes": 12,
+      "dataPath": "data/supplements/architectures/drills/d1-mlp-cnn-resnet.json"
+    },
+    {
+      "id": "d2",
+      "title": "RNNs, Attention, and Transformers",
+      "cardCount": 15,
+      "estimatedMinutes": 14,
+      "dataPath": "data/supplements/architectures/drills/d2-rnn-attention-transformer.json"
+    }
+  ],
+  "quizzes": [],
+  "labs": []
+}

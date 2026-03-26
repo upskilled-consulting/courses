@@ -1,0 +1,117 @@
+{
+  "id": "r3",
+  "moduleId": "m3",
+  "title": "Structural Modifications: Anchors, LOD, and Improved Rendering",
+  "estimatedMinutes": 14,
+  "learningObjectives": [
+    {
+      "id": "m3r3-lo1",
+      "verb": "Explain",
+      "description": "Explain how ScaffoldGS replaces per-Gaussian attribute storage with MLP-predicted attributes from sparse anchors, and identify the compression gain mechanism and its dependency on spatial locality",
+      "skillTags": [
+        "compaction",
+        "3dgs-fundamentals"
+      ]
+    },
+    {
+      "id": "m3r3-lo2",
+      "verb": "Trace",
+      "description": "Trace how HAC uses a hash-grid spatial context as a learned entropy model and explain why nearby Gaussians in 3D space having correlated attributes enables ~100× total compression",
+      "skillTags": [
+        "compaction",
+        "compression"
+      ]
+    },
+    {
+      "id": "m3r3-lo3",
+      "verb": "Explain",
+      "description": "Explain the OctreeGS level-of-detail approach and identify the scenario where distance-adaptive rendering quality meaningfully reduces compressed model size",
+      "skillTags": [
+        "compaction",
+        "3dgs-fundamentals"
+      ]
+    },
+    {
+      "id": "m3r3-lo4",
+      "verb": "Select",
+      "description": "Select between per-Gaussian and anchor-based structural methods given constraints on scene complexity, quality target, training budget, and minimum Gaussian count threshold",
+      "skillTags": [
+        "compaction",
+        "compression"
+      ]
+    }
+  ],
+  "content": "## Beyond Per-Gaussian Optimization\n\nThe methods covered so far optimize each Gaussian independently. A more powerful approach exploits **correlations between Gaussians**. Nearby Gaussians in a smooth surface tend to have similar attributes — similar colors, similar orientations, similar scales. Structural modifications make these correlations explicit, enabling dramatically more efficient encoding.\n\n## ScaffoldGS: Anchor-Based Representation\n\nScaffoldGS (Lu et al., CVPR 2024) introduces the concept of **anchors** — sparse control points that each predict the attributes of \\(K\\) nearby Gaussians.\n\nEach anchor carries:\n- 1 position (3 floats)\n- 1 scale (3 floats)\n- \\(K\\) spatial offsets (\\(K \\times 3\\) floats) — where the \\(K\\) Gaussians are relative to the anchor\n- 1 feature vector (\\(F\\) floats) — a learned descriptor\n\nA small MLP takes (anchor feature, view direction, distance to camera) and predicts the Gaussian attributes (scale, rotation, color, opacity) for all \\(K\\) Gaussians at once.\n\n**Why this helps compression**: instead of storing 59 independent floats per Gaussian, you store \\(F\\) features per anchor + a small MLP. The MLP itself must be encoded, but it's shared across all anchors — one fixed overhead. Anchor positions also exhibit strong spatial correlations (they tend to lie on smooth surfaces), making them more compressible than arbitrary Gaussian positions.\n\n## CompGS: Anchor-Based with Affine Warping\n\nCompGS predicts Gaussians from anchors using an **affine warp**:\n\n\\[\\text{Gaussian}_k = \\text{AffineWarp}(\\text{anchor attributes}, \\mathbf{f}_{anchor} + \\mathbf{f}_{splat_k})\\]\n\nwhere \\(\\mathbf{f}_{splat_k}\\) is a per-Gaussian residual feature. The warp is a linear transformation (predicted by a small MLP) rather than a full nonlinear mapping. **Residuals** from the anchor prediction are smaller and more compressible than raw attributes.\n\n## HAC and HAC++: Hash-Grid Context\n\nHAC (Hash-grid Assisted Context, Chen et al., ECCV 2024) extends ScaffoldGS by introducing a spatial hash grid (InstantNGP-style) over the anchor positions:\n\n1. Hash anchor position \\((x,y,z)\\) to look up a learnable feature vector from a hash table.\n2. The hash feature predicts the **distribution parameters** for arithmetic coding of anchor attributes — effectively a learned prior.\n3. Training with a rate term \\(\\lambda R\\) makes the learned distributions match the actual data, minimizing coded bit-rate.\n\nHAC++ extends this to achieve approximately **100× compression** of the original 3DGS representation while maintaining competitive quality.\n\n**Key insight**: the hash grid is a continuous spatial model — nearby anchors share hash bucket features, so the model implicitly learns spatial correlations in the distribution of attribute values. This is much more powerful than coding each attribute independently.\n\n## OctreeGS: Hierarchical Level-of-Detail\n\nOctreeGS organizes anchors in an octree — a hierarchical spatial partition where each node contains an anchor at the center of its voxel. Coarser octree levels correspond to larger voxels and coarser Gaussian representations.\n\nThis enables **LOD rendering**: for distant regions, use anchors from coarser octree levels (fewer, larger Gaussians). For nearby regions, use fine-level anchors. This:\n- Reduces rendering cost for large scenes\n- Reduces aliasing from undersampled geometry\n- Enables progressive streaming (coarse level first, then refine)\n\nOctreeGS training proceeds coarse-to-fine: start with coarse anchors, then progressively densify into finer octree levels.\n\n## Improved Rendering: EWA Splatting and Post-Processing\n\nThe standard tile-based rasterizer is an approximation of exact perspective-correct splatting. Two approaches improve quality:\n\n**EWA Splatting / PerspectiveSplat**: applies the elliptical weighted average filter correctly in perspective space, reducing aliasing at oblique viewing angles. With more geometrically accurate splats, fewer Gaussians are needed to achieve the same visual quality — directly reducing the parameter count.\n\n**SUNDAE UNet post-processing**: after rendering, apply a small UNet to refine the output image. By offloading some reconstruction quality to the post-processor, fewer Gaussians are needed in the explicit representation. Trade-off: the UNet adds inference cost and must be encoded alongside the Gaussians.",
+  "equationBreakdowns": [
+    {
+      "label": "CompGS — Affine Warp Gaussian Prediction",
+      "terms": [
+        {
+          "symbol": "\\text{Gaussian}_k",
+          "name": "k-th predicted Gaussian",
+          "desc": "The full attribute set (position, scale, rotation, color, opacity) for the k-th Gaussian associated with this anchor. CompGS predicts all K Gaussians per anchor in one pass."
+        },
+        {
+          "symbol": "\\text{AffineWarp}(\\cdot)",
+          "name": "Affine transformation",
+          "desc": "A linear map (matrix multiply + bias) predicted by a small MLP. Affine warps are cheaper to compute and easier to invert than full nonlinear mappings, and their outputs have a more compressible distribution."
+        },
+        {
+          "symbol": "\\text{anchor attributes}",
+          "name": "Anchor-level geometry",
+          "desc": "The shared position, scale, and orientation of the anchor point. All K Gaussians inherit these as a base, so only the residual deviation needs to be stored per Gaussian."
+        },
+        {
+          "symbol": "\\mathbf{f}_{anchor}",
+          "name": "Anchor feature vector",
+          "desc": "A learned descriptor stored at the anchor that encodes the local appearance of the scene region. Shared across all K Gaussians of this anchor — amortising the storage cost."
+        },
+        {
+          "symbol": "\\mathbf{f}_{splat_k}",
+          "name": "Per-Gaussian residual feature",
+          "desc": "A small correction vector specific to Gaussian k. Because it is a residual relative to the anchor feature, its values are small and tightly clustered around zero — making them far more compressible than raw attribute values."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Lu et al. 2024",
+      "title": "Scaffold-GS: Structured 3D Gaussians for View-Adaptive Rendering",
+      "url": "https://arxiv.org/abs/2312.00109"
+    },
+    {
+      "label": "Liu et al. 2024",
+      "title": "CompGS: Efficient 3D Scene Representation via Compressed Gaussian Splatting",
+      "url": "https://arxiv.org/abs/2404.09458"
+    },
+    {
+      "label": "Chen et al. 2024",
+      "title": "HAC: Hash-grid Assisted Context for 3D Gaussian Splatting Compression",
+      "url": "https://arxiv.org/abs/2403.14530"
+    },
+    {
+      "label": "Chen et al. 2025",
+      "title": "HAC++: Towards 100X Compression of 3D Gaussian Splatting",
+      "url": "https://arxiv.org/abs/2501.12255"
+    },
+    {
+      "label": "Ren et al. 2024",
+      "title": "Octree-GS: Towards Consistent Real-time Rendering with LOD-Structured 3D Gaussians",
+      "url": "https://arxiv.org/abs/2403.17898"
+    },
+    {
+      "label": "Warburg et al. 2024",
+      "title": "Spectrally Pruned Gaussian Fields with Neural Compensation (SUNDAE)",
+      "url": "https://arxiv.org/abs/2405.00676"
+    }
+  ],
+  "nextItem": {
+    "type": "reading",
+    "id": "r4"
+  },
+  "prevItem": {
+    "type": "reading",
+    "id": "r2"
+  }
+}

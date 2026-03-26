@@ -1,0 +1,125 @@
+{
+  "id": "r2",
+  "moduleId": "probability-foundations",
+  "title": "Bayes' Theorem and the Chain Rule of Probability",
+  "estimatedMinutes": 15,
+  "learningObjectives": [
+    {
+      "id": "r3-lo1",
+      "verb": "Define",
+      "description": "Define conditional probability P(A|B) and derive the product rule P(A∩B) = P(A|B)P(B) from it",
+      "skillTags": [
+        "probability-foundations",
+        "bayesian-reasoning"
+      ]
+    },
+    {
+      "id": "r3-lo2",
+      "verb": "Apply",
+      "description": "Apply the chain rule of probability to factorize a joint distribution P(A₁,A₂,...,Aₙ) as a product of conditional distributions",
+      "skillTags": [
+        "probability-foundations",
+        "bayesian-reasoning"
+      ]
+    },
+    {
+      "id": "r3-lo3",
+      "verb": "Derive",
+      "description": "Derive Bayes' theorem from the definition of conditional probability and identify the prior, likelihood, posterior, and evidence in a concrete inference problem",
+      "skillTags": [
+        "probability-foundations",
+        "bayesian-reasoning"
+      ]
+    },
+    {
+      "id": "r3-lo4",
+      "verb": "Explain",
+      "description": "Explain how Bayes' theorem enables sequential belief updating and identify where this appears in probabilistic ML models",
+      "skillTags": [
+        "probability-foundations",
+        "bayesian-reasoning"
+      ]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r1"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r3"
+  },
+  "content": "## Conditional Probability\n\nConditioning is one of the most powerful operations in probability. It lets us update our beliefs once we have observed some information.\n\n**Definition.** The **conditional probability** of $A$ given $B$ (written $P(A \\mid B)$) is the probability that $A$ occurs, restricted to the world where $B$ has already occurred:\n\n$$P(A \\mid B) = \\frac{P(A \\cap B)}{P(B)} \\qquad \\text{(provided } P(B) > 0\\text{)}$$\n\nGeometrically: conditioning on $B$ shrinks the sample space to $B$ and asks what fraction of $B$ is also in $A$.\n\n**Example.** A bag contains 3 red and 2 blue balls. You draw one and see it is red. What is the probability the next draw (without replacement) is also red?\n\n- $P(\\text{2nd red} \\mid \\text{1st red}) = P(\\text{1st red and 2nd red}) / P(\\text{1st red}) = (3/5 \\cdot 2/4) / (3/5) = 2/4 = 0.5$\n\n---\n\n## The Product Rule\n\nRearranging the definition of conditional probability gives the **product rule**:\n\n$$P(A \\cap B) = P(A \\mid B)\\, P(B)$$\n\nThe joint probability of $A$ and $B$ equals the probability of $B$ times the probability of $A$ given $B$. This also holds symmetrically:\n\n$$P(A \\cap B) = P(B \\mid A)\\, P(A)$$\n\nIf $A$ and $B$ are **independent**, $P(A \\mid B) = P(A)$, so the product rule simplifies to $P(A \\cap B) = P(A)\\, P(B)$.\n\n---\n\n## The Chain Rule of Probability\n\nThe product rule extends to any number of variables. The **chain rule** factorizes a joint distribution into a product of conditionals:\n\n$$P(A_1 \\cap A_2 \\cap \\cdots \\cap A_n) = P(A_1)\\, P(A_2 \\mid A_1)\\, P(A_3 \\mid A_1, A_2) \\cdots P(A_n \\mid A_1, \\ldots, A_{n-1})$$\n\nFor continuous random variables $x_1, \\ldots, x_n$:\n\n$$p(x_1, x_2, \\ldots, x_n) = p(x_1)\\, p(x_2 \\mid x_1)\\, p(x_3 \\mid x_1, x_2) \\cdots p(x_n \\mid x_1, \\ldots, x_{n-1})$$\n\n**Why this matters for ML.** Autoregressive language models use exactly this factorization. The probability of a sequence of tokens $(w_1, w_2, \\ldots, w_T)$ is:\n\n$$p(w_1, \\ldots, w_T) = \\prod_{t=1}^T p(w_t \\mid w_1, \\ldots, w_{t-1})$$\n\nEach next-token prediction is a conditional probability — the chain rule says these multiply to give the joint probability of the whole sequence.\n\n---\n\n## Bayes' Theorem\n\nBayes' theorem follows directly from the product rule. Since $P(A \\cap B) = P(A \\mid B) P(B) = P(B \\mid A) P(A)$, dividing both sides by $P(B)$:\n\n$$\\boxed{P(A \\mid B) = \\frac{P(B \\mid A)\\, P(A)}{P(B)}}$$\n\nIn the language of inference, we interpret this as:\n\n$$\\underbrace{P(H \\mid E)}_{\\text{posterior}} = \\frac{\\underbrace{P(E \\mid H)}_{\\text{likelihood}} \\cdot \\underbrace{P(H)}_{\\text{prior}}}{\\underbrace{P(E)}_{\\text{evidence}}}$$\n\n| Term | Symbol | Meaning |\n|------|--------|---------|\n| **Prior** | $P(H)$ | Our belief about hypothesis $H$ before seeing evidence |\n| **Likelihood** | $P(E \\mid H)$ | How probable is the evidence under hypothesis $H$? |\n| **Posterior** | $P(H \\mid E)$ | Updated belief after observing evidence $E$ |\n| **Evidence** | $P(E)$ | Probability of the evidence under all hypotheses — normalizes the posterior |\n\n### Computing the Evidence\n\nThe denominator $P(E)$ is found by summing (or integrating) over all hypotheses using the law of total probability:\n\n$$P(E) = \\sum_H P(E \\mid H)\\, P(H)$$\n\nThis ensures the posterior sums to 1.\n\n---\n\n## A Concrete Example\n\n**Disease testing.** A disease has prevalence 1% in the population. A test is 95% sensitive (correctly detects 95% of cases) and 90% specific (correctly clears 90% of healthy people).\n\nYou test positive. What is the probability you have the disease?\n\n- $P(D) = 0.01$ — prior (prevalence)\n- $P(+\\mid D) = 0.95$ — likelihood (sensitivity)\n- $P(+\\mid \\neg D) = 0.10$ — false positive rate\n- $P(+) = P(+\\mid D)P(D) + P(+\\mid \\neg D)P(\\neg D) = 0.95 \\times 0.01 + 0.10 \\times 0.99 = 0.1085$\n\n$$P(D \\mid +) = \\frac{0.95 \\times 0.01}{0.1085} \\approx 0.087$$\n\nOnly ~8.7% probability of disease despite a positive test — because the disease is rare (low prior). This counterintuitive result is a direct consequence of the prior dominating when the base rate is low.\n\n---\n\n## Sequential Updating\n\nBayes' theorem is naturally **sequential**: today's posterior becomes tomorrow's prior.\n\nSuppose you observe two independent pieces of evidence $E_1$ and $E_2$:\n\n$$P(H \\mid E_1, E_2) \\propto P(E_1 \\mid H)\\, P(E_2 \\mid H)\\, P(H)$$\n\n(assuming $E_1 \\perp E_2 \\mid H$ — conditionally independent given $H$). You can apply Bayes' theorem sequentially:\n\n1. Use $E_1$ to get $P(H \\mid E_1) \\propto P(E_1 \\mid H) P(H)$\n2. Use this as the new prior and apply $E_2$: $P(H \\mid E_1, E_2) \\propto P(E_2 \\mid H) P(H \\mid E_1)$\n\nThe order of evidence does not matter — the final posterior is the same.\n\n---\n\n## Bayes' Theorem in ML\n\n**Maximum a posteriori (MAP) estimation.** Choosing model parameters $\\theta$ to maximize $P(\\theta \\mid \\mathcal{D}) \\propto P(\\mathcal{D} \\mid \\theta) P(\\theta)$. The prior $P(\\theta)$ acts as regularization — a Gaussian prior corresponds to L2 weight decay.\n\n**Bayesian neural networks.** Instead of point estimates, maintain a posterior distribution over weights. Inference averages predictions over all weights weighted by the posterior.\n\n**Naive Bayes classifiers.** Classify by computing $P(y \\mid x) \\propto P(x \\mid y) P(y)$ for each class label $y$, assuming feature independence given $y$.\n\n**Probabilistic graphical models.** Define complex joint distributions using the chain rule, with conditional independence assumptions encoded as a graph.",
+  "equationBreakdowns": [
+    {
+      "label": "Conditional Probability",
+      "heading": "Conditional Probability",
+      "terms": [
+        {
+          "symbol": "P(A \\mid B)",
+          "name": "Conditional probability",
+          "desc": "The probability of A given that B has occurred. Re-normalizes the probability of A to the world where B is known to be true."
+        },
+        {
+          "symbol": "P(A \\cap B)",
+          "name": "Joint probability",
+          "desc": "The probability that both A and B occur. Numerator of the conditional probability formula."
+        },
+        {
+          "symbol": "P(B)",
+          "name": "Marginal probability",
+          "desc": "The denominator — the probability that B occurs at all. Restricts us to the world where B has happened."
+        }
+      ]
+    },
+    {
+      "label": "Bayes' Theorem",
+      "heading": "Bayes' Theorem",
+      "terms": [
+        {
+          "symbol": "P(H \\mid E)",
+          "name": "Posterior",
+          "desc": "Updated belief about hypothesis H after observing evidence E. The goal of Bayesian inference."
+        },
+        {
+          "symbol": "P(E \\mid H)",
+          "name": "Likelihood",
+          "desc": "How probable is the evidence E assuming H is true? The model's prediction of what we would observe."
+        },
+        {
+          "symbol": "P(H)",
+          "name": "Prior",
+          "desc": "Belief about H before seeing any evidence. Encodes background knowledge or assumptions."
+        },
+        {
+          "symbol": "P(E)",
+          "name": "Evidence (normalizing constant)",
+          "desc": "The total probability of the evidence under all hypotheses. Makes the posterior sum to 1. Often the hardest term to compute in practice."
+        }
+      ]
+    },
+    {
+      "label": "Chain Rule",
+      "heading": "Chain Rule of Probability",
+      "terms": [
+        {
+          "symbol": "p(x_1, \\ldots, x_n)",
+          "name": "Joint distribution",
+          "desc": "The probability of all variables taking specific values simultaneously."
+        },
+        {
+          "symbol": "\\prod_{t=1}^n p(x_t \\mid x_1, \\ldots, x_{t-1})",
+          "name": "Autoregressive factorization",
+          "desc": "Expresses the joint as a product of conditional distributions, each predicting the next variable from all previous ones. This is how language models factorize P(token sequence)."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Downey — Think Bayes 2e, Ch. 1–2",
+      "title": "Probability and Bayes's Theorem",
+      "url": "https://allendowney.github.io/ThinkBayes2/"
+    }
+  ]
+}

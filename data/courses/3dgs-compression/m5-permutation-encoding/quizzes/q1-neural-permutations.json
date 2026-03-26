@@ -1,0 +1,75 @@
+{
+  "id": "q1",
+  "moduleId": "m5",
+  "title": "Neural Permutation Learning",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "questions": [
+    {
+      "id": "q5_1",
+      "type": "multiple-choice",
+      "prompt": "Gumbel-Sinkhorn produces a soft permutation matrix \\(P_{soft}\\) by iterating row and column normalizations. Why is the hard permutation \\(P_{hard}\\) typically obtained via linear assignment rather than row-wise argmax?",
+      "options": [
+        { "id": "a", "text": "Row-wise argmax is numerically unstable for temperature τ < 0.1", "correct": false },
+        { "id": "b", "text": "Row-wise argmax can assign the same column to multiple rows (a collision), violating the permutation constraint; linear assignment guarantees a valid permutation", "correct": true },
+        { "id": "c", "text": "Linear assignment produces higher-quality sorts because it minimizes the global distance metric directly", "correct": false },
+        { "id": "d", "text": "Row-wise argmax is only valid when all rows are equally peaked (uniform sharpness)", "correct": false }
+      ],
+      "explanation": "A doubly-stochastic matrix is guaranteed to have rows and columns summing to 1, but taking row-wise argmax independently can cause collisions: two rows may both argmax to the same column. Linear assignment (Hungarian algorithm or auction algorithm) solves the assignment problem and guarantees each row and column is matched exactly once.",
+      "hint": "Consider what happens when two rows of P_soft both have their maximum in the same column."
+    },
+    {
+      "id": "q5_2",
+      "type": "multiple-choice",
+      "prompt": "ShuffleSoftSort achieves differentiable high-dimensional sorting with only N parameters instead of N². How does the 'shuffle' enable sorting in high dimensions using a 1D sorting primitive?",
+      "options": [
+        { "id": "a", "text": "The shuffle reduces 59D data to 1D by averaging all attribute dimensions", "correct": false },
+        { "id": "b", "text": "Each shuffle presents a random 1D projection of the data to SoftSort; iterating over many shuffles accumulates information about the full HD structure into the learned N sort keys", "correct": true },
+        { "id": "c", "text": "The shuffle operation is equivalent to PCA, projecting to the principal component before sorting", "correct": false },
+        { "id": "d", "text": "Shuffling randomizes the data so SoftSort converges faster due to reduced symmetry", "correct": false }
+      ],
+      "explanation": "No single 1D projection captures the full structure of 59D data. But by shuffling differently each iteration, ShuffleSoftSort exposes different pairwise relationships to SoftSort. Over many iterations, the gradients accumulate and guide the N learned sort keys toward values that produce good grid arrangements for all the different shuffled views — effectively doing HD sorting with a 1D operator.",
+      "hint": "Think about how many different aspects of a 59D dataset different random projections to 1D can reveal."
+    },
+    {
+      "id": "q5_3",
+      "type": "multiple-choice",
+      "prompt": "What is the key loss design challenge in permutation learning that causes naive loss combinations to fail, and what is the proposed solution?",
+      "options": [
+        { "id": "a", "text": "The stochastic constraint loss and distance matrix loss have conflicting gradients; the solution is to add them with equal weights", "correct": false },
+        { "id": "b", "text": "Jointly minimizing validity (row/col sums = 1) and neighbor similarity leads to local minima; the solution is a curriculum: first enforce smoothness, then enforce permutation validity", "correct": true },
+        { "id": "c", "text": "The loss is non-smooth due to the sorting operation; the solution is subgradient descent", "correct": false },
+        { "id": "d", "text": "The distance matrix loss is O(N²) memory, requiring gradient checkpointing", "correct": false }
+      ],
+      "explanation": "If you simultaneously optimize for valid permutation (doubly stochastic \\(P\\)) and high neighbor similarity (good sorting), the network tends to collapse to a trivial solution: map all points to the same grid location (high neighbor similarity but completely invalid permutation). The curriculum approach first lets the network learn a smooth arrangement (ignoring permutation validity), then gradually enforces the permutation constraint.",
+      "hint": "Consider the trivial 'cheating' solution that maximizes neighbor similarity at the cost of permutation validity."
+    },
+    {
+      "id": "q5_4",
+      "type": "code-completion",
+      "prompt": "Implement the Sinkhorn operator (one iteration of row and column normalization). Complete the normalization steps:",
+      "codeTemplate": "import torch\n\ndef sinkhorn_step(log_alpha, n_iters=20):\n    \"\"\"\n    log_alpha: (N, N) log of the soft assignment matrix\n    Returns: doubly-stochastic matrix after n_iters normalizations\n    \"\"\"\n    for _ in range(n_iters):\n        # Row-normalize in log space\n        log_alpha = log_alpha - torch.logsumexp(log_alpha, dim=1, keepdim=True)\n        # Column-normalize in log space\n        log_alpha = ___BLANK___\n    return torch.exp(log_alpha)",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "log_alpha - torch.logsumexp(log_alpha, dim=0, keepdim=True)",
+        "log_alpha - torch.logsumexp(log_alpha, dim=0, keepdim=True)"
+      ],
+      "explanation": "Sinkhorn normalization alternates row and column normalization in log space for numerical stability. Row normalization uses dim=1 (sum across columns for each row); column normalization uses dim=0 (sum across rows for each column). Using logsumexp and subtraction in log space avoids underflow when exp values are very small.",
+      "hint": "Row normalization normalizes along dim=1 (columns). Column normalization should normalize along dim=0 (rows)."
+    },
+    {
+      "id": "q5_5",
+      "type": "multiple-choice",
+      "prompt": "ShuffleSoftSort can be jointly optimized with 3DGS training. What must be true about the sort order updates during joint training?",
+      "options": [
+        { "id": "a", "text": "The sort order must be fixed at initialization and never updated", "correct": false },
+        { "id": "b", "text": "The sort order must be updated periodically during training, and gradients from the sorting loss must flow back to Gaussian attribute values", "correct": true },
+        { "id": "c", "text": "The sort order is always optimal after training converges, so it only needs to be computed once post-training", "correct": false },
+        { "id": "d", "text": "The Gaussian attributes must be kept frozen during sort order updates to prevent interference", "correct": false }
+      ],
+      "explanation": "Joint optimization requires bidirectional gradient flow: (1) the sorting loss improves the sort order given current attributes, and (2) the sorting loss gradients update Gaussian attributes to take values that sort better. If attributes are frozen, only the sort adapts to the attributes rather than attributes adapting to be more sortable. Periodic updates to the sort order keep it synchronized with the evolving attributes.",
+      "hint": "For joint optimization to work, both components must be able to influence each other."
+    }
+  ]
+}

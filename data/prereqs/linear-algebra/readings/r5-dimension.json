@@ -1,0 +1,80 @@
+{
+  "id": "r5",
+  "moduleId": "linear-algebra",
+  "title": "Dimension",
+  "estimatedMinutes": 14,
+  "learningObjectives": [
+    {
+      "id": "r5-lo1",
+      "verb": "Explain",
+      "description": "Explain why any two bases of the same finite-dimensional space have the same number of vectors (Dimension Theorem)",
+      "skillTags": [
+        "matrix-structure"
+      ]
+    },
+    {
+      "id": "r5-lo2",
+      "verb": "Compute",
+      "description": "Compute the rank and nullity of a matrix and verify that they sum to the number of columns",
+      "skillTags": [
+        "matrix-structure",
+        "dimensionality-reduction"
+      ]
+    },
+    {
+      "id": "r5-lo3",
+      "verb": "Use",
+      "description": "Use dimension counting as a shortcut to confirm that a set spans or is independent without row reduction",
+      "skillTags": [
+        "matrix-structure"
+      ]
+    },
+    {
+      "id": "r5-lo4",
+      "verb": "Interpret",
+      "description": "Interpret rank as the number of independent directions in a matrix and relate it to information capacity in ML models",
+      "skillTags": [
+        "matrix-structure",
+        "dimensionality-reduction"
+      ]
+    }
+  ],
+  "content": "## All Bases Have the Same Size\n\nThe most surprising and important fact about bases is:\n\n> **Theorem (Invariance of Dimension)**: any two bases for the same vector space $V$ have the same number of elements.\n\nThis number is the **dimension** of $V$, written $\\dim(V)$. It is well-defined regardless of which basis you choose.\n\n**Proof sketch**: if $B_1$ has $m$ vectors and $B_2$ has $n$ vectors and both are bases, then expressing each $B_1$ vector in terms of $B_2$ and using a linear-algebra counting argument shows $m \\leq n$. Repeating with the roles swapped gives $n \\leq m$, so $m = n$.\n\n## Dimensions of Common Spaces\n\n| Space | Dimension | Natural basis |\n|---|---|---|\n| $\\mathbb{R}^n$ | $n$ | $\\{\\vec{e}_1,\\ldots,\\vec{e}_n\\}$ |\n| $\\mathcal{M}_{m\\times n}$ | $mn$ | matrix units $E_{ij}$ |\n| $\\mathcal{P}_n$ (deg $\\leq n$) | $n+1$ | $\\{1, x, x^2, \\ldots, x^n\\}$ |\n| $\\{\\vec{0}\\}$ | $0$ | empty set |\n| $\\mathbb{R}^\\infty$ (sequences) | $\\infty$ | — |\n\n## Using Dimension to Identify Bases\n\nIn a space of dimension $n$, any set of *exactly* $n$ vectors that satisfies one of the following automatically satisfies both:\n- $n$ independent vectors → automatically span $V$ → basis\n- $n$ spanning vectors → automatically independent → basis\n\nThis is immensely practical: to show a set of $n$ vectors is a basis for $\\mathbb{R}^n$, you only need to check independence (or spanning) — the other condition is free.\n\n## The Rank-Nullity Theorem\n\nFor any $m \\times n$ matrix $A$, define:\n- $\\text{rank}(A)$ = dimension of the column space $\\mathcal{C}(A)$ = number of pivots in echelon form\n- $\\text{nullity}(A)$ = dimension of the null space $\\mathcal{N}(A)$ = number of free variables\n\nThen:\n\n$$\\text{rank}(A) + \\text{nullity}(A) = n$$\n\n<div class=\"rank-nullity-embed\"></div>\n\nEvery column of $A$ is either a pivot column (contributing to rank) or a free column (contributing to nullity). The two types partition all $n$ columns.\n\n**Equivalences for an $n \\times n$ matrix $A$:**\n\nAll of the following are equivalent:\n- $\\text{rank}(A) = n$\n- $\\text{nullity}(A) = 0$, i.e., $\\mathcal{N}(A) = \\{\\vec{0}\\}$\n- The columns of $A$ are linearly independent\n- The columns of $A$ span $\\mathbb{R}^n$\n- $A$ is invertible\n- $\\det(A) \neq 0$\n- $A\\vec{x} = \\vec{b}$ has a unique solution for every $\\vec{b}$\n\nThis list of equivalences is sometimes called the **Invertible Matrix Theorem**. Knowing any one of them gives all the others for free.\n\n## Dimension of Subspaces\n\nIf $W$ is a subspace of $V$ with $\\dim(V) = n$:\n- $\\dim(W) \\leq n$\n- $\\dim(W) = n \\iff W = V$ (the only $n$-dimensional subspace of $V$ is $V$ itself)\n- $\\dim(W) = 0 \\iff W = \\{\\vec{0}\\}$\n\n## Combining Subspaces\n\nIf $V = W_1 + W_2$ (every vector in $V$ is a sum of a vector from $W_1$ and one from $W_2$), the dimension formula is:\n\n$$\\dim(W_1 + W_2) = \\dim(W_1) + \\dim(W_2) - \\dim(W_1 \\cap W_2)$$\n\nIf the intersection is only $\\{\\vec{0}\\}$, the sum is **direct**: $V = W_1 \\oplus W_2$ and $\\dim(V) = \\dim(W_1) + \\dim(W_2)$. The direct sum decomposes $V$ into orthogonal (or at least non-overlapping) pieces — the matrix analogue is block-diagonal decomposition.\n\n## Computing Rank and Nullity\n\n```python\nimport numpy as np\n\n# 2 × 4 matrix — rank 2, nullity 2\nA = np.array([[1., 2., 0., 1.],\n              [2., 4., 1., 1.]])\n\n# Rank and nullity via SVD\n_, S, Vh = np.linalg.svd(A, full_matrices=True)\nrank    = int(np.sum(S > 1e-9))\nnullity = A.shape[1] - rank\n\nprint(f'rank    = {rank}')                                       # 2\nprint(f'nullity = {nullity}')                                    # 2\nprint(f'rank + nullity = {rank + nullity} = n = {A.shape[1]}')  # 2 + 2 = 4\n\n# Null space basis: rows of Vh beyond rank index\nnull_basis = Vh[rank:]\nprint('null space basis (rows):')\nprint(np.round(null_basis, 4))\n\n# Verify A @ null_vec = 0 for every null vector\nfor i, h in enumerate(null_basis):\n    resid = np.einsum('ij,j->i', A, h)\n    print(f'A @ null_basis[{i}] = {np.round(resid, 4)}')  # [0. 0.]\n```\n\nThe row dimension of `Vh[rank:]` always equals the nullity — that is the Rank-Nullity Theorem made concrete. For a square invertible matrix, `rank == n`, so `Vh[rank:]` is empty and `nullity == 0`.",
+  "equationBreakdowns": [
+    {
+      "label": "Rank-Nullity Theorem",
+      "terms": [
+        {
+          "symbol": "\\text{rank}(A)",
+          "name": "Rank = number of pivots",
+          "desc": "The dimension of the column space — how many independent output directions A can produce. Counted by the number of pivot columns after row reduction."
+        },
+        {
+          "symbol": "\\text{nullity}(A)",
+          "name": "Nullity = number of free variables",
+          "desc": "The dimension of the null space — how many independent directions get mapped to zero. Counted by the number of non-pivot (free) columns."
+        },
+        {
+          "symbol": "n",
+          "name": "Number of columns (input dimension)",
+          "desc": "The total number of columns of A. Rank-nullity says: every input direction either passes through to the output or is killed. The two counts always sum to the input dimension n."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Hefferon 2020",
+      "title": "Linear Algebra, Ch. Two §III: Basis and Dimension",
+      "url": null
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r4"
+  },
+  "nextItem": {
+    "type": "quiz",
+    "id": "q2"
+  }
+}

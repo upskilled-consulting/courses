@@ -1,0 +1,63 @@
+{
+  "id": "m3",
+  "title": "Compaction Strategies",
+  "order": 3,
+  "color": "#f59e0b",
+  "prereq": "m2",
+  "learningObjectives": [
+    "Derive the rate–distortion Lagrangian for joint compaction-compression, and analyze why sequential (compact-then-compress) pipelines leave bits on the table.",
+    "Quantify the per-attribute parameter budget of a full 3DGS representation and calculate the theoretical size at each SH degree, identifying where the budget is concentrated.",
+    "Evaluate SH degree reduction, rotation reparameterization, and isotropic Gaussians as attribute-reduction strategies, justifying the priority ordering given a target bit-rate and scene type.",
+    "Analyze the failure modes of standard adaptive density control and evaluate PixelGS, MCMC, and SUNDAE against the criterion of producing a representation that is both accurate and coding-friendly.",
+    "Assess the ScaffoldGS anchor architecture and HAC's hash-grid entropy model, and justify the conditions under which the anchor+MLP approach reduces total coded bits relative to flat 3DGS.",
+    "Design a compaction strategy for a specified scene type and bit-rate budget, selecting and sequencing techniques from the module, predicting compression ratios, and interpreting deviations from predicted outcomes."
+  ],
+  "readings": [
+    {
+      "id": "r1",
+      "title": "Compaction vs. Compression and Attribute Reduction",
+      "estimatedMinutes": 13,
+      "dataPath": "data/courses/3dgs-compression/m3-compaction/readings/r1-attribute-reduction.json"
+    },
+    {
+      "id": "r2",
+      "title": "Improved Densification and Pruning",
+      "estimatedMinutes": 15,
+      "dataPath": "data/courses/3dgs-compression/m3-compaction/readings/r2-densification-pruning.json"
+    },
+    {
+      "id": "r3",
+      "title": "Structural Modifications: Anchors, LOD, and Improved Rendering",
+      "estimatedMinutes": 14,
+      "dataPath": "data/courses/3dgs-compression/m3-compaction/readings/r3-structural-mods.json"
+    },
+    {
+      "id": "r4",
+      "title": "Designing a Compaction Strategy",
+      "estimatedMinutes": 12,
+      "dataPath": "data/courses/3dgs-compression/m3-compaction/readings/r4-compaction-strategy-design.json"
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "q1",
+      "title": "Compaction Strategies",
+      "questionCount": 5,
+      "passingScore": 0.7,
+      "dataPath": "data/courses/3dgs-compression/m3-compaction/quizzes/q1-strategies.json"
+    },
+    {
+      "id": "q2",
+      "title": "Coding-Aware Training and Structural Methods",
+      "questionCount": 4,
+      "passingScore": 0.7,
+      "dataPath": "data/courses/3dgs-compression/m3-compaction/quizzes/q2-coding-aware.json"
+    }
+  ],
+  "lab": {
+    "id": "lab3",
+    "title": "Compaction Pipeline: SH Reduction, Pruning, and Size Analysis",
+    "estimatedMinutes": 75,
+    "dataPath": "data/courses/3dgs-compression/m3-compaction/labs/lab3.json"
+  }
+}

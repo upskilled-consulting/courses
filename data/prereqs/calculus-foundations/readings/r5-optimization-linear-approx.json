@@ -1,0 +1,70 @@
+{
+  "id": "r5",
+  "moduleId": "calculus-foundations",
+  "title": "Optimization and Linear Approximation",
+  "estimatedMinutes": 16,
+  "learningObjectives": [
+    {
+      "id": "r5-lo1",
+      "verb": "Identify",
+      "description": "Identify critical points by setting the derivative to zero and classify them using the second derivative test",
+      "skillTags": ["calculus-foundations", "optimization"]
+    },
+    {
+      "id": "r5-lo2",
+      "verb": "Apply",
+      "description": "Apply the first-order (linear) approximation f(x₀ + δ) ≈ f(x₀) + f'(x₀)·δ to estimate function values near a point",
+      "skillTags": ["calculus-foundations", "optimization"]
+    },
+    {
+      "id": "r5-lo3",
+      "verb": "Explain",
+      "description": "Explain gradient descent as iterative application of the linear approximation, and justify why the negative gradient direction decreases the function",
+      "skillTags": ["calculus-foundations", "ml-connection", "optimization"]
+    }
+  ],
+  "prevItem": { "type": "quiz", "id": "q1" },
+  "nextItem": { "type": "reading", "id": "r6" },
+  "content": "## The Goal: Finding Minima\n\nOptimization is the process of finding input values that minimize (or maximize) a function. In ML, we want to find parameters $\\theta$ that minimize a loss function $\\mathcal{L}(\\theta)$. Calculus tells us exactly where to look.\n\n---\n\n## Critical Points\n\nAt a minimum of a smooth function, the tangent line is horizontal — the slope is zero. So:\n\n$$f'(x) = 0 \\quad \\Rightarrow \\quad x \\text{ is a critical point}$$\n\nCritical points are **candidates** for minima, but also for maxima and saddle points. Setting the derivative to zero tells us where to look; we need more information to classify.\n\n**Example.** $f(x) = x^3 - 3x$\n$$f'(x) = 3x^2 - 3 = 0 \\quad \\Rightarrow \\quad x^2 = 1 \\quad \\Rightarrow \\quad x = \\pm 1$$\n\nTwo critical points. Are they minima, maxima, or neither?\n\n---\n\n## The Second Derivative Test\n\nThe second derivative $f''(x)$ measures how the slope is changing. At a critical point where $f'(x_0) = 0$:\n\n| $f''(x_0)$ | Shape of graph | Type |\n|------------|----------------|------|\n| $> 0$ | Curves upward (concave up) | **Local minimum** |\n| $< 0$ | Curves downward (concave down) | **Local maximum** |\n| $= 0$ | Test inconclusive | Need further analysis |\n\n**Intuition:** If $f''(x_0) > 0$, the slope is increasing through zero — it was negative just before $x_0$ (function falling) and positive just after (function rising). So $x_0$ is a valley bottom.\n\n**Example continued.** $f''(x) = 6x$\n- At $x = 1$: $f'' = 6 > 0$ → **local minimum**\n- At $x = -1$: $f'' = -6 < 0$ → **local maximum**\n\n---\n\n## Local vs Global\n\nA **local minimum** is the lowest point in some neighborhood — but there may be lower points elsewhere. A **global minimum** is the lowest point over the entire domain.\n\nFor training neural networks:\n- The loss landscape is high-dimensional and non-convex — many local minima and saddle points exist\n- Reaching the global minimum is generally not required or expected\n- In practice, local minima found by gradient descent tend to generalize well, because flat minima (small $|f''|$) often correspond to simpler solutions\n\nA function where every critical point is a global minimum is **convex** — its graph always curves upward ($f'' \\geq 0$ everywhere). Logistic regression loss is convex; most deep network losses are not.\n\n---\n\n## Linear Approximation\n\nFor a differentiable function $f$, near any point $x_0$, the tangent line provides a close approximation:\n\n$$f(x_0 + \\delta) \\approx f(x_0) + f'(x_0) \\cdot \\delta$$\n\nThis is the **first-order Taylor approximation** — valid when $\\delta$ is small. The approximation says: start at $f(x_0)$, then move by slope $\\times$ step.\n\n**Example.** Estimate $\\sqrt{4.1}$.\n\nLet $f(x) = \\sqrt{x}$, $x_0 = 4$, $\\delta = 0.1$.\n$$f'(x) = \\frac{1}{2\\sqrt{x}} \\quad \\Rightarrow \\quad f'(4) = \\frac{1}{4}$$\n$$\\sqrt{4.1} \\approx \\sqrt{4} + \\frac{1}{4}(0.1) = 2 + 0.025 = 2.025$$\n\nActual value: $\\sqrt{4.1} \\approx 2.0248$. The error is about $0.0002$ — excellent for a one-term approximation.\n\n---\n\n## Gradient Descent\n\nThe linear approximation is the mathematical foundation of gradient descent. Suppose we want to decrease $f$ starting from $x_0$. The approximation says:\n\n$$f(x_0 + \\delta) \\approx f(x_0) + f'(x_0) \\cdot \\delta$$\n\nTo decrease $f$, we want this change to be negative:\n$$f'(x_0) \\cdot \\delta < 0$$\n\nThe simplest choice: set $\\delta = -\\eta \\cdot f'(x_0)$ for small $\\eta > 0$ (the **learning rate**). Then:\n$$f(x_0 + \\delta) \\approx f(x_0) - \\eta \\cdot [f'(x_0)]^2 \\leq f(x_0)$$\n\nThe update $x \\leftarrow x - \\eta \\cdot f'(x)$ is guaranteed to decrease $f$ locally — as long as $\\eta$ is small enough that the linear approximation remains valid.\n\nThis is **gradient descent** — the core algorithm for training neural networks. In multiple dimensions, $f'(x)$ becomes $\\nabla_\\theta \\mathcal{L}$ (the gradient vector), and the update becomes $\\theta \\leftarrow \\theta - \\eta \\cdot \\nabla_\\theta \\mathcal{L}$.\n\n---\n\n## Choosing the Learning Rate\n\nThe learning rate $\\eta$ controls the step size:\n\n- **Too large:** The linear approximation breaks down. We might overshoot and land at a point with higher loss.\n- **Too small:** Progress is glacially slow. Many steps needed to converge.\n- **Just right:** Consistent decrease per step, converging to a minimum in reasonable time.\n\nThis is why learning rate scheduling (warmup, decay) and adaptive methods (Adam, RMSProp) matter: they adjust $\\eta$ based on observed gradient behavior, compensating for the fact that the linear approximation has varying accuracy across the loss surface.\n\n---\n\n## PyTorch and TensorFlow\n\n```python\nimport torch\n\n# Manual gradient descent on f(x) = x² - 4x + 5  (minimum at x=2)\nx = torch.tensor(0.0, requires_grad=True)\nlr = 0.1\n\nfor step in range(20):\n    f = x**2 - 4*x + 5\n    f.backward()\n    with torch.no_grad():\n        x -= lr * x.grad   # gradient descent step\n    x.grad.zero_()\n    if step % 5 == 0:\n        print(f\"step {step}: x={x.item():.4f}, f={f.item():.4f}\")\n# Converges to x ≈ 2.0,  f ≈ 1.0\n```\n\n```python\nimport tensorflow as tf\n\n# Same function, TF-style\nx = tf.Variable(0.0)\nlr = 0.1\n\nfor step in range(20):\n    with tf.GradientTape() as tape:\n        f = x**2 - 4*x + 5\n    grad = tape.gradient(f, x)\n    x.assign_sub(lr * grad)  # x = x - lr * grad\n    if step % 5 == 0:\n        print(f\"step {step}: x={x.numpy():.4f}, f={f.numpy():.4f}\")\n```\n\nThese loops implement exactly the theory: compute the derivative at the current point, step in the negative gradient direction, repeat. The `zero_grad()` call in PyTorch is necessary because autograd *accumulates* gradients — without clearing them, each step's gradient would pile onto the previous.",
+  "equationBreakdowns": [
+    {
+      "label": "Linear Approximation",
+      "heading": "First-Order Taylor Approximation",
+      "terms": [
+        {
+          "symbol": "f(x_0)",
+          "name": "Current value",
+          "desc": "The function value at the base point x₀. The approximation starts here."
+        },
+        {
+          "symbol": "f'(x_0) \\cdot \\delta",
+          "name": "Linear correction",
+          "desc": "The slope at x₀ multiplied by the displacement δ. For small δ, this captures how much the function changes to first order."
+        }
+      ]
+    },
+    {
+      "label": "Gradient Descent Update",
+      "heading": "x ← x − η·f'(x)",
+      "terms": [
+        {
+          "symbol": "\\eta",
+          "name": "Learning rate",
+          "desc": "Step size scalar. Must be small enough that the linear approximation is valid at each step. Too large causes divergence; too small causes slow convergence."
+        },
+        {
+          "symbol": "-f'(x)",
+          "name": "Negative gradient direction",
+          "desc": "Moving opposite to the gradient guarantees local decrease: f'(x)·(-η·f'(x)) = -η[f'(x)]² ≤ 0."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "MIT 18.01SC — Sessions 23–24, 28–30",
+      "title": "Linear Approximation and Applications of Differentiation",
+      "url": "https://ocw.mit.edu/courses/18-01sc-single-variable-calculus-fall-2010/"
+    }
+  ]
+}

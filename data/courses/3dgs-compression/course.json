@@ -1,0 +1,89 @@
+{
+  "id": "3dgs-compression",
+  "title": "3D Gaussian Splatting: Compression & Optimization",
+  "subtitle": "From Gaussian Splatting Compression to Self-Organizing Grids",
+  "version": "1.0.0",
+  "unlockThreshold": 0.6,
+  "modules": [
+    {
+      "id": "m1",
+      "slug": "m1-foundations",
+      "title": "Foundations of 3DGS",
+      "description": "NeRF vs 3DGS, Gaussian math, the rendering pipeline, training via differentiable rasterization, and key extensions.",
+      "order": 1,
+      "prereq": null,
+      "dataPath": "data/courses/3dgs-compression/m1-foundations/module.json",
+      "color": "#4f6ef7"
+    },
+    {
+      "id": "m2",
+      "slug": "m2-evaluation",
+      "title": "Evaluation & Survey",
+      "description": "Standardized metrics (PSNR, SSIM, LPIPS), benchmark datasets, and why cross-paper comparisons usually fail.",
+      "order": 2,
+      "prereq": "m1",
+      "dataPath": "data/courses/3dgs-compression/m2-evaluation/module.json",
+      "color": "#22c55e"
+    },
+    {
+      "id": "m3",
+      "slug": "m3-compaction",
+      "title": "Compaction Strategies",
+      "description": "Attribute reduction, improved densification & pruning, structural modifications (ScaffoldGS, HAC), and rendering improvements.",
+      "order": 3,
+      "prereq": "m2",
+      "dataPath": "data/courses/3dgs-compression/m3-compaction/module.json",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "m4",
+      "slug": "m4-grid-sorting",
+      "title": "Grid-Based Sorting",
+      "description": "Reshaping Gaussians into 2D grids, quality metrics (DPQ, GAF, GDF), and the SOM → SSM → LAS → FLAS algorithm family.",
+      "order": 4,
+      "prereq": "m3",
+      "dataPath": "data/courses/3dgs-compression/m4-grid-sorting/module.json",
+      "color": "#ec4899"
+    },
+    {
+      "id": "m5",
+      "slug": "m5-permutation-encoding",
+      "title": "Permutation Learning & Encoding",
+      "description": "Neural permutation learning (GradSort, ShuffleSoftSort), quantization, vector quantization, entropy coding, and the full SOG pipeline.",
+      "order": 5,
+      "prereq": "m4",
+      "dataPath": "data/courses/3dgs-compression/m5-permutation-encoding/module.json",
+      "color": "#8b5cf6"
+    },
+    {
+      "id": "m6",
+      "slug": "m6-production-pipeline",
+      "title": "End-to-End 3DGS Production Pipelines",
+      "description": "Structure from Motion with GLOMAP, depth-prior initialization, Sparse Adam, and the full .splat binary format — from YouTube video to deployable web viewer.",
+      "order": 6,
+      "prereq": "m5",
+      "dataPath": "data/courses/3dgs-compression/m6-production-pipeline/module.json",
+      "color": "#0ea5e9"
+    },
+    {
+      "id": "m7",
+      "slug": "m7-gpu-kernel-optimization",
+      "title": "GPU Architecture & Kernel Optimization",
+      "description": "CUDA thread hierarchy, SIMT execution, CGMA ratio, roofline analysis, memory coalescing, and profiling with torch.profiler and Perfetto.",
+      "order": 7,
+      "prereq": "m6",
+      "dataPath": "data/courses/3dgs-compression/m7-gpu-kernel-optimization/module.json",
+      "color": "#f97316"
+    },
+    {
+      "id": "m8",
+      "slug": "m8-enterprise-patterns",
+      "title": "Enterprise Application Patterns",
+      "description": "Domain logic layering, data mapping strategies, concurrency patterns, and distribution patterns for production ML systems.",
+      "order": 8,
+      "prereq": "m7",
+      "dataPath": "data/courses/3dgs-compression/m8-enterprise-patterns/module.json",
+      "color": "#64748b"
+    }
+  ]
+}

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Upskilled — Technical ML &amp; Computer Vision Courses</title>
+  <meta name="description" content="Deep technical courses in machine learning and computer vision for practitioners."/>
+  <!-- KaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+  <!-- marked.js -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+  <!-- highlight.js -->
+  <!-- hljs theme is embedded in platform.css (custom per-theme) -->
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+  <link rel="stylesheet" href="assets/css/platform.css"/>
+  <!-- Three.js (for SH visualizer) -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <!-- Expose animation helpers as globals for platform.js (plain script) -->
+  <script type="module">
+    import { initDensificationAnimation } from './assets/js/densification-anim.js';
+    import { initSHVisualizer } from './assets/js/sh-visualizer.js';
+    import { initGaussElimAnimation } from './assets/js/gauss-elim-anim.js';
+    import { initSolutionSetAnimation } from './assets/js/solution-set-anim.js';
+    import { initParametricAnimation }  from './assets/js/parametric-anim.js';
+    import { initSubspaceAnimation }    from './assets/js/subspace-anim.js';
+    import { initSpanGaussAnimation }   from './assets/js/span-gauss-anim.js';
+    import { initLITestAnimation }      from './assets/js/li-test-anim.js';
+    import { initRankNullityAnimation } from './assets/js/rank-nullity-anim.js';
+    window.initDensificationAnimation = initDensificationAnimation;
+    window.initSHVisualizer = initSHVisualizer;
+    window.initGaussElimAnimation = initGaussElimAnimation;
+    window.initSolutionSetAnimation = initSolutionSetAnimation;
+    window.initParametricAnimation = initParametricAnimation;
+    window.initSubspaceAnimation = initSubspaceAnimation;
+    window.initSpanGaussAnimation = initSpanGaussAnimation;
+    window.initLITestAnimation = initLITestAnimation;
+    window.initRankNullityAnimation = initRankNullityAnimation;
+  </script>
+</head>
+<body data-theme="dark">
+
+  <nav class="platform-nav" id="platformNav">
+    <div class="nav-inner">
+      <a href="#/" class="nav-brand" id="navBrand">
+        <img src="assets/images/logo.png" alt="Upskilled" class="brand-logo"/>
+      </a>
+      <div class="nav-breadcrumb" id="navBreadcrumb"></div>
+
+      <div class="nav-search" id="navSearch">
+        <button class="search-pill" id="searchPill" aria-label="Search (Ctrl+K)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <span class="search-pill-hint">Search…</span>
+          <span class="search-pill-kbd">⌘K</span>
+        </button>
+      </div>
+
+      <div class="nav-actions">
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme" title="Toggle light/dark theme">
+          <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+          <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main id="appRoot"></main>
+
+  <footer class="platform-footer">
+    <div class="footer-inner">
+      <span class="footer-copy">
+        © 2025 <a href="https://upskilled.consulting" target="_blank" rel="noopener">Upskilled Consulting</a>
+        &nbsp;·&nbsp;
+        <a href="https://nickmccarty.me" target="_blank" rel="noopener">Nicholas McCarty</a>
+      </span>
+    </div>
+  </footer>
+
+  <script src="assets/js/platform.js"></script>
+
+  <!-- ── Search overlay ─────────────────────────────────────── -->
+  <div class="search-overlay" id="searchOverlay" role="dialog" aria-modal="true" aria-label="Search">
+    <div class="search-modal" id="searchModal">
+      <div class="search-modal-head">
+        <div class="search-input-row">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" id="searchField" class="search-field"
+            placeholder="Search…" autocomplete="off" spellcheck="false" aria-label="Search"/>
+          <button class="search-esc-btn" id="searchEscBtn" aria-label="Close search">ESC</button>
+        </div>
+        <div class="search-scope-bar">
+          <span class="search-scope-dot" id="searchScopeDot"></span>
+          <span class="search-scope-label" id="searchScopeLabel">All content</span>
+        </div>
+      </div>
+      <div class="search-results-list" id="searchResultsList">
+        <div class="search-hint-state">Type to search…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Notation FAB ──────────────────────────────────────── -->
+  <button class="notation-fab" id="notationFab" aria-label="Notation reference" title="Notation reference" style="display:none">
+    <span aria-hidden="true">?</span>
+  </button>
+
+  <!-- ── Notation modal ────────────────────────────────────── -->
+  <div class="notation-overlay" id="notationOverlay" role="dialog" aria-modal="true" aria-label="Notation Reference">
+    <div class="notation-modal">
+      <div class="notation-modal-head">
+        <span class="notation-modal-title">Notation Reference</span>
+        <input type="text" id="notationSearchField" class="notation-search" placeholder="Filter symbols…" autocomplete="off" spellcheck="false"/>
+        <button class="notation-close-btn" id="notationCloseBtn" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="notation-list" id="notationList"></div>
+    </div>
+  </div>
+
+  <!-- ── Paragraph popup ────────────────────────────────────── -->
+  <div class="para-overlay" id="paraOverlay">
+    <div class="para-popup" id="paraPopup" role="dialog" aria-modal="true">
+      <div class="para-popup-header">
+        <span class="para-popup-src" id="paraPopupSrc"></span>
+        <button class="para-popup-close" id="paraPopupClose" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="para-popup-text" id="paraPopupText"></div>
+    </div>
+  </div>
+</body>
+</html>

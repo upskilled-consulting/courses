@@ -1,0 +1,23 @@
+{
+  "id": "lab1",
+  "moduleId": "activation-functions",
+  "title": "Activation Functions in PyTorch",
+  "estimatedMinutes": 50,
+  "prevItem": {
+    "type": "quiz",
+    "id": "q2"
+  },
+  "nextItem": {
+    "type": "lab",
+    "id": "lab2"
+  },
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/supplements/activation-functions/lab_activation_functions_pytorch.ipynb",
+  "objectives": [
+    "Implement all 31 PyTorch activation functions from scratch using tensor operations and verify against `nn.*` equivalents",
+    "Visualize activation functions and their gradients side-by-side to build intuition for output range, smoothness, and saturation",
+    "Measure the dying ReLU phenomenon experimentally and compare with LeakyReLU, PReLU, and ELU",
+    "Implement and verify the SwiGLU feedforward block from scratch, then benchmark against a ReLU FFN on a small classification task",
+    "Profile the compute cost of smooth activations (GELU, Mish, SiLU) vs piecewise activations (ReLU, Hardswish) using `torch.utils.benchmark`"
+  ],
+  "description": "## Lab Overview\n\nThis notebook ties every formula from the readings to runnable, verifiable code. For each activation function you will:\n\n1. **Implement from scratch** using basic PyTorch tensor ops\n2. **Verify numerically** against the corresponding `torch.nn` module\n3. **Inspect the gradient** via `.backward()` and compare to the analytical derivative\n4. **Visualize** the function and its derivative over $[-5, 5]$\n\n### Sections\n\n| Section | Content |\n|---------|--------|\n| 1 | ReLU family: ReLU, LeakyReLU, PReLU, RReLU, ReLU6 — from scratch + gradient comparison |\n| 2 | Saturating activations: Sigmoid, Tanh, Hardsigmoid, Hardtanh, Softsign, LogSigmoid |\n| 3 | Smooth modern: GELU (exact and tanh approx), SiLU/Swish, Mish, ELU, CELU, SELU |\n| 4 | Gating: GLU, Hardswish, Softmax, LogSoftmax, Softmax2d, Softmin |\n| 5 | Shrinkage: Hardshrink, Softshrink, Tanhshrink, Threshold, Softplus |\n| 6 | Dying ReLU experiment: track dead neuron count across training steps for ReLU vs LeakyReLU vs ELU |\n| 7 | SwiGLU FFN: implement from scratch, verify against `nn.SiLU` + `chunk`, benchmark vs ReLU FFN |\n| 8 | Compute benchmarks: `torch.utils.benchmark` for all activations on CPU and CUDA |\n| 9 | End-to-end: train a small MLP on CIFAR-10 with 5 activation functions and compare convergence curves |"
+}

@@ -1,0 +1,148 @@
+{
+  "id": "r4",
+  "moduleId": "activation-functions",
+  "title": "Gating & Normalization Activations",
+  "estimatedMinutes": 15,
+  "learningObjectives": [
+    {
+      "id": "r4-lo1",
+      "verb": "Explain",
+      "description": "Explain how GLU uses a sigmoid gate to control information flow and state which dimension is split",
+      "skillTags": [
+        "gating"
+      ]
+    },
+    {
+      "id": "r4-lo2",
+      "verb": "Apply",
+      "description": "Apply Softmax to a logit vector and verify that the outputs are non-negative and sum to one",
+      "skillTags": [
+        "gating",
+        "classification"
+      ]
+    },
+    {
+      "id": "r4-lo3",
+      "verb": "Distinguish",
+      "description": "Distinguish Softmax from LogSoftmax in terms of output and explain why LogSoftmax is numerically preferred when combined with NLLLoss",
+      "skillTags": [
+        "gating",
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r4-lo4",
+      "verb": "Identify",
+      "description": "Identify Hardswish as a piecewise-linear approximation of Swish and state its advantage for mobile deployment",
+      "skillTags": [
+        "gating"
+      ]
+    }
+  ],
+  "prevItem": {
+    "type": "quiz",
+    "id": "q1"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r5"
+  },
+  "content": "## GLU — Gated Linear Unit\n\n$$\\text{GLU}(X, W, V, b, c) = (XW + b) \\otimes \\sigma(XV + c)$$\n\nGLU splits an input transformation into two halves: a **linear component** $(XW + b)$ and a **gate** $\\sigma(XV + c)$. The gate, a sigmoid applied to a learned linear projection, controls how much of the linear component flows through.\n\nIn practice, a single weight matrix $W \\in \\mathbb{R}^{d \\times 2d}$ projects the input to twice the hidden size, then the output is split in half along the last dimension:\n\n```python\nx_proj = self.linear(x)            # shape: (B, 2d)\ngate, signal = x_proj.chunk(2, dim=-1)\nreturn signal * torch.sigmoid(gate)  # shape: (B, d)\n```\n\nGLU halves the output dimension — the network must project to $2d$ first. This is why GLU layers have double the parameters of simple linear layers.\n\n**Where it's used:** Language models (Dauphin et al., 2017); later variants like GeGLU (GELU gate) and SwiGLU (SiLU gate) are used in PaLM, LLaMA, Mistral.\n\n**PyTorch:**\n```python\n# nn.GLU splits the last dim in half: output is first_half * sigmoid(second_half)\nx = torch.randn(2, 8)         # input: (batch=2, features=8)\nglu = nn.GLU(dim=-1)\nprint(glu(x).shape)           # torch.Size([2, 4])\n\n# Manual equivalent (used when building custom GLU variants):\na, b = x.chunk(2, dim=-1)\nout = a * torch.sigmoid(b)    # shape: (2, 4)\n```\n\n**TensorFlow:**\n```python\n# No built-in GLU; implement via split + sigmoid\nimport tensorflow as tf\n\nx = tf.random.normal((2, 8))\na, b = tf.split(x, 2, axis=-1)   # each: (2, 4)\nout = a * tf.nn.sigmoid(b)        # GLU output: (2, 4)\n```\n\n## Hardswish — Mobile-Optimized Swish\n\n$$f(x) = x \\cdot \\frac{\\text{ReLU6}(x + 3)}{6}$$\n\nHardswish is a piecewise linear approximation of SiLU/Swish designed for mobile inference:\n\n$$f(x) = \\begin{cases} 0 & x \\leq -3 \\\\ x(x+3)/6 & -3 < x < 3 \\\\ x & x \\geq 3 \\end{cases}$$\n\nThe formula $x \\cdot \\text{ReLU6}(x+3)/6$ reuses the ReLU6 operation (which hardware accelerators handle natively) to approximate the sigmoid gate $\\sigma(x) \\approx (x+3)/6$ in the active region. This avoids expensive exponential/sigmoid computation.\n\n**Where it's used:** MobileNetV3, EfficientNet-Lite.\n\n**PyTorch:**\n```python\nx = torch.tensor([-4., -3., 0., 3., 4.])\nprint(nn.Hardswish()(x))   # tensor([0.0000, 0.0000, 0.0000, 3.0000, 4.0000])\nprint(F.hardswish(x))      # identical\n```\n\n**TensorFlow:**\n```python\nx = tf.constant([-4., -3., 0., 3., 4.])\n# TF 2.x: tf.keras.activations.hard_swish (available from Keras 3 / TF 2.13+)\n# Manual implementation:\nhard_swish = lambda x: x * tf.nn.relu6(x + 3.0) / 6.0\nprint(hard_swish(x))   # [0. 0. 0. 3. 4.]\n```\n\n## Softmax\n\n$$f(x_i) = \\frac{e^{x_i}}{\\sum_{j=1}^{K} e^{x_j}}$$\n\nSoftmax converts a vector of $K$ real numbers (logits) into a probability distribution: all outputs are in $(0,1)$ and they sum to 1. It is the canonical output activation for multi-class classification.\n\n**Numerical stability:** For large logits, $e^{x_i}$ overflows float32. The log-sum-exp trick subtracts the maximum:\n\n$$f(x_i) = \\frac{e^{x_i - \\max_j x_j}}{\\sum_{j} e^{x_j - \\max_j x_j}}$$\n\nThis is numerically identical but safe for any input magnitude. PyTorch applies this internally.\n\n**Temperature scaling:** $f(x_i, T) = e^{x_i/T} / \\sum_j e^{x_j/T}$. As $T \\to 0$, output approaches a one-hot (argmax); as $T \\to \\infty$, output approaches a uniform distribution.\n\n**Important:** Do not apply Softmax before `nn.CrossEntropyLoss` — CrossEntropyLoss applies LogSoftmax internally for numerical stability.\n\n**PyTorch:**\n```python\nlogits = torch.tensor([2.0, 1.0, 0.1])\nprobs = nn.Softmax(dim=-1)(logits)\nprint(probs)             # tensor([0.6590, 0.2424, 0.0986])\nprint(probs.sum())       # tensor(1.)\n```\n\n**TensorFlow:**\n```python\nlogits = tf.constant([2.0, 1.0, 0.1])\nprobs = tf.nn.softmax(logits, axis=-1)\nprint(probs)             # [0.659  0.2424 0.0986]\nprint(tf.reduce_sum(probs))  # 1.0\n# In a model output: tf.keras.layers.Dense(K, activation='softmax')\n```\n\n## LogSoftmax\n\n$$f(x_i) = x_i - \\log\\!\\left(\\sum_{j=1}^{K} e^{x_j}\\right) = \\log\\frac{e^{x_i}}{\\sum_j e^{x_j}}$$\n\nLogSoftmax computes the log of Softmax in a numerically stable single pass, outputting log-probabilities in $(-\\infty, 0]$. It is designed to pair with `nn.NLLLoss`: $\\text{CrossEntropyLoss}(x, y) = \\text{NLLLoss}(\\text{LogSoftmax}(x), y)$.\n\n**PyTorch:**\n```python\nlogits = torch.tensor([2.0, 1.0, 0.1])\nlog_probs = nn.LogSoftmax(dim=-1)(logits)\nprint(log_probs)         # tensor([-0.4170, -1.4170, -2.3170])\n# With NLLLoss: loss = nn.NLLLoss()(log_probs.unsqueeze(0), torch.tensor([0]))\n```\n\n**TensorFlow:**\n```python\nlogits = tf.constant([2.0, 1.0, 0.1])\nlog_probs = tf.nn.log_softmax(logits, axis=-1)\nprint(log_probs)         # [-0.4170 -1.4170 -2.3170]\n# Combined loss: tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)\n```\n\n## Softmax2d\n\nApplies Softmax over the **channel dimension** at each spatial location of a 4D tensor of shape $(N, C, H, W)$. Equivalent to `F.softmax(x, dim=1)`. At each pixel $(h, w)$, the $C$ channel values are normalized to a probability distribution:\n\n$$\\text{Softmax2d}(x)_{n,c,h,w} = \\frac{e^{x_{n,c,h,w}}}{\\sum_{c'} e^{x_{n,c',h,w}}}$$\n\nUsed in semantic segmentation where each pixel needs a class probability distribution.\n\n**PyTorch:**\n```python\n# Normalizes across the channel dimension at each spatial location\nx = torch.randn(1, 3, 4, 4)   # (N, C, H, W)\nout = nn.Softmax2d()(x)\nprint(out.shape)               # torch.Size([1, 3, 4, 4])\nprint(out[0, :, 0, 0].sum())   # tensor(1.) — channels sum to 1 at each pixel\n```\n\n**TensorFlow:**\n```python\nx = tf.random.normal((1, 4, 4, 3))  # TF uses (N, H, W, C)\nout = tf.nn.softmax(x, axis=-1)     # normalize over channel axis\nprint(tf.reduce_sum(out[0, 0, 0]))  # 1.0\n```\n\n## Softmin\n\n$$f(x_i) = \\frac{e^{-x_i}}{\\sum_{j=1}^{K} e^{-x_j}}$$\n\nSoftmin is identical to Softmax applied to the negated input: `Softmin(x) = Softmax(-x)`. It assigns higher probabilities to **smaller** values — useful when you want to emphasize the closest (minimum distance) element, e.g., nearest-neighbor attention.\n\n**PyTorch:**\n```python\nlogits = torch.tensor([2.0, 1.0, 0.1])\nprint(nn.Softmin(dim=-1)(logits))   # tensor([0.0986, 0.2424, 0.6590])\n# Higher weight to smaller values (inverted from Softmax)\n```\n\n**TensorFlow:**\n```python\nlogits = tf.constant([2.0, 1.0, 0.1])\n# Softmin(x) = Softmax(-x)\nprint(tf.nn.softmax(-logits, axis=-1))   # [0.0986 0.2424 0.659 ]\n```\n\n## Comparison Table\n\n| Function | Output | Use case |\n|----------|--------|----------|\n| GLU | $\\mathbb{R}^{d/2}$ | Transformer FFN gating |\n| Hardswish | $(-\\infty, \\infty)$ | Mobile backbone hidden layers |\n| Softmax | $[0,1]^K$, sums to 1 | Multi-class output layer |\n| LogSoftmax | $(-\\infty, 0]^K$ | + NLLLoss for classification |\n| Softmax2d | $[0,1]$ per pixel | Semantic segmentation output |\n| Softmin | $[0,1]^K$, sums to 1 | Distance-based attention |",
+  "equationBreakdowns": [
+    {
+      "label": "GLU formula",
+      "terms": [
+        {
+          "symbol": "XW + b",
+          "name": "Linear signal",
+          "desc": "Standard linear projection — the information pathway"
+        },
+        {
+          "symbol": "\\otimes",
+          "name": "Element-wise product",
+          "desc": "Gate applied to signal: each dimension independently gated"
+        },
+        {
+          "symbol": "\\sigma(XV + c)",
+          "name": "Sigmoid gate",
+          "desc": "Learned binary gate in $(0,1)$ — controls which information flows through"
+        }
+      ]
+    },
+    {
+      "label": "Hardswish formula",
+      "terms": [
+        {
+          "symbol": "x",
+          "name": "Linear component",
+          "desc": "The signal being gated"
+        },
+        {
+          "symbol": "\\text{ReLU6}(x+3)",
+          "name": "Shifted ReLU6",
+          "desc": "Approximates $6\\sigma(x)$ in the range $[-3, 3]$; hardware-friendly no-exponential"
+        },
+        {
+          "symbol": "6",
+          "name": "Normalization divisor",
+          "desc": "Brings the gate back to $[0,1]$ range"
+        }
+      ]
+    },
+    {
+      "label": "Softmax formula",
+      "terms": [
+        {
+          "symbol": "e^{x_i}",
+          "name": "Exponentiated logit",
+          "desc": "Exponential makes all values positive and amplifies differences between logits"
+        },
+        {
+          "symbol": "\\sum_{j=1}^{K} e^{x_j}",
+          "name": "Partition function",
+          "desc": "Normalizing constant ensuring all outputs sum to 1"
+        },
+        {
+          "symbol": "K",
+          "name": "Number of classes",
+          "desc": "Dimensionality of the logit vector being normalized"
+        }
+      ]
+    },
+    {
+      "label": "LogSoftmax formula",
+      "terms": [
+        {
+          "symbol": "x_i",
+          "name": "Raw logit",
+          "desc": "Pre-normalized score for class $i$"
+        },
+        {
+          "symbol": "\\log\\sum_j e^{x_j}",
+          "name": "Log-sum-exp",
+          "desc": "The log of the partition function — computed stably by subtracting the max logit first"
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Dauphin et al. (2017) — Language Modeling with Gated Convolutional Networks (GLU)",
+      "title": "Introduced GLU for language modeling; showed gating mechanism outperforms ReLU in text tasks",
+      "url": null,
+      "note": "Introduced GLU for language modeling; showed gating mechanism outperforms ReLU in text tasks"
+    },
+    {
+      "label": "Howard et al. (2019) — Searching for MobileNetV3 (Hardswish)",
+      "title": "Introduced Hardswish as a mobile-efficient approximation of Swish",
+      "url": null,
+      "note": "Introduced Hardswish as a mobile-efficient approximation of Swish"
+    },
+    {
+      "label": "Noam Shazeer (2020) — GLU Variants Improve Transformer (GeGLU, SwiGLU)",
+      "title": "Demonstrated that replacing the FFN activation with GLU variants (GeGLU, SwiGLU) consistently improves language model perplexity",
+      "url": null,
+      "note": "Demonstrated that replacing the FFN activation with GLU variants (GeGLU, SwiGLU) consistently improves language model perplexity"
+    }
+  ]
+}

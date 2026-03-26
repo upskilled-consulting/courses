@@ -1,0 +1,53 @@
+{
+  "id": "m8",
+  "slug": "m8-enterprise-patterns",
+  "title": "Enterprise Patterns for ML Systems",
+  "color": "#10b981",
+  "description": "Applying Fowler's Patterns of Enterprise Application Architecture to 3DGS inference pipelines and ML research systems.",
+  "learningObjectives": [
+    "Explain the three-layer architecture and apply the dependency rule to decompose a 3DGS inference service into Presentation, Domain, and Data Source layers.",
+    "Select the appropriate domain logic pattern — Transaction Script, Domain Model, Table Module, or Service Layer — given a description of system complexity and team constraints.",
+    "Implement the Data Mapper + Unit of Work + Identity Map triad to achieve complete isolation between a Gaussian splatting domain model and its persistence layer.",
+    "Diagnose the N+1 query problem in both database contexts and ML batch inference pipelines, and apply Lazy Load or eager fetching to resolve it.",
+    "Distinguish Optimistic Offline Lock from Pessimistic Offline Lock and justify which to use in distributed 3DGS training based on conflict frequency and throughput requirements.",
+    "Design a coarse-grained Remote Facade and corresponding Data Transfer Objects for a 3DGS compression service, quantifying the latency savings over fine-grained remote calls."
+  ],
+  "readings": [
+    {
+      "id": "r1",
+      "title": "Layering & Domain Logic Patterns",
+      "estimatedMinutes": 25,
+      "dataPath": "data/courses/3dgs-compression/m8-enterprise-patterns/readings/r1-layering-domain-logic.json"
+    },
+    {
+      "id": "r2",
+      "title": "Data Mapping, Concurrency & State",
+      "estimatedMinutes": 28,
+      "dataPath": "data/courses/3dgs-compression/m8-enterprise-patterns/readings/r2-data-mapping-concurrency.json"
+    },
+    {
+      "id": "r3",
+      "title": "Distribution, Base Patterns & Open Problems",
+      "estimatedMinutes": 22,
+      "dataPath": "data/courses/3dgs-compression/m8-enterprise-patterns/readings/r3-distribution-open-problems.json"
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "q1",
+      "title": "Domain Logic & Data Mapping",
+      "dataPath": "data/courses/3dgs-compression/m8-enterprise-patterns/quizzes/q1-domain-data-mapping.json"
+    },
+    {
+      "id": "q2",
+      "title": "Concurrency, Distribution & Systems Design",
+      "dataPath": "data/courses/3dgs-compression/m8-enterprise-patterns/quizzes/q2-concurrency-distribution.json"
+    }
+  ],
+  "lab": {
+    "id": "lab8",
+    "title": "Building a Layered 3DGS Inference Service",
+    "estimatedMinutes": 90,
+    "dataPath": "data/courses/3dgs-compression/m8-enterprise-patterns/labs/lab8.json"
+  }
+}

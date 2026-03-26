@@ -1,0 +1,56 @@
+{
+  "id": "r3",
+  "moduleId": "m2",
+  "title": "Standardized Testing Protocol and the 3DGS.zip Survey",
+  "estimatedMinutes": 10,
+  "learningObjectives": [
+    {
+      "id": "m2r3-lo1",
+      "verb": "Identify",
+      "description": "Identify the five hidden variables (evaluation resolution, train/test split, initialization, iteration count, SfM settings) that make cross-paper PSNR comparisons invalid and explain the magnitude of their individual effects",
+      "skillTags": [
+        "evaluation"
+      ]
+    },
+    {
+      "id": "m2r3-lo2",
+      "verb": "Apply",
+      "description": "Apply the standardized testing protocol from the 3DGS.zip survey to design a reproducible evaluation, specifying correct resolution, split ratio, and iteration count",
+      "skillTags": [
+        "evaluation"
+      ]
+    },
+    {
+      "id": "m2r3-lo3",
+      "verb": "Explain",
+      "description": "Explain why relative improvement over a paper's own baseline is the only valid cross-paper comparison metric, and identify when even this comparison breaks down",
+      "skillTags": [
+        "evaluation"
+      ]
+    },
+    {
+      "id": "m2r3-lo4",
+      "verb": "Use",
+      "description": "Use the 3DGS.zip survey site to retrieve standardized benchmark results and interpret compression ratio vs. quality tradeoff curves for multiple methods",
+      "skillTags": [
+        "evaluation"
+      ]
+    }
+  ],
+  "content": "## The Reproducibility Problem\n\nIf you pick up two 3DGS compression papers and compare their reported numbers, the comparison is almost certainly invalid. Training settings, evaluation resolutions, train/test splits, and initialization strategies vary enough between papers that a \"better\" result might simply reflect different experimental choices rather than a better algorithm.\n\nThis was the central finding that motivated the **3DGS.zip standardized survey** (Bagdasarian et al., Eurographics 2025).\n\n## What Varies Between Papers (and Shouldn't)\n\n### Evaluation Resolution\nThe most impactful hidden variable: **PSNR is maximized when evaluation resolution equals training resolution.** If a paper trains at 1600×1200 and evaluates at 1600×1200, it will report higher PSNR than an identical method that downsamples to 800×600 for evaluation. Some methods implicitly optimize for their evaluation resolution by tuning hyperparameters.\n\n### Train/Test Split\nMost datasets don't prescribe a fixed split. Some papers hold out every 8th image for evaluation; others hold out every 4th. A denser test set includes more challenging viewpoints. This alone can cause ~0.5 dB PSNR variation.\n\n### Initialization\n3DGS is initialized from an SfM point cloud. The number and quality of SfM points depends on COLMAP settings (feature extractor resolution, matcher type). A denser initialization leads to fewer densification iterations needed and a different final Gaussian count — which directly affects compression ratios.\n\n### Number of Training Iterations\nBaseline 3DGS uses 30,000 iterations. Some methods compare against a 7,000-iteration baseline (citing speed), others train longer. More iterations → better quality → compression ratios look larger.\n\n## The Standardized Protocol\n\nThe 3DGS.zip survey enforces:\n\n1. **Same scenes**: a fixed selection from each dataset\n2. **Evaluation resolution = training resolution**: no post-hoc downsampling\n3. **Standardized image resizing**: consistent preprocessing pipeline\n4. **Fixed train/test split**: every 8th image held out for test\n5. **Standardized initialization**: same COLMAP settings, same SfM output\n6. **Baseline 3DGS as anchor**: all methods compared against the same baseline run\n\n## Why This Matters for Practitioners\n\nWhen reading a paper's results table:\n- **Absolute PSNR** is only meaningful relative to their reported baseline run on the same protocol\n- **Relative improvement** over baseline is more informative than absolute numbers\n- The file size (MB) and Gaussian count are direct measures, less sensitive to protocol differences\n- Rate–distortion plots (PSNR vs. file size) are the most honest presentation\n\n## The Open Survey Site\n\nThe 3DGS.zip project maintains an open comparison website that re-evaluates submitted methods under the standardized protocol: https://survey.3dgs.zip/\n\nThis is the correct place to compare methods head-to-head. A method that looks state-of-the-art in its paper may rank differently on the standardized benchmark.",
+  "references": [
+    {
+      "label": "Bagdasarian et al. 2025",
+      "title": "3DGS.zip: A Survey on 3D Gaussian Splatting Compression Methods",
+      "url": "https://arxiv.org/abs/2407.09510"
+    }
+  ],
+  "nextItem": {
+    "type": "quiz",
+    "id": "q1"
+  },
+  "prevItem": {
+    "type": "reading",
+    "id": "r2"
+  }
+}

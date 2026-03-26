@@ -1,0 +1,89 @@
+{
+  "id": "r1",
+  "moduleId": "m4",
+  "title": "Why Sort Gaussians into a 2D Grid?",
+  "estimatedMinutes": 11,
+  "learningObjectives": [
+    {
+      "id": "m4r1-lo1",
+      "verb": "Explain",
+      "description": "Explain the core insight that Gaussian order-invariance makes any permutation of N Gaussians a lossless representation, enabling permutation search as a compression pre-processing step",
+      "skillTags": [
+        "grid-sorting",
+        "compression"
+      ]
+    },
+    {
+      "id": "m4r1-lo2",
+      "verb": "Demonstrate",
+      "description": "Demonstrate how reshaping N × 59 Gaussian attributes into a √N × √N × 59 2D grid exploits image codec spatial correlation models, and estimate the compression gain for a representative scene",
+      "skillTags": [
+        "grid-sorting",
+        "compression"
+      ]
+    },
+    {
+      "id": "m4r1-lo3",
+      "verb": "Explain",
+      "description": "Explain why 3D position is the natural primary sorting key for Gaussian grids and identify which other Gaussian attributes (color, scale, SH) benefit most from spatial sorting",
+      "skillTags": [
+        "grid-sorting",
+        "gaussian-math"
+      ]
+    },
+    {
+      "id": "m4r1-lo4",
+      "verb": "Identify",
+      "description": "Identify the compression gain from sorting Gaussians into a 2D grid before PNG vs. JPEG XL vs. WebP encoding, and explain why the standard image codec choice matters less than the sorting quality",
+      "skillTags": [
+        "grid-sorting",
+        "compression"
+      ]
+    }
+  ],
+  "content": "## The Core Insight\n\n3D Gaussian Splatting is **order-invariant**: a set of Gaussians represents the same scene regardless of the order they appear in the data array. This means there are \\(N!\\) equivalent representations for a scene with \\(N\\) Gaussians. Among all these permutations, most are incompressible — but some are highly compressible.\n\nThe key question is: **can we find the permutation that makes the data most compressible?**\n\n## The Image Compression Analogy\n\nConsider an extreme version of this problem with image pixels. A 500×500 pixel image has 250,000 pixels. If you randomly shuffle all pixels, you destroy all spatial correlation — a lossless codec like PNG must essentially store every pixel value independently.\n\nExperimental results (from Barthel et al., FLAS paper) on a natural image:\n\n| Arrangement | PNG size | Reduction vs. shuffled |\n|---|---|---|\n| Shuffled pixels | 626 KB | 1.0× (baseline) |\n| Original image | 496 KB | 1.26× |\n| Sorted (by color) | 199 KB | 3.15× |\n\nFor JPEG (lossy):\n\n| Arrangement | JPEG size | Reduction vs. shuffled |\n|---|---|---|\n| Shuffled | 298 KB | 1.0× |\n| Original | 174 KB | 1.71× |\n| Sorted | 33 KB | **9.03×** |\n\nSorting pixels by value creates a smooth color gradient — adjacent pixels become similar, maximizing local correlation. Codecs exploit local correlation via prediction and transform coding (DCT in JPEG). **Sorted data is up to 9× more compressible under a lossy codec.**\n\n## Attribute-to-Grid Reshaping\n\nThe same principle applies to 3DGS. A single Gaussian has 59 attributes. A scene with \\(N\\) Gaussians can be viewed as \\(N \\times 59\\) matrix. This matrix can be **reshaped into a 2D grid** (e.g., \\(\\sqrt{N} \\times \\sqrt{N} \\times 59\\)) and then treated as a multi-channel image.\n\nFor \\(N = 65536\\) Gaussians: a \\(256 \\times 256 \\times 59\\) array of values, which can be split into 59 grayscale images (or grouped into multi-channel images), each of size \\(256 \\times 256\\).\n\nIf these 59 images are smooth (nearby grid cells have similar values), standard image codecs (JPEG, JPEG XL, WebP, HEIC) will compress them effectively — with no 3DGS-specific codec needed.\n\n## The Sorting Problem\n\nThe hard part: how do we **assign Gaussians to grid positions** such that the resulting attribute images are smooth?\n\nThis is equivalent to finding a permutation \\(\\pi\\) of the \\(N\\) Gaussians that, when they are placed into the \\(\\sqrt{N} \\times \\sqrt{N}\\) grid in order \\(\\pi\\), minimizes the differences between adjacent grid cells.\n\nFor \\(N = 65536\\) Gaussians, the number of possible permutations is \\(65536!\\) — an astronomically large search space. Brute force is completely infeasible. We need efficient algorithms that find near-optimal orderings in polynomial time.\n\n## Why Position Is the Natural Sorting Key\n\nGaussian attributes are not independent: nearby Gaussians in 3D space tend to have similar colors, similar scales, and similar orientations (they all lie on the same surface). By sorting Gaussians primarily by their 3D positions, we naturally cluster attributionally similar Gaussians together in the grid.\n\nThe SOG paper (Morgenstern et al., ECCV 2024) uses a weighted combination of all attributes as the sorting key:\n\n\\[c = \\sum_i \\omega_i A_i\\]\n\nwhere \\(\\omega_i\\) are per-attribute weights (position weighted most heavily, since it correlates most strongly with the other attributes).",
+  "equationBreakdowns": [
+    {
+      "label": "SOG Weighted Attribute Sorting Key",
+      "terms": [
+        {
+          "symbol": "c",
+          "name": "Composite sorting key",
+          "desc": "A single scalar value computed for each Gaussian. Gaussians are sorted by c before being placed into the 2D grid. The smoother the resulting grid, the more compressible the attribute images."
+        },
+        {
+          "symbol": "\\sum_i",
+          "name": "Sum over attributes",
+          "desc": "Iterates over all attribute groups of the Gaussian — position, scale, rotation, opacity, SH coefficients, etc. Each contributes a weighted component to the final key."
+        },
+        {
+          "symbol": "\\omega_i",
+          "name": "Per-attribute weight",
+          "desc": "Controls how much each attribute type influences the sort order. Position is weighted most heavily because 3D spatial proximity is the strongest predictor of similarity across all other attributes."
+        },
+        {
+          "symbol": "A_i",
+          "name": "Attribute value",
+          "desc": "The normalized value of attribute group i for this Gaussian. Attributes with different scales (e.g., positions in metres vs. opacities in [0,1]) are normalized before combining so that no single attribute dominates through scale alone."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Morgenstern et al. 2024",
+      "title": "Compact 3D Scene Representation via Self-Organizing Gaussian Grids",
+      "url": "https://arxiv.org/abs/2312.13299"
+    },
+    {
+      "label": "Barthel et al. 2023",
+      "title": "Improved Evaluation and Generation of Grid Layouts using Distance Preservation Quality and Nearest Neighbor Graphs",
+      "url": "https://arxiv.org/abs/2309.12463"
+    }
+  ],
+  "nextItem": {
+    "type": "reading",
+    "id": "r2"
+  },
+  "prevItem": null
+}

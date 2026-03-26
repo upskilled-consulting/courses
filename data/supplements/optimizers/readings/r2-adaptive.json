@@ -1,0 +1,269 @@
+{
+  "id": "r2",
+  "moduleId": "optimizers",
+  "title": "Adaptive Learning Rate Methods",
+  "estimatedMinutes": 14,
+  "learningObjectives": [
+    {
+      "id": "r2-lo1",
+      "verb": "Derive",
+      "description": "Derive the Adagrad update rule and explain why its monotonically increasing squared-gradient accumulator causes the effective learning rate to approach zero",
+      "skillTags": [
+        "adaptive-lr",
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r2-lo2",
+      "verb": "Explain",
+      "description": "Explain how RMSprop's exponential moving average fixes Adagrad's dying-rate problem and identify the effect of the decay factor α on gradient memory",
+      "skillTags": [
+        "adaptive-lr"
+      ]
+    },
+    {
+      "id": "r2-lo3",
+      "verb": "Trace",
+      "description": "Trace the Adadelta update through its two EMAs and explain how the numerator's update-scale EMA eliminates the global learning rate hyperparameter",
+      "skillTags": [
+        "adaptive-lr"
+      ]
+    },
+    {
+      "id": "r2-lo4",
+      "verb": "Select",
+      "description": "Select among Adagrad, RMSprop, and Adadelta given constraints on gradient sparsity, stationarity, and hyperparameter tuning budget",
+      "skillTags": [
+        "adaptive-lr"
+      ]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r1"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r3"
+  },
+  "content": "## The Motivation for Per-Parameter Learning Rates\n\nA single global learning rate treats every parameter identically. But parameters differ dramatically: input-layer weights in a language model see many zero gradients (sparse tokens), while output weights receive dense updates every step. Adaptive methods assign each parameter its own effective learning rate based on its gradient history.\n\n## Adagrad\n\nAdagrad accumulates the *sum* of squared gradients $G_t$ for each parameter and divides the learning rate by its square root:\n$$G_{t,i} = G_{t-1,i} + g_{t,i}^2$$\n\n$$\\theta_{t+1,i} = \\theta_{t,i} - \\frac{\\eta}{\\sqrt{G_{t,i} + \\varepsilon}} \\, g_{t,i}$$\n\nParameters that receive large gradients accumulate a large $G$, reducing their effective learning rate. Parameters with rare, small gradients keep a small $G$, retaining a large effective rate. This makes Adagrad ideal for **sparse features** (e.g., word embeddings with infrequent tokens).\n\n```python\noptimizer = torch.optim.Adagrad(\n    model.parameters(), lr=0.01, eps=1e-10, weight_decay=0\n)\n```\n\n**TensorFlow:**\n```python\noptimizer = tf.keras.optimizers.Adagrad(\n    learning_rate=0.01, epsilon=1e-10\n)\n```\n\n**The fatal flaw:** $G_t$ is monotonically increasing and never forgets. After many steps, every parameter's effective learning rate approaches zero and learning stops. Adagrad is mostly useful for convex shallow models or short training runs.\n\n## RMSprop\n\nRMSprop (Hinton, unpublished 2012) fixes Adagrad's dying-rate problem by using an **exponential moving average** of squared gradients instead of the cumulative sum:\n$$E[g^2]_t = \\rho \\, E[g^2]_{t-1} + (1 - \\rho) \\, g_t^2$$\n\n$$\\theta_{t+1} = \\theta_t - \\frac{\\eta}{\\sqrt{E[g^2]_t + \\varepsilon}} \\, g_t$$\n\nThe decay factor $\\rho$ (typically 0.99) controls how quickly the history is forgotten — gradients from ~100 steps ago receive nearly zero weight. The effective learning rate adapts but never collapses.\n\n```python\noptimizer = torch.optim.RMSprop(\n    model.parameters(), lr=0.01, alpha=0.99, eps=1e-8,\n    momentum=0, centered=False, weight_decay=0\n)\n```\n\n**TensorFlow:**\n```python\noptimizer = tf.keras.optimizers.RMSprop(\n    learning_rate=0.001, rho=0.99, epsilon=1e-8,\n    momentum=0.0, centered=False\n)\n# Note: PyTorch param is 'alpha'; TF param is 'rho' — same concept\n```\n\n**Centered RMSprop** (`centered=True`) normalizes by the variance of the gradient rather than the raw second moment:\n$$\\text{Var}[g]_t = E[g^2]_t - (E[g]_t)^2$$\n\nThis removes the mean gradient contribution, making the normalizer a true variance estimate and often improving convergence on recurrent networks.\n\n## Adadelta\n\nAdadelta (Zeiler 2012) pushes the adaptive idea further by **eliminating the learning rate hyperparameter entirely**. It tracks both a running average of squared gradients *and* a running average of squared parameter updates:\n$$E[g^2]_t = \\rho \\, E[g^2]_{t-1} + (1-\\rho) \\, g_t^2$$\n\n$$\\Delta\\theta_t = -\\frac{\\sqrt{E[\\Delta\\theta^2]_{t-1} + \\varepsilon}}{\\sqrt{E[g^2]_t + \\varepsilon}} \\, g_t$$\n\n$$E[\\Delta\\theta^2]_t = \\rho \\, E[\\Delta\\theta^2]_{t-1} + (1-\\rho) \\, \\Delta\\theta_t^2$$\n\nThe numerator $\\sqrt{E[\\Delta\\theta^2] + \\varepsilon}$ self-calibrates the update scale based on recent parameter changes, giving each parameter an automatically tuned effective step size.\n\n```python\noptimizer = torch.optim.Adadelta(\n    model.parameters(), lr=1.0, rho=0.9, eps=1e-6, weight_decay=0\n)\n```\n\n**TensorFlow:**\n```python\noptimizer = tf.keras.optimizers.Adadelta(\n    learning_rate=1.0, rho=0.9, epsilon=1e-6\n)\n# learning_rate=1.0 gives the pure Adadelta update, matching PyTorch's default\n```\n\nNote that PyTorch's implementation retains `lr` as a global scale applied *after* the Adadelta update — setting `lr=1.0` (default) gives the pure version. Adadelta is robust to learning rate choice and works well when hyperparameter tuning budgets are limited.\n\n## Comparison\n\n| Method | Second-moment estimate | Forgets old gradients? | LR required? |\n|---|---|---|---|\n| Adagrad | Cumulative sum | No (monotone decay) | Yes |\n| RMSprop | EMA (α) | Yes | Yes |\n| Adadelta | EMA (ρ) + update EMA | Yes | No (optional scale) |\n\n## When to Use Each\n\n- **Adagrad** — sparse NLP tasks (TF-IDF, bag-of-words), short convex training runs\n- **RMSprop** — RNNs, reinforcement learning (historically strong), quick convergence on non-stationary objectives\n- **Adadelta** — situations where LR search is expensive; robust default without tuning\n\nIn practice, Adam/AdamW has largely superseded all three for dense deep learning. Understanding adaptive methods remains essential because Adam is their direct descendant.\n",
+  "equationBreakdowns": [
+    {
+      "label": "Adagrad — accumulator",
+      "heading": "Adagrad",
+      "terms": [
+        {
+          "symbol": "G_{t,i}",
+          "name": "Accumulated squared gradient",
+          "desc": "Running sum of all squared gradients for parameter $i$ up to step $t$ — monotonically increases and never forgets"
+        },
+        {
+          "symbol": "G_{t-1,i}",
+          "name": "Previous accumulator",
+          "desc": "Squared-gradient sum from the prior step — carries full history since initialization"
+        },
+        {
+          "symbol": "g_{t,i}^2",
+          "name": "Squared gradient",
+          "desc": "Square of the current gradient for parameter $i$ — always non-negative, so $G$ can only grow"
+        }
+      ]
+    },
+    {
+      "label": "Adagrad — parameter update",
+      "heading": "Adagrad",
+      "terms": [
+        {
+          "symbol": "\\theta_{t+1,i}",
+          "name": "Updated parameter",
+          "desc": "Parameter $i$ after the adaptive step"
+        },
+        {
+          "symbol": "\\eta",
+          "name": "Global learning rate",
+          "desc": "Initial step size — divided by the per-parameter accumulator to give an effective rate"
+        },
+        {
+          "symbol": "\\sqrt{G_{t,i} + \\varepsilon}",
+          "name": "Adaptive denominator",
+          "desc": "Square root of the accumulated squared gradients — large for frequently updated parameters, small for rarely updated ones"
+        },
+        {
+          "symbol": "\\varepsilon",
+          "name": "Epsilon",
+          "desc": "Small constant (default 1e-10 in PyTorch) added for numerical stability — prevents division by zero when $G_{t,i} \\approx 0$"
+        },
+        {
+          "symbol": "g_{t,i}",
+          "name": "Current gradient",
+          "desc": "Mini-batch gradient for parameter $i$ at step $t$"
+        }
+      ]
+    },
+    {
+      "label": "RMSprop — EMA accumulator",
+      "heading": "RMSprop",
+      "terms": [
+        {
+          "symbol": "E[g^2]_t",
+          "name": "EMA of squared gradients",
+          "desc": "Exponential moving average of $g^2$ — unlike Adagrad's cumulative sum, this forgets old history so the effective LR never collapses"
+        },
+        {
+          "symbol": "\\rho",
+          "name": "Decay factor",
+          "desc": "Controls memory length — typical value 0.99 gives a ~100-step window. PyTorch calls this `alpha`; TensorFlow calls it `rho`"
+        },
+        {
+          "symbol": "E[g^2]_{t-1}",
+          "name": "Previous EMA",
+          "desc": "Weighted contribution of all past squared gradients — decays geometrically with $\\rho$"
+        },
+        {
+          "symbol": "(1 - \\rho) \\, g_t^2",
+          "name": "Current gradient contribution",
+          "desc": "Fraction of the new squared gradient added each step — balances with the decayed history"
+        }
+      ]
+    },
+    {
+      "label": "RMSprop — parameter update",
+      "heading": "RMSprop",
+      "terms": [
+        {
+          "symbol": "\\theta_{t+1}",
+          "name": "Updated parameters",
+          "desc": "Parameters after the adaptive step"
+        },
+        {
+          "symbol": "\\eta",
+          "name": "Learning rate",
+          "desc": "Global step size — divided by the per-parameter adaptive denominator"
+        },
+        {
+          "symbol": "\\sqrt{E[g^2]_t + \\varepsilon}",
+          "name": "Adaptive denominator",
+          "desc": "Square root of the EMA — normalizes the gradient by its recent magnitude. Bounded away from zero (unlike Adagrad's ever-growing $\\sqrt{G_t}$)"
+        },
+        {
+          "symbol": "\\varepsilon",
+          "name": "Epsilon",
+          "desc": "Numerical stability constant (default 1e-8) — prevents division by zero when gradients are near zero"
+        },
+        {
+          "symbol": "g_t",
+          "name": "Current gradient",
+          "desc": "Mini-batch gradient — scaled by the adaptive denominator before being applied"
+        }
+      ]
+    },
+    {
+      "label": "Adadelta — gradient EMA",
+      "heading": "Adadelta",
+      "terms": [
+        {
+          "symbol": "E[g^2]_t",
+          "name": "EMA of squared gradients",
+          "desc": "Same accumulator as RMSprop — exponential moving average that forgets old gradients. Forms the denominator of the update."
+        },
+        {
+          "symbol": "\\rho",
+          "name": "Decay factor",
+          "desc": "Controls the gradient memory window — typical value 0.9"
+        },
+        {
+          "symbol": "(1-\\rho) \\, g_t^2",
+          "name": "Current gradient contribution",
+          "desc": "Fraction of new squared gradient added each step"
+        }
+      ]
+    },
+    {
+      "label": "Adadelta — parameter update",
+      "heading": "Adadelta",
+      "terms": [
+        {
+          "symbol": "\\Delta\\theta_t",
+          "name": "Parameter update",
+          "desc": "The step applied to parameters — no global learning rate required"
+        },
+        {
+          "symbol": "\\sqrt{E[\\Delta\\theta^2]_{t-1} + \\varepsilon}",
+          "name": "Update scale (numerator)",
+          "desc": "RMS of recent parameter updates — self-calibrates the step size based on how large recent updates have been"
+        },
+        {
+          "symbol": "\\sqrt{E[g^2]_t + \\varepsilon}",
+          "name": "Gradient scale (denominator)",
+          "desc": "RMS of recent gradients — normalizes the gradient magnitude, analogous to RMSprop's denominator"
+        },
+        {
+          "symbol": "\\varepsilon",
+          "name": "Epsilon",
+          "desc": "Numerical stability constant in both numerator and denominator — also ensures updates are non-zero at initialization when $E[\\Delta\\theta^2]_0 = 0$"
+        },
+        {
+          "symbol": "g_t",
+          "name": "Current gradient",
+          "desc": "Mini-batch gradient — scaled by the ratio of the two RMS estimates instead of a fixed learning rate"
+        }
+      ]
+    },
+    {
+      "label": "Adadelta — update EMA",
+      "heading": "Adadelta",
+      "terms": [
+        {
+          "symbol": "E[\\Delta\\theta^2]_t",
+          "name": "EMA of squared updates",
+          "desc": "Running average of squared parameter updates — the unique Adadelta accumulator that replaces the global learning rate"
+        },
+        {
+          "symbol": "E[\\Delta\\theta^2]_{t-1}",
+          "name": "Previous update EMA",
+          "desc": "Decayed history of past update magnitudes — note this uses $t-1$, so it is computed *before* the current update is applied"
+        },
+        {
+          "symbol": "(1-\\rho) \\, \\Delta\\theta_t^2",
+          "name": "Current update contribution",
+          "desc": "Square of the update just computed — feeds back into the next step's numerator"
+        }
+      ]
+    },
+    {
+      "label": "RMSprop — centered variance",
+      "heading": "RMSprop",
+      "terms": [
+        {
+          "symbol": "\\text{Var}[g]_t",
+          "name": "Gradient variance estimate",
+          "desc": "Used as the adaptive denominator in place of the raw second moment — removes the mean gradient's contribution, making the normalizer a true variance rather than $E[g^2]$"
+        },
+        {
+          "symbol": "E[g^2]_t",
+          "name": "EMA of squared gradients",
+          "desc": "Running second moment — same as standard RMSprop's accumulator"
+        },
+        {
+          "symbol": "(E[g]_t)^2",
+          "name": "Squared mean gradient",
+          "desc": "Square of the running mean gradient EMA — subtracting this centers the estimate around zero mean, analogous to $\\text{Var}[X] = E[X^2] - (E[X])^2$"
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Zeiler 2012",
+      "title": "ADADELTA: An Adaptive Learning Rate Method",
+      "url": "https://arxiv.org/abs/1212.5701",
+      "note": "Introduces Adadelta — motivation for eliminating the learning rate hyperparameter"
+    },
+    {
+      "label": "Duchi et al. 2011",
+      "title": "Adaptive Subgradient Methods for Online Learning and Stochastic Optimization",
+      "url": "https://jmlr.org/papers/v12/duchi11a.html",
+      "note": "Original Adagrad paper — theoretical guarantees for sparse gradients"
+    }
+  ]
+}

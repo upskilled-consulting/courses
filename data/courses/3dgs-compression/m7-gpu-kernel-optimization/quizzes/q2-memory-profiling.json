@@ -1,0 +1,80 @@
+{
+  "id": "q2",
+  "moduleId": "m7",
+  "title": "Memory Hierarchy, Roofline & Profiling",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "questions": [
+    {
+      "id": "q7_q2_1",
+      "type": "code-completion",
+      "prompt": "Compute the CGMA ratio for the naive matrix multiply kernel. Fill in the achievable throughput on a GPU with 2.0 TB/s memory bandwidth:",
+      "codeTemplate": "# For NxN matrix multiply, each output element P[i][j] requires:\n# - 2*N floating-point operations (N multiplies + N adds)\n# - 2*N global memory reads (N from row i of M, N from column j of N)\n# - Each float32 is 4 bytes\n\nN = 1024\nfp_ops_per_element = 2 * N        # 2048 FP ops\nbytes_per_element  = 2 * N * 4    # 8192 bytes\n\ncgma = fp_ops_per_element / bytes_per_element\nprint(f\"CGMA ratio: {cgma:.4f} FLOPs/byte\")  # Expected: 0.25\n\nbandwidth_TBs = 2.0  # A100 HBM2e in TB/s\nbandwidth_GBs = bandwidth_TBs * 1e6  # GB/s (note: 1 TB/s = 1e6 MB/s = 1e3 GB/s)\nmax_gflops = ___BLANK___\nprint(f\"Max achievable: {max_gflops:.0f} GFlop/s\")  # Expected: 500",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "bandwidth_GBs * cgma",
+        "bandwidth_TBs * 1e3 * cgma",
+        "2.0 * 1e3 * cgma",
+        "2000 * cgma",
+        "2000 * 0.25",
+        "500.0",
+        "500"
+      ],
+      "explanation": "CGMA = 2N FLOPs / (2N × 4 bytes) = 1/4 = 0.25 FLOPs/byte. With 2.0 TB/s = 2000 GB/s bandwidth: achievable throughput = 2000 GB/s × 0.25 FLOPs/byte = 500 GFlop/s. The A100's peak FP32 is 19,500 GFlop/s, so the naive kernel achieves only 500/19500 ≈ 2.6% of peak — entirely memory-limited. Tiling with T=16 raises CGMA to 4.0 and achievable throughput to 8,000 GFlop/s (41% of peak), at which point the kernel transitions from memory-bound to compute-bound.",
+      "hint": "Achievable throughput = bandwidth × CGMA. Ensure units are consistent: both in GB/s and GFlop/s."
+    },
+    {
+      "id": "q7_q2_2",
+      "type": "multiple-choice",
+      "prompt": "32 threads in a warp each read a float32 from a global memory array using the access pattern `data[threadIdx.x * 4]` (stride-4 access). How many memory transactions does this generate compared to stride-1 access?",
+      "options": [
+        { "id": "a", "text": "1 transaction — the hardware detects the stride pattern and coalesces automatically", "correct": false },
+        { "id": "b", "text": "4 transactions — the hardware groups stride-4 accesses into groups of 8", "correct": false },
+        { "id": "c", "text": "Up to 4 transactions — each group of 8 consecutive threads accesses addresses 32 bytes apart (8 floats × 4 bytes), falling into 4 separate 128-byte cache lines", "correct": false },
+        { "id": "d", "text": "Up to 32 transactions — with stride 4 (16 bytes between consecutive thread addresses), the 32 threads span 32 × 16 = 512 bytes across 4 cache lines, but because no two threads share a cache line their accesses cannot be coalesced into fewer than 4 transactions, and without full alignment could require up to 32", "correct": true }
+      ],
+      "explanation": "The coalescing rule requires consecutive threads to access consecutive 4-byte addresses (stride-1) in an aligned 128-byte block. At stride-4, thread k accesses address k×16. Threads 0–7 span addresses 0–112 (one 128-byte cache line), threads 8–15 span addresses 128–240 (next line), etc. Best case: 4 transactions for 32 threads. But if the base address is unaligned, threads within a notional cache-line group may spill across two physical cache lines, potentially requiring up to 32 separate transactions — a 32× bandwidth penalty. The general rule: effective bandwidth = peak bandwidth / stride.",
+      "hint": "With stride-4, how many bytes apart are consecutive thread addresses? How many such addresses fit in a 128-byte cache line?"
+    },
+    {
+      "id": "q7_q2_3",
+      "type": "multiple-choice",
+      "prompt": "You profile a custom CUDA kernel and measure: arithmetic intensity = 2.1 FLOP/byte, achieved throughput = 3.8 TFlop/s. The target GPU has peak FP32 = 19.5 TFlop/s and HBM bandwidth = 2.0 TB/s. What does the roofline model tell you, and what is the correct optimization direction?",
+      "options": [
+        { "id": "a", "text": "The kernel is compute-bound (I = 2.1 > ridge point). Optimization should focus on reducing arithmetic operations or increasing parallelism.", "correct": false },
+        { "id": "b", "text": "The kernel is memory-bound (I = 2.1 < ridge point = 9.75). The roofline ceiling at this intensity is 2.0 × 2.1 = 4.2 TFlop/s; the kernel achieves 3.8 TFlop/s (90% of the memory-roofline ceiling), meaning it is already near-optimal for its access pattern. To improve further, increase arithmetic intensity.", "correct": true },
+        { "id": "c", "text": "The kernel is memory-bound and poorly optimized — achieved throughput of 3.8 TFlop/s is well below peak, so memory coalescing must be broken.", "correct": false },
+        { "id": "d", "text": "The roofline cannot be applied because the kernel's arithmetic intensity is between 1.0 and 10.0, a transitional regime where neither model applies.", "correct": false }
+      ],
+      "explanation": "Ridge point = peak / bandwidth = 19,500 / 2,000 = 9.75 FLOP/byte. Since I = 2.1 < 9.75, the kernel is memory-bound. The memory-roofline ceiling at I = 2.1 is 2.0 TB/s × 2.1 FLOP/byte = 4.2 TFlop/s. The kernel achieves 3.8 TFlop/s = 90.5% of the memory ceiling — it is nearly perfectly utilizing available bandwidth. Further optimization via coalescing or shared-memory tuning is unlikely to yield more than ~10% improvement. The correct path is to increase arithmetic intensity (do more computation per byte fetched) to shift the ridge point or cross it — e.g., by applying shared-memory tiling to reuse loaded data.",
+      "hint": "First compute the ridge point. Then check whether the achieved throughput is close to the memory roofline ceiling (bandwidth × intensity) or the compute ceiling (peak FLOP/s)."
+    },
+    {
+      "id": "q7_q2_4",
+      "type": "multiple-choice",
+      "prompt": "A torch.profiler trace of a 3DGS training step shows: renderCUDA = 28ms GPU time, loss.backward() = 8ms GPU time, adam_update = 2ms GPU time, and a 12ms gap between backward() completing and the optimizer starting. What is the most likely cause of the 12ms gap, and how would you confirm it?",
+      "options": [
+        { "id": "a", "text": "The optimizer has a 12ms initialization overhead on the first call. Confirm by running multiple iterations and checking if the gap disappears after the first.", "correct": false },
+        { "id": "b", "text": "A CPU–GPU synchronization point: the host Python code reads a GPU tensor (e.g., a gradient statistic for Gaussian densification) before launching the optimizer, forcing cudaDeviceSynchronize(). Confirm by finding the corresponding CPU thread gap in the Perfetto timeline that aligns with the GPU idle period.", "correct": true },
+        { "id": "c", "text": "The CUDA stream scheduler is reordering kernels. Confirm by increasing the number of CUDA streams to parallelize backward and optimizer.", "correct": false },
+        { "id": "d", "text": "The loss.backward() kernel is waiting for renderCUDA to complete. Confirm by checking if removing the backward pass eliminates the gap.", "correct": false }
+      ],
+      "explanation": "A gap between GPU kernels where the CPU is busy is the telltale signature of a CPU–GPU synchronization point. In 3DGS training, the densification check periodically reads the accumulated gradient magnitudes (`viewspace_point_tensor.grad`) and visibility counts from GPU tensors to decide which Gaussians to clone or prune. This `.grad` access in Python triggers an implicit `cudaDeviceSynchronize()` — the CPU blocks until the backward pass completes, copies the value to CPU, then the Python code runs the densification logic, then launches the optimizer. In Perfetto, this appears as: GPU backward kernel ends → CPU thread becomes active (Python densification code) → 12ms of CPU computation → GPU optimizer kernel starts. The fix is to batch or defer densification checks to reduce sync frequency.",
+      "hint": "What operation in Python would cause the GPU to stall and the CPU to become active between two GPU kernel launches?"
+    },
+    {
+      "id": "q7_q2_5",
+      "type": "multiple-choice",
+      "prompt": "An ncu report on the 3DGS forward rasterizer shows: Achieved Occupancy = 72%, L1 Hit Rate = 31%, Global Memory Throughput = 1.4 TB/s (out of 2.0 TB/s peak). Which intervention is most likely to improve throughput?",
+      "options": [
+        { "id": "a", "text": "Increase block size to 32×32 (1024 threads per block) to raise occupancy from 72% to 100%.", "correct": false },
+        { "id": "b", "text": "Reduce register usage per thread to allow more concurrent blocks per SM, increasing occupancy above 72%.", "correct": false },
+        { "id": "c", "text": "Improve data reuse within the shared-memory Gaussian batch — e.g., increase batch size so each loaded Gaussian is evaluated by more pixel threads before the next global memory load — raising the L1 hit rate from 31% and reducing the number of distinct global memory transactions per iteration.", "correct": true },
+        { "id": "d", "text": "Fuse the forward and backward kernels into a single kernel to eliminate kernel launch overhead between the two passes.", "correct": false }
+      ],
+      "explanation": "The 31% L1 hit rate is the diagnostic signal: most memory accesses are bypassing L1 and going to global memory, consuming bandwidth. The kernel is already at 70% of peak bandwidth — it is near the memory-bound ceiling. Increasing occupancy from 72% to 100% would help hide latency but the kernel is bandwidth-limited, not latency-limited; more warps just queue up for the same bottleneck. The correct fix is to increase data reuse — e.g., by loading a larger batch of Gaussians into shared memory so each Gaussian's attributes are read from global memory once but evaluated by more pixel threads (or more times per thread) before eviction. This raises arithmetic intensity and shifts the working set toward L1, improving the hit rate.",
+      "hint": "The L1 hit rate of 31% means 69% of accesses miss L1 and hit global memory. What change would make more accesses hit L1?"
+    }
+  ]
+}

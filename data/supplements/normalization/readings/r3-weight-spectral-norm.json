@@ -1,0 +1,86 @@
+{
+  "id": "r3",
+  "moduleId": "normalization",
+  "title": "Weight Normalization and Spectral Normalization",
+  "estimatedMinutes": 15,
+  "learningObjectives": [
+    {
+      "id": "r3-lo1",
+      "verb": "Describe",
+      "description": "Describe the weight normalization reparameterization w = g·v/‖v‖ and explain how decoupling magnitude from direction simplifies the optimization geometry",
+      "skillTags": ["normalization", "training-dynamics"]
+    },
+    {
+      "id": "r3-lo2",
+      "verb": "Compare",
+      "description": "Compare weight normalization to batch normalization: what weight norm avoids (batch statistics, train/eval mismatch), what it loses (automatic scale adaptation), and when each is preferable",
+      "skillTags": ["normalization"]
+    },
+    {
+      "id": "r3-lo3",
+      "verb": "Explain",
+      "description": "Explain the spectral norm of a matrix — its relationship to the largest singular value and the Lipschitz constant — and describe how power iteration estimates it efficiently",
+      "skillTags": ["normalization"]
+    },
+    {
+      "id": "r3-lo4",
+      "verb": "Identify",
+      "description": "Identify where spectral normalization is applied in GAN discriminators and explain why constraining the Lipschitz constant is required by the Wasserstein distance objective",
+      "skillTags": ["normalization"]
+    }
+  ],
+  "prevItem": { "type": "reading", "id": "r2" },
+  "nextItem": { "type": "reading", "id": "r4" },
+  "content": "## Weight Normalization\n\nWeight normalization (Salimans & Kingma, 2016) takes a different approach from all the normalizations seen so far. Instead of normalizing *activations* at runtime, it reparameterizes the **weight vectors** themselves.\n\nFor each output neuron $i$, replace the weight vector $\\mathbf{w}_i$ with a magnitude scalar $g_i$ and a direction vector $\\mathbf{v}_i$:\n\n$$\\mathbf{w}_i = g_i \\cdot \\frac{\\mathbf{v}_i}{\\|\\mathbf{v}_i\\|}$$\n\nThe network now has two parameters per weight vector: $g_i \\in \\mathbb{R}$ (scalar magnitude) and $\\mathbf{v}_i \\in \\mathbb{R}^{n_{\\text{in}}}$ (direction, unnormalized). The actual weight used in the forward pass is always the unit-normalized direction scaled by $g_i$.\n\n**Crucially:** weight normalization adds no computation to the forward pass beyond the reparameterization itself. There is no batch statistic computation, no running average, no train/eval mode difference.\n\n---\n\n## Why Reparameterizing Helps Optimization\n\nConsider gradient descent on the original weight $\\mathbf{w}$. The learning dynamics couple magnitude and direction — a step that adjusts the direction of $\\mathbf{w}$ also changes its magnitude, and vice versa.\n\nWith weight norm, the gradients w.r.t. $g$ and $\\mathbf{v}$ are:\n\n$$\\nabla_g \\mathcal{L} = \\frac{\\nabla_{\\mathbf{w}} \\mathcal{L} \\cdot \\mathbf{v}}{\\|\\mathbf{v}\\|}$$\n\n$$\\nabla_{\\mathbf{v}} \\mathcal{L} = \\frac{g}{\\|\\mathbf{v}\\|}\\left(\\nabla_{\\mathbf{w}} \\mathcal{L} - \\frac{\\nabla_g \\mathcal{L}}{g} \\cdot \\hat{\\mathbf{v}}\\right)$$\n\nThe gradient w.r.t. $\\mathbf{v}$ is automatically **orthogonalized**: the component of $\\nabla_{\\mathbf{w}}\\mathcal{L}$ in the direction of $\\hat{\\mathbf{v}}$ is subtracted out. Updates to $\\mathbf{v}$ only change the *direction* of $\\mathbf{w}$, not its magnitude.\n\nThis decoupling produces more well-conditioned optimization — updates to magnitude and direction do not interfere with each other.\n\n---\n\n## Weight Norm + Mean-Only BatchNorm\n\nSalimans & Kingma also proposed pairing weight normalization with **mean-only batch normalization**: subtract the batch mean but do not divide by the batch variance. This is lighter-weight than full BN and avoids the variance estimation noise that is problematic for small batches.\n\nThe combination was shown to match full BN in some settings while being more suitable for online / generative modeling tasks.\n\n---\n\n## Weight Norm vs. Batch Norm\n\n| Property | Weight Norm | Batch Norm |\n|---|---|---|\n| Normalizes | Weight vectors | Activations (per-feature, across batch) |\n| Batch-dependent | No | Yes |\n| Train/eval difference | No | Yes (running stats) |\n| Overhead | Reparameterization only | Batch statistics per layer |\n| Adapts to data scale | No | Yes (batch statistics track data) |\n| Works with batch size 1 | Yes | No (needs LayerNorm instead) |\n| Common use | Generative models, RL | CNNs, supervised vision |\n\n---\n\n## Spectral Normalization\n\nSpectral normalization (Miyato et al., 2018) constrains the weight matrix at the level of its largest singular value.\n\n### The Spectral Norm\n\nFor a matrix $W \\in \\mathbb{R}^{m \\times n}$, the **spectral norm** is its largest singular value:\n\n$$\\sigma_1(W) = \\max_{\\mathbf{x} \\neq 0} \\frac{\\|W\\mathbf{x}\\|_2}{\\|\\mathbf{x}\\|_2}$$\n\nThis equals the induced $\\ell_2$ operator norm — the maximum factor by which the linear map $\\mathbf{x} \\mapsto W\\mathbf{x}$ can amplify any input vector. It bounds the layer's Lipschitz constant:\n\n$$\\|W\\mathbf{x} - W\\mathbf{y}\\|_2 \\leq \\sigma_1(W)\\|\\mathbf{x} - \\mathbf{y}\\|_2$$\n\n### The Normalization\n\nSpectral normalization divides $W$ by its spectral norm after each gradient step:\n\n$$\\hat{W} = W / \\sigma_1(W)$$\n\nThis ensures $\\sigma_1(\\hat{W}) = 1$: the normalized layer is Lipschitz-1. If all layers are Lipschitz-1, the entire network has Lipschitz constant at most 1 (product of per-layer constants).\n\n### Efficient Estimation via Power Iteration\n\nComputing $\\sigma_1(W)$ exactly via SVD is $O(\\min(m,n) \\cdot mn)$ — too expensive to do at every step. Instead, **power iteration** provides a fast estimate:\n\n**Initialize:** random unit vector $\\tilde{\\mathbf{u}} \\in \\mathbb{R}^m$, $\\tilde{\\mathbf{v}} \\in \\mathbb{R}^n$\n\n**At each training step (1 iteration is typically enough):**\n$$\\tilde{\\mathbf{v}} \\leftarrow \\frac{W^\\top \\tilde{\\mathbf{u}}}{\\|W^\\top \\tilde{\\mathbf{u}}\\|} \\qquad \\tilde{\\mathbf{u}} \\leftarrow \\frac{W \\tilde{\\mathbf{v}}}{\\|W \\tilde{\\mathbf{v}}\\|}$$\n$$\\sigma_1(W) \\approx \\tilde{\\mathbf{u}}^\\top W \\tilde{\\mathbf{v}}$$\n\nThe vectors $\\tilde{\\mathbf{u}}$ and $\\tilde{\\mathbf{v}}$ converge to the left and right singular vectors corresponding to $\\sigma_1$. They are stored between steps so each update starts from the previous estimate — one iteration per step is sufficient because $W$ changes slowly.\n\n### Why GANs Need Lipschitz Constraints\n\nThe Wasserstein GAN (Arjovsky et al., 2017) defines the discriminator's objective as:\n\n$$\\mathcal{L}_{\\text{WGAN}} = \\mathbb{E}_{x \\sim p_{\\text{data}}}[D(x)] - \\mathbb{E}_{x \\sim p_g}[D(x)]$$\n\nFor this objective to equal the true Wasserstein-1 distance, the discriminator $D$ must be a **1-Lipschitz function** (Kantorovich-Rubinstein duality). WGAN-GP enforces this with a gradient penalty; spectral normalization enforces it directly via weight normalization — and does so without adding any loss term or hyperparameter to tune.\n\nSpectral normalization stabilizes GAN training dramatically and is standard in modern image generators (BigGAN, StyleGAN discriminator).\n\n---\n\n## PyTorch and TensorFlow\n\n**PyTorch** — `torch.nn.utils.weight_norm` and `spectral_norm`:\n\n```python\nimport torch\nimport torch.nn as nn\nfrom torch.nn.utils import weight_norm, spectral_norm, remove_weight_norm\n\n# Weight normalization: reparameterize w = g * v / ||v||\nlinear = nn.Linear(64, 32)\nwn = weight_norm(linear, name='weight', dim=0)\n# wn now exposes 'weight_g' (magnitude) and 'weight_v' (direction)\nprint([n for n, _ in wn.named_parameters()])  # ['weight_g', 'weight_v', 'bias']\n\nx   = torch.randn(8, 64)\nout = wn(x)                     # reconstructs weight = g * v/||v|| each forward pass\n\nremove_weight_norm(wn)          # fuse back into a plain weight before saving/inference\n\n# Spectral normalization: W_hat = W / sigma_1(W)\nconv   = nn.Conv2d(64, 128, 3, padding=1)\nsn_conv = spectral_norm(conv, n_power_iterations=1)\n# sn_conv.weight_u / weight_v store the power-iteration vectors between steps\n\nx   = torch.randn(4, 64, 8, 8)\nout = sn_conv(x)                # sigma_1 estimated and applied on every forward pass\n\n# Typical spectrally-normalized GAN discriminator block\nclass SNResBlock(nn.Module):\n    def __init__(self, in_ch: int, out_ch: int):\n        super().__init__()\n        self.conv1 = spectral_norm(nn.Conv2d(in_ch, out_ch, 3, padding=1))\n        self.conv2 = spectral_norm(nn.Conv2d(out_ch, out_ch, 3, padding=1))\n        self.skip  = spectral_norm(nn.Conv2d(in_ch, out_ch, 1))\n\n    def forward(self, x):\n        h = torch.relu(self.conv1(x))\n        h = self.conv2(h)\n        return torch.relu(h + self.skip(x))\n```\n\n**TensorFlow / Keras:**\n\n```python\nimport tensorflow as tf\n\n# SpectralNormalization wrapper — built-in from TF 2.6+\ndense   = tf.keras.layers.Dense(64)\nsn_dense = tf.keras.layers.SpectralNormalization(dense)\n\nx   = tf.random.normal((8, 128))\nout = sn_dense(x)   # weight divided by estimated largest singular value\n\n# Wrap Conv2D the same way\nconv    = tf.keras.layers.Conv2D(128, 3, padding='same')\nsn_conv = tf.keras.layers.SpectralNormalization(conv)\n\n# Manual weight normalization\nclass WeightNormDense(tf.keras.layers.Layer):\n    def __init__(self, units: int, **kwargs):\n        super().__init__(**kwargs)\n        self.units = units\n\n    def build(self, input_shape):\n        fan_in = input_shape[-1]\n        self.v = self.add_weight('v', shape=(fan_in, self.units))\n        self.g = self.add_weight('g', shape=(self.units,), initializer='ones')\n\n    def call(self, x):\n        v_norm = tf.linalg.norm(self.v, axis=0, keepdims=True)  # (1, units)\n        w = self.g * self.v / v_norm                             # (fan_in, units)\n        return x @ w\n```",
+  "equationBreakdowns": [
+    {
+      "label": "Weight Normalization Reparameterization",
+      "heading": "Weight Normalization",
+      "terms": [
+        {
+          "symbol": "g_i",
+          "name": "Magnitude scalar",
+          "desc": "A single learned scalar controlling the length of weight vector i. Updated by the optimizer independently of the direction."
+        },
+        {
+          "symbol": "\\mathbf{v}_i / \\|\\mathbf{v}_i\\|",
+          "name": "Unit direction vector",
+          "desc": "The weight direction, normalized to unit length. Updates to v_i only change where the weight points, not how large it is."
+        },
+        {
+          "symbol": "g_i \\cdot \\mathbf{v}_i / \\|\\mathbf{v}_i\\|",
+          "name": "Reparameterized weight",
+          "desc": "The actual weight used in the forward pass — magnitude times direction. Identical to the original weight w_i, but parameterized so magnitude and direction are optimized separately."
+        }
+      ]
+    },
+    {
+      "label": "Spectral Norm",
+      "heading": "Spectral Normalization",
+      "terms": [
+        {
+          "symbol": "\\sigma_1(W) = \\max_{\\mathbf{x}\\neq0} \\|W\\mathbf{x}\\|/\\|\\mathbf{x}\\|",
+          "name": "Largest singular value",
+          "desc": "The maximum stretch factor of the linear map W. If σ₁(W) = 5, then W can amplify some input vector by up to 5×. Spectral normalization forces this to exactly 1."
+        },
+        {
+          "symbol": "\\hat{W} = W/\\sigma_1(W)",
+          "name": "Spectrally normalized weight",
+          "desc": "After normalization, σ₁(Ŵ) = 1 — the layer cannot amplify any input by more than a factor of 1. The product of per-layer Lipschitz constants bounds the network's global Lipschitz constant."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Salimans & Kingma 2016",
+      "title": "Weight Normalization: A Simple Reparameterization to Accelerate Training of Deep Neural Networks",
+      "url": "https://arxiv.org/abs/1602.07868"
+    },
+    {
+      "label": "Miyato et al. 2018",
+      "title": "Spectral Normalization for Generative Adversarial Networks",
+      "url": "https://arxiv.org/abs/1802.05957"
+    }
+  ]
+}

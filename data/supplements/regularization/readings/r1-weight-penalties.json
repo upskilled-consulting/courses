@@ -1,0 +1,81 @@
+{
+  "id": "r1",
+  "moduleId": "regularization",
+  "title": "L1 and L2 Weight Penalties",
+  "estimatedMinutes": 15,
+  "learningObjectives": [
+    {
+      "id": "r1-lo1",
+      "verb": "Derive",
+      "description": "Derive the L2-regularized gradient update and show that it is equivalent to decaying every weight by (1 − αλ) before the gradient step — the origin of the term 'weight decay'",
+      "skillTags": ["regularization", "training-dynamics"]
+    },
+    {
+      "id": "r1-lo2",
+      "verb": "Explain",
+      "description": "Explain why L1 regularization induces sparsity while L2 regularization does not, using the geometry of their constraint sets and the shape of their gradients near zero",
+      "skillTags": ["regularization"]
+    },
+    {
+      "id": "r1-lo3",
+      "verb": "Interpret",
+      "description": "Interpret L2 regularization as a Gaussian prior on weights (MAP estimation) and L1 as a Laplace prior, and state what the strength λ controls in both cases",
+      "skillTags": ["regularization", "bayesian-reasoning"]
+    },
+    {
+      "id": "r1-lo4",
+      "verb": "Explain",
+      "description": "Explain why weight decay and L2 regularization are equivalent for SGD but not for Adam, and state what AdamW fixes",
+      "skillTags": ["regularization", "training-dynamics"]
+    }
+  ],
+  "prevItem": { "type": "reading", "id": "r0" },
+  "nextItem": { "type": "reading", "id": "r2" },
+  "content": "## The Idea: Penalize Large Weights\n\nA model with large weights is one that can change its output dramatically in response to small input changes — a sign of high variance. Penalizing weight magnitude directly limits how complex the learned function can be.\n\nThe regularized objective adds a **penalty term** to the training loss:\n\n$$\\tilde{\\mathcal{L}}(\\theta) = \\mathcal{L}(\\theta) + \\lambda\\, \\Omega(\\theta)$$\n\nwhere $\\Omega(\\theta)$ is the penalty and $\\lambda > 0$ controls its strength. Larger $\\lambda$ = stronger regularization = simpler models.\n\n---\n\n## L2 Regularization (Weight Decay)\n\nThe L2 penalty adds the sum of squared weights:\n\n$$\\Omega(\\theta) = \\frac{1}{2}\\|\\theta\\|_2^2 = \\frac{1}{2}\\sum_j \\theta_j^2$$\n\nThe gradient of the regularized loss:\n\n$$\\nabla_\\theta \\tilde{\\mathcal{L}} = \\nabla_\\theta \\mathcal{L} + \\lambda\\theta$$\n\nThe SGD update becomes:\n\n$$\\theta \\leftarrow \\theta - \\alpha(\\nabla_\\theta \\mathcal{L} + \\lambda\\theta) = \\underbrace{(1 - \\alpha\\lambda)}_{\\text{decay factor}}\\theta - \\alpha\\nabla_\\theta\\mathcal{L}$$\n\nThis is **weight decay**: every weight is multiplied by $(1-\\alpha\\lambda) < 1$ before the gradient step. Weights are continuously pulled toward zero unless the gradient pushes them away.\n\n### Effect on the Loss Landscape\n\nL2 adds a bowl-shaped penalty centered at the origin. The regularized minimum is pulled from the unregularized minimum toward zero. Parameters that contribute little to the loss shrink the most — they are not worth the penalty.\n\n### L2 as a Gaussian Prior (MAP Estimation)\n\nMaximizing the posterior $p(\\theta \\mid \\mathcal{D}) \\propto p(\\mathcal{D} \\mid \\theta)\\, p(\\theta)$ with a Gaussian prior $p(\\theta) = \\mathcal{N}(0, 1/\\lambda)$ is equivalent to minimizing:\n\n$$-\\log p(\\mathcal{D} \\mid \\theta) + \\frac{\\lambda}{2}\\|\\theta\\|_2^2$$\n\nThe L2 penalty *is* a Gaussian prior. $\\lambda$ is the precision (inverse variance) of the prior — larger $\\lambda$ concentrates the prior more tightly around zero.\n\n---\n\n## L1 Regularization (Lasso)\n\nThe L1 penalty uses the sum of absolute values:\n\n$$\\Omega(\\theta) = \\|\\theta\\|_1 = \\sum_j |\\theta_j|$$\n\nGradient (where defined, $\\theta_j \\neq 0$):\n\n$$\\frac{\\partial}{\\partial \\theta_j}\\tilde{\\mathcal{L}} = \\frac{\\partial\\mathcal{L}}{\\partial\\theta_j} + \\lambda\\,\\text{sign}(\\theta_j)$$\n\n### Why L1 Induces Sparsity\n\n**L2 gradient at small $\\theta_j$:** $\\lambda\\theta_j \\to 0$. The penalty becomes negligible — small weights are barely penalized, so they never reach exactly zero.\n\n**L1 gradient at small $\\theta_j$:** $\\lambda\\,\\text{sign}(\\theta_j) = \\pm\\lambda$. The penalty does not shrink as the weight approaches zero. At each step, exactly $\\alpha\\lambda$ is subtracted from $|\\theta_j|$ — the weight reaches zero in finite steps and *stays there* (due to the subgradient being zero at the origin).\n\n**Geometric view:** The L2 constraint set is a sphere (smooth, no corners). The L1 constraint set is a diamond/cross-polytope with corners at the axes. Convex optimization problems constrained to the L1 ball frequently have solutions at the corners — exactly on the axes — where many coordinates are zero.\n\n### L1 as a Laplace Prior\n\nA Laplace prior $p(\\theta_j) \\propto \\exp(-\\lambda|\\theta_j|)$ gives MAP estimation equivalent to L1 regularization. The Laplace prior has a sharp peak at zero and heavier tails than Gaussian — it strongly prefers zeros but allows large values when the data demands them.\n\n---\n\n## Elastic Net\n\nElastic net combines L1 and L2:\n\n$$\\Omega(\\theta) = \\alpha\\|\\theta\\|_1 + \\frac{1-\\alpha}{2}\\|\\theta\\|_2^2$$\n\nRetains L1's sparsity-inducing property while L2 ensures the solution is unique and handles correlated features. Useful when groups of correlated features should either all be selected or all dropped.\n\n---\n\n## Weight Decay vs. L2: The Adam Distinction\n\nFor SGD, L2 regularization and weight decay are mathematically identical (as shown above). For **adaptive optimizers** like Adam, they diverge.\n\nAdam's update scales the gradient by $1/\\sqrt{v_t}$ where $v_t$ is the second moment. When the L2 penalty is added to the loss, it gets this same scaling — parameters with large gradients get *less* weight decay, not more. This defeats the purpose.\n\n**AdamW (Loshchilov & Hutter, 2019)** decouples weight decay from the gradient update:\n\n$$\\theta_t \\leftarrow \\theta_{t-1} - \\alpha \\cdot \\frac{m_t}{\\sqrt{v_t} + \\epsilon} - \\alpha\\lambda\\,\\theta_{t-1}$$\n\nThe decay $\\alpha\\lambda\\theta$ is applied directly to the weights, not to the gradient before the adaptive step. This restores the \"equal decay for all weights\" behavior intended by weight decay, and is now the standard for training transformers.\n\n*Note: the optimizer supplement covers the AdamW update rule in detail. This reading covers the regularization geometry behind why decoupling matters.*\n\n---\n\n## Practical Guidance\n\n| | L1 | L2 / Weight Decay |\n|---|---|---|\n| Effect | Sparse solutions | Small but nonzero solutions |\n| Gradient at zero | Discontinuous (±λ) | Zero (no push to zero) |\n| Typical $\\lambda$ | $10^{-4}$–$10^{-2}$ | $10^{-4}$–$10^{-2}$ |\n| Common in DL | Rarely (pruning methods preferred) | Almost universally |\n| Common in linear models | Feature selection (Lasso) | Ridge regression |\n\n---\n\n## PyTorch and TensorFlow\n\n**PyTorch** — L2 via `weight_decay`, L1 manually, AdamW:\n\n```python\nimport torch\nimport torch.nn as nn\n\nmodel = nn.Linear(64, 10)\n\n# L2 regularization: built into every optimizer as weight_decay\n# SGD update becomes: theta <- theta*(1 - lr*lambda) - lr*grad  (weight shrinkage)\noptimizer_sgd   = torch.optim.SGD(model.parameters(),  lr=0.01, weight_decay=1e-4)\noptimizer_adam  = torch.optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)\n\n# AdamW: decouples weight decay from the adaptive learning rate scaling\n# PREFERRED over Adam + weight_decay for transformers and modern architectures\noptimizer_adamw = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=0.01)\n\n# L1 regularization: no built-in; add manually to the loss\ndef l1_penalty(model, lam=1e-4):\n    return lam * sum(p.abs().sum() for p in model.parameters())\n\ncriterion = nn.CrossEntropyLoss()\nx, y = torch.randn(16, 64), torch.randint(0, 10, (16,))\nloss = criterion(model(x), y) + l1_penalty(model)\nloss.backward()\n\n# Elastic net: combine both terms\ndef elastic_net(model, l1=1e-5, l2=1e-4):\n    return (l1 * sum(p.abs().sum()  for p in model.parameters()) +\n            l2 * sum(p.pow(2).sum() for p in model.parameters()))\n```\n\n**TensorFlow / Keras:**\n\n```python\nimport tensorflow as tf\n\n# Regularizers passed directly to layer constructors\ndense_l2 = tf.keras.layers.Dense(64, activation='relu',\n                                  kernel_regularizer=tf.keras.regularizers.L2(1e-4))\ndense_l1 = tf.keras.layers.Dense(64,\n                                  kernel_regularizer=tf.keras.regularizers.L1(1e-5))\ndense_en = tf.keras.layers.Dense(64,\n                                  kernel_regularizer=tf.keras.regularizers.L1L2(l1=1e-5, l2=1e-4))\n\n# AdamW — built-in from TF 2.11+\noptimizer = tf.keras.optimizers.AdamW(learning_rate=1e-3, weight_decay=0.01)\n```",
+  "equationBreakdowns": [
+    {
+      "label": "L2 Regularized Loss",
+      "heading": "L2 Regularization",
+      "terms": [
+        {
+          "symbol": "\\lambda",
+          "name": "Regularization strength",
+          "desc": "Controls the tradeoff between fitting the data and keeping weights small. λ = 0 is unregularized; large λ forces all weights toward zero."
+        },
+        {
+          "symbol": "\\frac{1}{2}\\|\\theta\\|_2^2",
+          "name": "L2 penalty",
+          "desc": "Sum of squared weights, scaled by 1/2 so the gradient is simply θ (no factor of 2). Penalizes large weights quadratically — a weight of 2 is penalized 4× more than a weight of 1."
+        },
+        {
+          "symbol": "(1 - \\alpha\\lambda)\\theta",
+          "name": "Weight decay factor",
+          "desc": "The result of the L2 gradient penalty in the SGD update. Every weight is multiplied by a number slightly less than 1 at each step — continuously pulled toward zero."
+        }
+      ]
+    },
+    {
+      "label": "L1 Penalty and Sparsity",
+      "heading": "L1 Regularization",
+      "terms": [
+        {
+          "symbol": "\\|\\theta\\|_1",
+          "name": "L1 norm (sum of absolutes)",
+          "desc": "Penalizes weight magnitude linearly, not quadratically. A weight of 2 is penalized exactly twice as much as a weight of 1."
+        },
+        {
+          "symbol": "\\lambda\\,\\text{sign}(\\theta_j)",
+          "name": "Constant gradient magnitude",
+          "desc": "The L1 gradient has the same magnitude λ regardless of how small θ_j is — unlike L2, which shrinks the gradient as the weight shrinks. This constant push drives small weights all the way to zero."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Loshchilov & Hutter 2019",
+      "title": "Decoupled Weight Decay Regularization (AdamW)",
+      "url": "https://arxiv.org/abs/1711.05101"
+    }
+  ]
+}

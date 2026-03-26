@@ -1,0 +1,81 @@
+{
+  "id": "r1",
+  "moduleId": "linear-algebra",
+  "title": "Linear Systems and Gauss's Method",
+  "estimatedMinutes": 18,
+  "learningObjectives": [
+    {
+      "id": "r1-lo1",
+      "verb": "Translate",
+      "description": "Translate a word problem into an augmented matrix and classify the system as consistent or inconsistent",
+      "skillTags": [
+        "matrix-structure",
+        "linear-fitting"
+      ]
+    },
+    {
+      "id": "r1-lo2",
+      "verb": "Apply",
+      "description": "Apply Gaussian elimination to bring a matrix to echelon form, recording each row operation",
+      "skillTags": [
+        "matrix-structure",
+        "linear-fitting"
+      ]
+    },
+    {
+      "id": "r1-lo3",
+      "verb": "Identify",
+      "description": "Identify pivot variables and free variables from echelon form and state what each implies about the solution set",
+      "skillTags": [
+        "matrix-structure"
+      ]
+    },
+    {
+      "id": "r1-lo4",
+      "verb": "Determine",
+      "description": "Determine existence and uniqueness of solutions directly from echelon form without back-substituting",
+      "skillTags": [
+        "matrix-structure",
+        "linear-fitting"
+      ]
+    }
+  ],
+  "content": "## Linear Systems\n\nA **linear equation** in variables $x_1, x_2, \\ldots, x_n$ has the form\n\n$$a_1 x_1 + a_2 x_2 + \\cdots + a_n x_n = b$$\n\nwhere the coefficients $a_i$ and the right-hand side $b$ are constants. A **linear system** is a collection of $m$ such equations that must hold simultaneously.\n\nThree outcomes are possible for any linear system:\n- **Unique solution** — exactly one assignment of values satisfies all equations\n- **No solution** — the equations are inconsistent (a contradictory equation appears during reduction)\n- **Infinitely many solutions** — at least one variable is free to range over $\\mathbb{R}$\n\nNo other outcome is possible. This trichotomy is a theorem, not an assumption.\n\n## Matrix Form\n\nA linear system is compactly written as $A\\vec{x} = \\vec{b}$, where $A$ is the $m \\times n$ **coefficient matrix**, $\\vec{x}$ is the column vector of unknowns, and $\\vec{b}$ is the column vector of right-hand sides.\n\nThe **augmented matrix** $[A \\mid \\vec{b}]$ packages the coefficient matrix and right-hand side together:\n\n$$\\left[\\begin{array}{ccc|c} a_{11} & \\cdots & a_{1n} & b_1 \\\\ \\vdots & & \\vdots & \\vdots \\\\ a_{m1} & \\cdots & a_{mn} & b_m \\end{array}\\right]$$\n\nAll row operations are performed on the augmented matrix — we never need to write the variable names explicitly during elimination.\n\n## Row Operations\n\nThree **elementary row operations** transform a system without changing its solution set:\n\n| Operation | Notation | Effect |\n|---|---|---|\n| Swap two rows | $\\rho_i \\leftrightarrow \\rho_j$ | Reorders equations |\n| Scale a row by $k \\neq 0$ | $k\\rho_i$ | Multiplies equation by a nonzero constant |\n| Add a multiple of one row to another | $k\\rho_i + \\rho_j \\to \\rho_j$ | Combines two equations |\n\nThe swap and scale operations are preparatory. The workhorse is the **row combination**: adding a multiple of one row to another is what actually eliminates variables.\n\n## Gauss's Method (Row Reduction)\n\n**Gauss's method** applies row combinations to produce a staircase pattern where each row's first nonzero entry — called the **pivot** or **leading entry** — is strictly to the right of the pivot in the row above. This form is called **echelon form** (or row echelon form).\n\n### Algorithm\n\n1. Find the leftmost column with a nonzero entry. Swap rows if needed to place a nonzero entry at the top of that column.\n2. Use row combinations to zero out all entries below the pivot.\n3. Cover the top row and repeat on the remaining submatrix.\n4. Stop when no rows remain or all remaining rows are zero.\n\n### Example\n\nSolve the $3 \\times 3$ system:\n\n$$\\begin{array}{rcrcrcl} x & + & y & + & z & = & 6 \\\\ 2x & + & y & - & z & = & 1 \\\\ x & - & y & + & 2z & = & 5 \\end{array}$$\n\n<div class=\"gauss-elim-embed\"></div>\n\nAugmented matrix and reduction:\n\n$$\\left[\\begin{array}{rrr|r} 1 & 1 & 1 & 6 \\\\ 2 & 1 & -1 & 1 \\\\ 1 & -1 & 2 & 5 \\end{array}\\right] \\xrightarrow{-2\\rho_1 + \\rho_2,\\;-\\rho_1 + \\rho_3} \\left[\\begin{array}{rrr|r} 1 & 1 & 1 & 6 \\\\ 0 & -1 & -3 & -11 \\\\ 0 & -2 & 1 & -1 \\end{array}\\right]$$\n\n$$\\xrightarrow{-2\\rho_2 + \\rho_3} \\left[\\begin{array}{rrr|r} 1 & 1 & 1 & 6 \\\\ 0 & -1 & -3 & -11 \\\\ 0 & 0 & 7 & 21 \\end{array}\\right]$$\n\nThis is echelon form. Back-substitution:\n- Row 3: $7z = 21 \\Rightarrow z = 3$\n- Row 2: $-y - 3(3) = -11 \\Rightarrow y = 2$\n- Row 1: $x + 2 + 3 = 6 \\Rightarrow x = 1$\n\nSolution: $(x, y, z) = (1, 2, 3)$.\n\n## Pivot Variables and Free Variables\n\nAfter reduction to echelon form:\n\n- A **pivot variable** (or leading variable) is one whose column contains a leading entry. It can be solved for in terms of the free variables.\n- A **free variable** corresponds to a column with no leading entry. It can take any value, generating infinitely many solutions.\n\n**Decision rule**: \n- No free variables + no contradictory row → unique solution  \n- Any free variable + no contradictory row → infinitely many solutions  \n- Any row of the form $[0 \\;\\cdots\\; 0 \\mid c]$ with $c \\neq 0$ → no solution\n\n## Reduced Echelon Form and Gauss-Jordan\n\n**Reduced row echelon form** (RREF) adds two requirements to echelon form:\n- Each pivot equals 1\n- All entries *above* each pivot are also zero\n\n**Gauss-Jordan reduction** achieves RREF by additionally eliminating upward (above each pivot) after the forward pass. The result directly reads off the solution without back-substitution. For large systems, Gauss-Jordan is less numerically preferred than plain Gaussian elimination followed by back-substitution — but it is conceptually clean and useful for computing matrix inverses.",
+  "equationBreakdowns": [
+    {
+      "label": "Augmented Matrix",
+      "terms": [
+        {
+          "symbol": "[A \\mid \\vec{b}]",
+          "name": "Augmented matrix",
+          "desc": "The coefficient matrix A concatenated with the right-hand side vector b as an extra column. Row operations on the augmented matrix simultaneously transform both the left-hand side coefficients and the right-hand side values."
+        },
+        {
+          "symbol": "A",
+          "name": "Coefficient matrix (m × n)",
+          "desc": "Row i of A holds the coefficients of equation i. Column j of A holds the coefficients of variable xⱼ across all equations. The dimensions m×n encode: m equations, n unknowns."
+        },
+        {
+          "symbol": "\\vec{b}",
+          "name": "Right-hand side vector",
+          "desc": "The constants on the right-hand side of each equation, stacked into a column vector. Solving Ax = b asks: which linear combination of the columns of A equals b?"
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Hefferon 2020",
+      "title": "Linear Algebra, Ch. One §I: Solving Linear Systems",
+      "url": null
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r0"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r2"
+  }
+}

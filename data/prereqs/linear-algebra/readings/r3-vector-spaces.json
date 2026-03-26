@@ -1,0 +1,75 @@
+{
+  "id": "r3",
+  "moduleId": "linear-algebra",
+  "title": "Vector Spaces and Subspaces",
+  "estimatedMinutes": 17,
+  "learningObjectives": [
+    {
+      "id": "r3-lo1",
+      "verb": "Verify",
+      "description": "Verify whether a set with operations satisfies the eight vector space axioms",
+      "skillTags": [
+        "matrix-structure"
+      ]
+    },
+    {
+      "id": "r3-lo2",
+      "verb": "Test",
+      "description": "Test whether a subset is a subspace using the three-condition test: zero vector, closure under addition and scaling",
+      "skillTags": [
+        "matrix-structure"
+      ]
+    },
+    {
+      "id": "r3-lo3",
+      "verb": "Determine",
+      "description": "Determine whether a vector belongs to a span by reducing the corresponding augmented system",
+      "skillTags": [
+        "matrix-structure",
+        "embedding-geometry"
+      ]
+    },
+    {
+      "id": "r3-lo4",
+      "verb": "Describe",
+      "description": "Describe the null space and column space of a matrix geometrically and explain their role in ML model expressivity",
+      "skillTags": [
+        "matrix-structure",
+        "embedding-geometry"
+      ]
+    }
+  ],
+  "content": "## Why Axiomatize?\n\nIn the previous readings, vectors were $n$-tuples of reals. But \"addition\" and \"scalar multiplication\" appear in many other settings — polynomials, functions, matrices. The concept of a **vector space** abstracts the shared structure, letting us prove theorems once that apply everywhere.\n\n## Definition of a Vector Space\n\nA **vector space** over $\\mathbb{R}$ is a set $V$ equipped with two operations — addition $\\vec{v} + \\vec{w}$ and scalar multiplication $c\\vec{v}$ — satisfying ten axioms:\n\n**Addition axioms:**\n1. Closure: $\\vec{v} + \\vec{w} \\in V$\n2. Commutativity: $\\vec{v} + \\vec{w} = \\vec{w} + \\vec{v}$\n3. Associativity: $(\\vec{v} + \\vec{w}) + \\vec{u} = \\vec{v} + (\\vec{w} + \\vec{u})$\n4. Zero element: there exists $\\vec{0} \\in V$ such that $\\vec{v} + \\vec{0} = \\vec{v}$\n5. Additive inverse: for each $\\vec{v}$ there exists $-\\vec{v}$ such that $\\vec{v} + (-\\vec{v}) = \\vec{0}$\n\n**Scalar multiplication axioms:**\n\n6. Closure: $c\\vec{v} \\in V$\n7. Distributivity over vector addition: $c(\\vec{v} + \\vec{w}) = c\\vec{v} + c\\vec{w}$\n8. Distributivity over scalar addition: $(c + d)\\vec{v} = c\\vec{v} + d\\vec{v}$\n9. Associativity: $(cd)\\vec{v} = c(d\\vec{v})$\n10. Identity: $1\\vec{v} = \\vec{v}$\n\nThe axioms capture exactly what it means for a set to behave \"like\" $\\mathbb{R}^n$.\n\n## Canonical Examples\n\n**$\\mathbb{R}^n$**: column vectors with component-wise operations. The archetypal vector space.\n\n**$\\mathcal{M}_{m \\times n}$**: $m \\times n$ matrices with component-wise addition and scalar scaling. The zero vector is the zero matrix.\n\n**$\\mathcal{P}_n$**: polynomials of degree $\\leq n$, with coefficient-wise addition. E.g., $(1 + 2x) + (3 - x) = 4 + x$. The zero vector is the zero polynomial.\n\n**Function spaces**: the set of all functions $f: \\mathbb{R} \\to \\mathbb{R}$ with $(f+g)(x) = f(x)+g(x)$ and $(cf)(x) = c\\cdot f(x)$. This is an infinite-dimensional vector space. Fourier analysis lives here.\n\n**Trivial space**: $\\{\\vec{0}\\}$ with the only possible operations. Dimension zero.\n\n## Subspaces\n\nA **subspace** of $V$ is a subset $W \\subseteq V$ that is itself a vector space under the same operations. Rather than checking all ten axioms, a subset $W$ is a subspace if and only if:\n\n1. $\\vec{0} \\in W$\n2. Closed under addition: $\\vec{u}, \\vec{v} \\in W \\Rightarrow \\vec{u} + \\vec{v} \\in W$\n3. Closed under scalar multiplication: $\\vec{v} \\in W, c \\in \\mathbb{R} \\Rightarrow c\\vec{v} \\in W$\n\nConditions 2 and 3 can be combined: $W$ is a subspace iff for all $\\vec{u}, \\vec{v} \\in W$ and scalars $a, b$: $a\\vec{u} + b\\vec{v} \\in W$.\n\n**Examples of subspaces of $\\mathbb{R}^3$:**\n- $\\{\\vec{0}\\}$ (trivial)\n- Any line through the origin: $\\{t\\vec{v} : t \\in \\mathbb{R}\\}$\n- Any plane through the origin: $\\{s\\vec{u} + t\\vec{v} : s, t \\in \\mathbb{R}\\}$\n- All of $\\mathbb{R}^3$\n\n**Non-examples**: a line *not* through the origin is not a subspace (it doesn't contain $\\vec{0}$). The set of vectors with non-negative entries is not a subspace (not closed under negation).\n\n## Spanning Sets\n\nThe **span** of a set $S = \\{\\vec{v}_1, \\ldots, \\vec{v}_k\\}$ is the set of all linear combinations:\n\n$$[S] = \\text{span}(S) = \\{c_1 \\vec{v}_1 + c_2 \\vec{v}_2 + \\cdots + c_k \\vec{v}_k : c_i \\in \\mathbb{R}\\}$$\n\nThe span is always a subspace. We say $S$ **spans** $W$ if $[S] = W$.\n\nWhen looking for a spanning set for a space arising from a linear system, write the solution set in parametric form — the vectors multiplied by the free parameters form a spanning set for the null space.\n\n## Checking Span Membership with Gauss's Method\n\nTo test whether $\\vec{v}$ lies in $\\text{span}\\{\\vec{u}_1, \\ldots, \\vec{u}_k\\}$, ask: do scalars $a_1, \\ldots, a_k$ exist such that\n\n$$a_1 \\vec{u}_1 + \\cdots + a_k \\vec{u}_k = \\vec{v}\\,?$$\n\nAssemble $A = [\\vec{u}_1 \\mid \\cdots \\mid \\vec{u}_k]$ (columns are the spanning vectors) and apply Gauss's method to $[A \\mid \\vec{v}]$. If the system is consistent, $\\vec{v}$ is in the span; if it is inconsistent, it is not.\n\n**Example.** Is $\\vec{v} = (5,4)$ in $\\text{span}\\{\\vec{u}_1=(1,1),\\,\\vec{u}_2=(2,1)\\}$?\n\n$$a\\begin{pmatrix}1\\\\1\\end{pmatrix}+b\\begin{pmatrix}2\\\\1\\end{pmatrix}=\\begin{pmatrix}5\\\\4\\end{pmatrix}\\quad\\Longrightarrow\\quad\\left[\\begin{array}{rr|r}1&2&5\\\\1&1&4\\end{array}\\right]$$\n\n<div class=\"span-gauss-embed\"></div>\n\nThe reduction $\\rho_2 \\leftarrow \\rho_2 - \\rho_1$ gives $b=1$, then back-substitution gives $a=3$, so $(5,4) = 3\\vec{u}_1 + 1\\vec{u}_2$. Replacing the right-hand side with a general $(x,y)$ shows a solution always exists, confirming $\\text{span}\\{\\vec{u}_1,\\vec{u}_2\\} = \\mathbb{R}^2$.\n\n## Computing Span Membership with `einsum`\n\nOnce you have the coefficients, `einsum` is the idiomatic way to verify a linear combination in both PyTorch and TensorFlow. The subscript `'ij,j->i'` means: multiply column $j$ of $A$ by scalar $c_j$ and sum over $j$ to produce output index $i$.\n\n```python\nimport numpy as np\n\n# Spanning vectors as *columns* of A\nA = np.array([[1., 2.],\n              [1., 1.]])\nv = np.array([5., 4.])\n\n# Solve A @ c = v  (find coefficients)\nc = np.linalg.solve(A, v)\nprint('coefficients:', c)          # [3. 1.]\n\n# Verify: einsum 'ij,j->i' means sum_j A_ij * c_j\nv_hat = np.einsum('ij,j->i', A, c)\nprint('reconstructed v:', v_hat)    # [5. 4.]\n\n# Does the span cover all of R^2?\n# Yes iff det(A) != 0\nprint('det(A):', np.linalg.det(A))  # -1.0  (nonzero -> span = R^2)\n```\n\nThe `einsum` string `'ij,j->i'` is identical in NumPy, PyTorch (`torch.einsum`), and TensorFlow (`tf.einsum`). For over-determined systems (more equations than spanning vectors) where an exact solution may not exist, use `np.linalg.lstsq` — a non-zero residual means $\\vec{v}$ is not in the span.\n\n## The Null Space and Column Space Revisited\n\nFor $A \\in \\mathcal{M}_{m \\times n}$:\n\n- **Null space** $\\mathcal{N}(A) = \\{\\vec{x} \\in \\mathbb{R}^n : A\\vec{x} = \\vec{0}\\}$ is a subspace of $\\mathbb{R}^n$.\n- **Column space** $\\mathcal{C}(A) = \\{A\\vec{x} : \\vec{x} \\in \\mathbb{R}^n\\}$ is a subspace of $\\mathbb{R}^m$ (the span of the columns of $A$).\n\nBoth are subspaces — they are closed under the linear combinations that define those spaces. This is why the General = Particular + Homogeneous theorem works: $\\mathcal{N}(A)$ is a genuine subspace, so we can form the coset $\\vec{p} + \\mathcal{N}(A)$.",
+  "equationBreakdowns": [
+    {
+      "label": "Subspace Test",
+      "terms": [
+        {
+          "symbol": "\\vec{0} \\in W",
+          "name": "Contains zero",
+          "desc": "The zero vector must belong to the subspace. This rules out, for example, affine flats not through the origin. It's a necessary first check — if 0 ∉ W, stop immediately."
+        },
+        {
+          "symbol": "a\\vec{u} + b\\vec{v} \\in W",
+          "name": "Closed under linear combinations",
+          "desc": "A subset is a subspace iff it is closed under arbitrary linear combinations. This single condition subsumes both the addition and scalar multiplication closure requirements."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Hefferon 2020",
+      "title": "Linear Algebra, Ch. Two §I: Definition of Vector Space",
+      "url": null
+    }
+  ],
+  "prevItem": {
+    "type": "quiz",
+    "id": "q1"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r4"
+  }
+}

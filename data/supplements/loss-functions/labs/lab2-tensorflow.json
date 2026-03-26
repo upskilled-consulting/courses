@@ -1,0 +1,20 @@
+{
+  "id": "lab2",
+  "moduleId": "loss-functions",
+  "title": "Loss Functions in TensorFlow",
+  "estimatedMinutes": 40,
+  "prevItem": {
+    "type": "lab",
+    "id": "lab1"
+  },
+  "nextItem": null,
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/supplements/loss-functions/lab_loss_functions_tensorflow.ipynb",
+  "objectives": [
+    "Implement the core loss families using `tf.keras.losses` and `tf.keras.losses.Loss` base class",
+    "Verify numerical parity between PyTorch and TensorFlow for all shared loss functions",
+    "Differentiate through custom loss functions using `tf.GradientTape`",
+    "Build a custom Keras loss class (subclassing `tf.keras.losses.Loss`) for TripletMarginLoss",
+    "Train a model end-to-end with `model.compile(loss=...)` using both built-in and custom losses"
+  ],
+  "description": "## Lab Overview\n\nThis notebook is the TensorFlow companion to the PyTorch lab. For every loss implemented in PyTorch, you will find the TensorFlow/Keras equivalent — or implement it from scratch when no built-in exists.\n\n### TF vs PyTorch API Differences\n\n| Concept | PyTorch | TensorFlow/Keras |\n|---------|---------|------------------|\n| MSE | `nn.MSELoss()` | `tf.keras.losses.MeanSquaredError()` |\n| BCE from logits | `nn.BCEWithLogitsLoss()` | `tf.keras.losses.BinaryCrossentropy(from_logits=True)` |\n| Categorical CE | `nn.CrossEntropyLoss()` | `tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)` |\n| KL divergence | `nn.KLDivLoss(reduction='batchmean')` | `tf.keras.losses.KLDivergence()` |\n| Custom loss | `nn.Module` subclass | `tf.keras.losses.Loss` subclass |\n\n### Key TF-Specific Topics\n\n- **`from_logits=True`**: Always prefer this in Keras — it enables numerically stable softmax+CE fusion, exactly like PyTorch's `BCEWithLogitsLoss`/`CrossEntropyLoss`.\n- **`GradientTape` through custom losses**: Custom `tf.keras.losses.Loss` subclasses are automatically differentiable.\n- **Sample weighting**: `model.fit(sample_weight=...)` applies per-sample weights to the loss — the TF equivalent of `reduction='none'` + manual weighting in PyTorch.\n\n### Sections\n\n| Section | Content |\n|---------|--------|\n| 1 | Regression losses: MSE, MAE, Huber |\n| 2 | Binary classification: BinaryCrossentropy |\n| 3 | Multi-class: SparseCategoricalCrossentropy, CategoricalCrossentropy |\n| 4 | KL divergence and soft targets |\n| 5 | Custom `tf.keras.losses.Loss` — from-scratch Huber |\n| 6 | Custom triplet loss with `GradientTape` |\n| 7 | Numerical parity check: TF vs PyTorch on all shared losses |\n| 8 | End-to-end: training with `model.compile(loss=...)` |"
+}

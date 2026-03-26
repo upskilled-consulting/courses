@@ -1,0 +1,149 @@
+{
+  "id": "r3",
+  "moduleId": "m1",
+  "title": "Rendering Pipeline and Differentiable Training",
+  "estimatedMinutes": 14,
+  "learningObjectives": [
+    {
+      "id": "m1r3-lo1",
+      "verb": "Trace",
+      "description": "Trace the 3DGS rendering pipeline from 3D Gaussians to final pixel colors, identifying the projection (Σ′ = JWΣW⊤J⊤), tile assignment, depth sort, and alpha compositing steps",
+      "skillTags": [
+        "rendering-pipeline",
+        "3dgs-fundamentals"
+      ]
+    },
+    {
+      "id": "m1r3-lo2",
+      "verb": "Explain",
+      "description": "Explain why per-tile depth sorting is an approximation, identify the conditions under which it produces visible artifacts, and state why it is used despite this limitation",
+      "skillTags": [
+        "rendering-pipeline"
+      ]
+    },
+    {
+      "id": "m1r3-lo3",
+      "verb": "Distinguish",
+      "description": "Distinguish cloning from splitting in adaptive densification and identify the specific positional-gradient signal and Gaussian scale condition that triggers each operation",
+      "skillTags": [
+        "rendering-pipeline",
+        "training"
+      ]
+    },
+    {
+      "id": "m1r3-lo4",
+      "verb": "Explain",
+      "description": "Explain why the photometric loss combines L1 and D-SSIM terms, identify what artifact each term is sensitive to, and state the role of opacity resets in preventing opacity fog",
+      "skillTags": [
+        "training",
+        "rendering-pipeline"
+      ]
+    }
+  ],
+  "content": "## From 3D Gaussians to a 2D Image\n\nThe 3DGS rendering pipeline is a carefully engineered rasterizer that trades the exactness of ray marching for real-time performance. Understanding it precisely matters because the rendering pipeline is also the backward pass through which gradients flow during training.\n\n## Step 1: Projection — 3D Gaussians to 2D Splats\n\nA 3D Gaussian with mean \\(\\mu\\) and covariance \\(\\Sigma\\) projects to a 2D Gaussian on the image plane. Given viewing transform \\(W\\) and Jacobian of the projection \\(J\\):\n\n\\[\\Sigma' = J W \\Sigma W^\\top J^\\top\\]\n\nThe 3D ellipsoid becomes a 2D ellipse (\"splat\") in screen space. The projected mean \\(\\mu'\\) is simply the perspective projection of \\(\\mu\\).\n\n## Step 2: Tile-Based Rasterization\n\nThe screen is divided into a grid of **16×16 pixel tiles**. For each Gaussian, 3DGS determines which tiles its 2D extent intersects and creates a list entry per tile.\n\n**Key steps:**\n1. **Sorting**: within each tile, all contributing Gaussians are sorted by depth (front to back) using a fast radix sort.\n2. **Alpha accumulation**: each tile is processed in parallel on GPU with one thread per pixel, accumulating color front-to-back.\n\nSorting is per-tile, not globally, which is an approximation — but in practice it produces minimal artifacts while enabling orders-of-magnitude speedup over exact sorting.\n\n## Step 3: Alpha Compositing\n\nThe rendered color at pixel \\(\\mathbf{p}\\) is the alpha-composited sum over all \\(N\\) depth-sorted Gaussians visible in that pixel:\n\n\\[c(\\mathbf{p}) = \\sum_{i=1}^{N} c_i\\, \\alpha_i'(\\mathbf{p}) \\prod_{j=1}^{i-1} \\bigl(1 - \\alpha_j'(\\mathbf{p})\\bigr)\\]\n\nwhere:\n- \\(c_i\\) is the view-dependent color of Gaussian \\(i\\) (evaluated via SH)\n- \\(\\alpha_i'(\\mathbf{p}) = \\sigma_{\\alpha,i} \\cdot f_i'(\\mathbf{p})\\) is the effective alpha at pixel \\(\\mathbf{p}\\), combining opacity and the 2D Gaussian density\n- \\(\\prod_{j<i}(1-\\alpha_j')\\) is the **accumulated transmittance** — how much light reaches Gaussian \\(i\\) after the Gaussians in front absorb/occlude it\n\n**Early termination**: once the accumulated transmittance drops below a threshold (typically 0.0001), all remaining Gaussians are skipped. This is what makes deep scenes tractable: most rays terminate well before reaching all Gaussians.\n\n## Training: Differentiable Rendering + Gradient Descent\n\nAll operations above are differentiable with respect to the Gaussian parameters. Training proceeds in three phases:\n\n**1. Initialize** Gaussian positions from the SfM sparse point cloud.\n\n**2. Iterate** — at each step, four operations form a tight inner loop:\n\n<div style=\"margin:1.5rem 0 0.5rem;overflow-x:auto\">\n<div style=\"display:flex;align-items:stretch;gap:0;border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;min-width:520px\">\n  <div style=\"flex:1;padding:14px 12px;background:var(--bg-surface);border-right:1px solid var(--border);text-align:center\">\n    <div style=\"font-size:0.7em;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent);margin-bottom:6px\">① Render</div>\n    <div style=\"font-size:0.78em;color:var(--text-muted);line-height:1.5\">Rasterize from a training viewpoint</div>\n  </div>\n  <div style=\"flex:1;padding:14px 12px;background:var(--bg-surface);border-right:1px solid var(--border);text-align:center\">\n    <div style=\"font-size:0.7em;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#f59e0b;margin-bottom:6px\">② Loss</div>\n    <div style=\"font-size:0.78em;color:var(--text-muted);line-height:1.5\">\\(\\mathcal{L} = (1{-}\\lambda)\\mathcal{L}_1 + \\lambda\\mathcal{L}_{D\\text{-}SSIM}\\)</div>\n  </div>\n  <div style=\"flex:1;padding:14px 12px;background:var(--bg-surface);border-right:1px solid var(--border);text-align:center\">\n    <div style=\"font-size:0.7em;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#4ade80;margin-bottom:6px\">③ Backprop</div>\n    <div style=\"font-size:0.78em;color:var(--text-muted);line-height:1.5\">Differentiate through the rasterizer</div>\n  </div>\n  <div style=\"flex:1;padding:14px 12px;background:var(--bg-surface);text-align:center\">\n    <div style=\"font-size:0.7em;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#c084fc;margin-bottom:6px\">④ Update</div>\n    <div style=\"font-size:0.78em;color:var(--text-muted);line-height:1.5\">Adam step on \\(\\mu, \\Sigma, \\sigma_\\alpha, \\text{SH}\\)</div>\n  </div>\n</div>\n<div style=\"display:flex;justify-content:center;align-items:center;gap:10px;padding:5px 16px\">\n  <div style=\"flex:1;height:1px;background:var(--border)\"></div>\n  <span style=\"font-size:0.72em;color:var(--text-faint)\">↺ repeat for each training iteration</span>\n  <div style=\"flex:1;height:1px;background:var(--border)\"></div>\n</div>\n</div>\n\n- **Render** — rasterize the current Gaussians from a randomly sampled training viewpoint using the tile rasterizer.\n- **Compute loss** — the photometric objective combines a per-pixel absolute error term with a structural similarity term:\n\n$$\\mathcal{L} = (1-\\lambda)\\mathcal{L}_1 + \\lambda\\mathcal{L}_{D\\text{-}SSIM}$$\n\n  \\(\\mathcal{L}_1\\) penalizes mean absolute colour error per pixel. \\(\\mathcal{L}_{D\\text{-}SSIM}\\) penalizes structural and contrast differences that \\(\\mathcal{L}_1\\) alone is insensitive to — blurring and edge misalignment both raise it even when the average colour is correct. Typical \\(\\lambda = 0.2\\).\n- **Backpropagate** — differentiate through the differentiable rasterizer to obtain \\(\\partial\\mathcal{L}/\\partial\\mu\\), \\(\\partial\\mathcal{L}/\\partial\\Sigma\\), \\(\\partial\\mathcal{L}/\\partial\\sigma_\\alpha\\), and \\(\\partial\\mathcal{L}/\\partial\\mathbf{f}_{SH}\\) for every visible Gaussian.\n- **Update** — take an Adam step on all Gaussian parameters: \\(\\mu, \\Sigma, \\sigma_\\alpha, \\text{SH}\\).\n\n**3. Every \\(N\\) iterations:** run **adaptive densification** (described below).\n\n## Adaptive Densification\n\nGradient descent alone changes Gaussian attributes but not their count. Densification periodically adjusts the population:\n\n**What is a high positional gradient?** During training, the photometric loss \\(\\mathcal{L}\\) is compared against each training image. The gradient \\(\\partial\\mathcal{L}/\\partial\\mu\\) measures how much the loss would decrease if a Gaussian moved. A large value signals that the Gaussian is in the wrong place — the scene has structure nearby that it is failing to cover.\n\n<div class='densification-card gradient-card'><canvas data-densification='gradient' class='densification-canvas'></canvas><div><div class='densification-solution-label'>Positional Gradient</div><div class='densification-solution-text'>The amber region shows unrecovered photometric signal. The arrow is ∂L/∂μ — pointing from the Gaussian toward the region it should cover. When this magnitude stays high across iterations, gradient descent alone cannot fix it: the Gaussian needs to be cloned or split.</div></div></div>\n\n### Cloning\n\nWhen a small Gaussian has high positional gradient (the loss strongly wants it to move), it is **under-reconstructing** the region.\n\n<div class='densification-card clone-card'><canvas data-densification='clone' class='densification-canvas'></canvas><div><div class='densification-solution-label'>Solution</div><div class='densification-solution-text'>Duplicate the Gaussian — two copies converge to slightly different positions, together covering the under-reconstructed region.</div></div></div>\n\n### Splitting\n\nWhen a large Gaussian has high positional gradient, it is **over-reconstructing** — one blob covers a region that needs finer detail.\n\n<div class='densification-card split-card'><canvas data-densification='split' class='densification-canvas'></canvas><div><div class='densification-solution-label'>Solution</div><div class='densification-solution-text'>Replace with two smaller Gaussians placed along the gradient direction, each covering part of the over-reconstructed region at higher fidelity.</div></div></div>\n\n### Pruning\nGaussians with opacity \\(\\sigma_\\alpha\\) below a threshold are nearly invisible and waste parameters. They are deleted. Periodically, all opacities are reset to near-zero and re-learned — this prevents \"opacity fog\" where Gaussians persist with low but non-zero opacity.\n\n### Why Densification Matters for Compression\nThe final Gaussian count after training is not fixed — it emerges from the densification history. Methods that improve densification (Module 3) directly reduce the total parameter count before any encoding, which is often more impactful than encoding improvements applied to a fixed representation.",
+  "references": [
+    {
+      "label": "Kerbl et al. 2023",
+      "title": "3D Gaussian Splatting for Real-Time Radiance Field Rendering",
+      "url": "https://arxiv.org/abs/2308.04079"
+    }
+  ],
+  "nextItem": {
+    "type": "reading",
+    "id": "r4"
+  },
+  "prevItem": {
+    "type": "reading",
+    "id": "r2"
+  },
+  "equationBreakdowns": [
+    {
+      "label": "2D Projected Covariance",
+      "heading": "Step 1: Projection",
+      "terms": [
+        {
+          "symbol": "\\Sigma'",
+          "name": "2D screen-space covariance",
+          "desc": "The covariance of the Gaussian after it has been projected onto the image plane. Used directly by the tile rasterizer to compute each Gaussian's screen footprint."
+        },
+        {
+          "symbol": "J",
+          "name": "Projection Jacobian",
+          "desc": "Local linear approximation of the (non-linear) perspective projection at the Gaussian's mean position. Converts 3D displacements into 2D screen-space displacements."
+        },
+        {
+          "symbol": "W",
+          "name": "World-to-camera transform",
+          "desc": "Rotation + translation that moves the Gaussian from world coordinates into camera space. Applied before projection so Σ is expressed relative to the camera."
+        },
+        {
+          "symbol": "\\Sigma",
+          "name": "3D world-space covariance",
+          "desc": "The full 3D covariance matrix of the Gaussian (= R S S⊤ R⊤). Encodes shape and orientation before any camera transform is applied."
+        },
+        {
+          "symbol": "W^\\top,\\; J^\\top",
+          "name": "Transposes (error propagation)",
+          "desc": "The A M A⊤ pattern propagates covariance through a linear map A. Here A = JW, so the full transform is (JW) Σ (JW)⊤ — the standard formula for how uncertainty transforms under a linear mapping."
+        }
+      ]
+    },
+    {
+      "label": "Alpha-Composited Pixel Colour",
+      "heading": "Step 3: Alpha Compositing",
+      "terms": [
+        {
+          "symbol": "c(\\mathbf{p})",
+          "name": "Final pixel colour",
+          "desc": "The rendered RGB value at pixel p, produced by blending contributions from all Gaussians whose screen footprint covers p, sorted front-to-back by depth."
+        },
+        {
+          "symbol": "c_i",
+          "name": "Gaussian colour",
+          "desc": "The view-dependent RGB colour of Gaussian i, evaluated from its spherical harmonic coefficients at the current viewing direction."
+        },
+        {
+          "symbol": "\\alpha_i'(\\mathbf{p})",
+          "name": "Effective alpha at pixel p",
+          "desc": "Opacity of Gaussian i at pixel p — the product of its learned opacity σ_α and its 2D Gaussian falloff evaluated at p using the projected covariance Σ′."
+        },
+        {
+          "symbol": "\\prod_{j=1}^{i-1}\\bigl(1-\\alpha_j'\\bigr)",
+          "name": "Transmittance",
+          "desc": "Fraction of light that passes through all Gaussians in front of i without being absorbed. Starts at 1 for the frontmost Gaussian and decreases as each successive layer blocks more light."
+        },
+        {
+          "symbol": "\\sum_{i=1}^{N}",
+          "name": "Front-to-back sum",
+          "desc": "Gaussians are sorted by depth (nearest first) before compositing. The renderer can early-exit once accumulated transmittance falls below a threshold, skipping occluded Gaussians entirely."
+        }
+      ]
+    },
+    {
+      "label": "Photometric Training Loss",
+      "heading": "Training",
+      "terms": [
+        {
+          "symbol": "\\mathcal{L}",
+          "name": "Total training loss",
+          "desc": "The scalar value minimised by gradient descent at each iteration. Computed by comparing the rendered image against the ground-truth photograph from the same viewpoint. Lower is better; zero would mean perfect reconstruction."
+        },
+        {
+          "symbol": "(1-\\lambda)\\mathcal{L}_1",
+          "name": "L1 colour term",
+          "desc": "Mean absolute difference between rendered and ground-truth pixel colours. Robust to outlier pixels and computationally cheap. Alone it tends to produce slightly blurry results because averaging across many possible sharp images minimises L1 loss."
+        },
+        {
+          "symbol": "\\lambda\\mathcal{L}_{D\text{-}SSIM}",
+          "name": "D-SSIM structural term",
+          "desc": "Dissimilarity measured by SSIM — a perceptual metric sensitive to local luminance, contrast, and structure. Penalises blurring and edge misalignment that L1 averages away. The D prefix means 1 − SSIM so that minimising the loss maximises similarity."
+        },
+        {
+          "symbol": "\\lambda",
+          "name": "Loss balance weight",
+          "desc": "Trades off colour fidelity (L1) vs. structural fidelity (D-SSIM). The original 3DGS paper uses λ = 0.2, meaning 80% L1 and 20% D-SSIM. Higher λ sharpens edges at the cost of occasional colour artefacts; lower λ is smoother but may blur fine detail."
+        }
+      ]
+    }
+  ]
+}

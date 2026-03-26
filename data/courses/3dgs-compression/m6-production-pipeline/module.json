@@ -1,0 +1,86 @@
+{
+  "id": "m6",
+  "title": "End-to-End 3DGS Full Pipeline",
+  "order": 6,
+  "color": "#0ea5e9",
+  "prereq": "m5",
+  "learningObjectives": [
+    "Formulate Structure from Motion as a joint camera-pose and 3D-point optimization problem and trace the GLOMAP global pipeline from feature extraction through bundle adjustment.",
+    "Derive the essential matrix from point correspondences, explain the role of RANSAC, and interpret the Ceres solver convergence diagnostics printed by GLOMAP.",
+    "Explain how monocular depth predictions are aligned to sparse COLMAP metric depths via affine regression and how depth priors accelerate Gaussian densification.",
+    "Analyze the Sparse Adam optimizer and the 3dgs_accel rasterization branch, quantifying the complexity reduction relative to standard Adam and the naive tile-assignment loop.",
+    "Decode the 32-byte .splat binary record field by field: derive the SH₀ coefficient, the opacity-weighted volume sort key, and the quaternion normalization encoding.",
+    "Diagnose a mismatched PLY file, write a robust field-aware converter, and reason about when pre-sorted exports differ from per-frame depth-sorted rendering.",
+    "Derive the SOM weight update rule from first principles, implement BMU selection and PLAS assignment, and explain how topology-preserving ordering enables better compression than opacity sorting.",
+    "Compute PSNR, SSIM, and LPIPS for a held-out test set using the LLFF 1/8 protocol, and interpret the tradeoff between compression ratio and perceptual quality for SOGS vs. standard 3DGS."
+  ],
+  "readings": [
+    {
+      "id": "r1",
+      "title": "Structure from Motion: Camera Registration & Bundle Adjustment",
+      "estimatedMinutes": 18,
+      "dataPath": "data/courses/3dgs-compression/m6-production-pipeline/readings/r1-sfm-camera-registration.json"
+    },
+    {
+      "id": "r2",
+      "title": "Depth Priors, Exposure Compensation & Accelerated 3DGS Training",
+      "estimatedMinutes": 16,
+      "dataPath": "data/courses/3dgs-compression/m6-production-pipeline/readings/r2-depth-priors-training.json"
+    },
+    {
+      "id": "r3",
+      "title": "The .splat Binary Format: Opacity Sorting, SH Coefficients & Byte Layout",
+      "estimatedMinutes": 14,
+      "dataPath": "data/courses/3dgs-compression/m6-production-pipeline/readings/r3-splat-binary-format.json"
+    },
+    {
+      "id": "r4",
+      "title": "Self-Organizing Gaussians: SOM Ordering, PLAS Assignment & SH Quantization",
+      "estimatedMinutes": 16,
+      "dataPath": "data/courses/3dgs-compression/m6-production-pipeline/readings/r4-sogs-architecture.json"
+    },
+    {
+      "id": "r5",
+      "title": "Benchmarking Gaussian Splat Reconstructions: PSNR, SSIM, LPIPS & Test Protocols",
+      "estimatedMinutes": 14,
+      "dataPath": "data/courses/3dgs-compression/m6-production-pipeline/readings/r5-benchmarking-reconstruction.json"
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "q1",
+      "title": "Structure from Motion & Reconstruction Theory",
+      "questionCount": 5,
+      "passingScore": 0.7,
+      "dataPath": "data/courses/3dgs-compression/m6-production-pipeline/quizzes/q1-sfm-theory.json"
+    },
+    {
+      "id": "q2",
+      "title": "Binary Format, Encoding & Export",
+      "questionCount": 5,
+      "passingScore": 0.7,
+      "dataPath": "data/courses/3dgs-compression/m6-production-pipeline/quizzes/q2-binary-format.json"
+    },
+    {
+      "id": "q3",
+      "title": "SOGS Architecture, Metrics & Compression Benchmarks",
+      "questionCount": 5,
+      "passingScore": 0.7,
+      "dataPath": "data/courses/3dgs-compression/m6-production-pipeline/quizzes/q3-sogs-benchmarking.json"
+    }
+  ],
+  "labs": [
+    {
+      "id": "lab6",
+      "title": "Full Pipeline: YouTube Video → GLOMAP → 3DGS → .splat",
+      "estimatedMinutes": 120,
+      "dataPath": "data/courses/3dgs-compression/m6-production-pipeline/labs/lab6.json"
+    },
+    {
+      "id": "lab6b",
+      "title": "SOGS Pipeline: YouTube Video → GLOMAP → SOGS → Compressed Grid",
+      "estimatedMinutes": 90,
+      "dataPath": "data/courses/3dgs-compression/m6-production-pipeline/labs/lab6b.json"
+    }
+  ]
+}

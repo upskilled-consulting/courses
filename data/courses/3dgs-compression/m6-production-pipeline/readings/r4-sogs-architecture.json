@@ -1,0 +1,138 @@
+{
+  "id": "r4",
+  "moduleId": "m6",
+  "title": "Self-Organizing Gaussians: SOM Ordering, PLAS Assignment & SH Quantization",
+  "estimatedMinutes": 16,
+  "learningObjectives": [
+    {
+      "id": "m6r4-lo1",
+      "verb": "Explain",
+      "description": "Explain SOM training — BMU selection, weight update, temporal learning rate and neighborhood radius decay — and identify how the neighborhood function imposes topological structure on the Gaussian grid",
+      "skillTags": [
+        "grid-sorting",
+        "permutation-learning"
+      ]
+    },
+    {
+      "id": "m6r4-lo2",
+      "verb": "Distinguish",
+      "description": "Distinguish PLAS from SOM in terms of assignment approach (optimal bipartite matching vs. competitive learning), computational complexity, and achievable DPQ grid quality",
+      "skillTags": [
+        "grid-sorting"
+      ]
+    },
+    {
+      "id": "m6r4-lo3",
+      "verb": "Explain",
+      "description": "Explain how int8 SH quantization with delta coding across grid rows achieves 2–3 effective bits per coefficient, and identify the role of spatial coherence in enabling entropy gains",
+      "skillTags": [
+        "quantization",
+        "compression",
+        "grid-sorting"
+      ]
+    },
+    {
+      "id": "m6r4-lo4",
+      "verb": "Trace",
+      "description": "Trace the full SOGS encoding pipeline from raw Gaussian attributes to a compressed grid file, identifying each transformation step and its reversibility",
+      "skillTags": [
+        "compression",
+        "grid-sorting",
+        "quantization"
+      ]
+    }
+  ],
+  "content": "## From Opacity-Sorted to Structure-Aware Ordering\n\nThe `.splat` format sorts Gaussians by opacity-weighted volume — a view-independent heuristic that places large, opaque Gaussians first. This ordering is optimized for *rendering* fidelity, not *compression*. Adjacent entries in an opacity-sorted file tend to be spread throughout the scene: Gaussian 1 might be a large wall fragment, Gaussian 2 a distant tree, Gaussian 3 a ceiling tile. Their position, color, and scale vectors are uncorrelated, so delta coding or prediction across rows achieves almost nothing.\n\nSelf-Organizing Gaussians (SOGS) replaces opacity sorting with a **topology-preserving 2D grid assignment** derived from a Self-Organizing Map. After SOGS ordering, adjacent entries in the storage grid correspond to spatially and photometrically similar Gaussians. Delta-coded attributes achieve high compression ratios, and the 2D grid maps naturally to image formats exploitable by hardware video codecs.\n\n## The Self-Organizing Map: A Grid That Learns Topology\n\nA Self-Organizing Map (SOM) is an unsupervised neural network that projects high-dimensional data onto a low-dimensional grid while preserving topological structure. For SOGS, the input is a set of \\(N\\) Gaussians, each described by a feature vector \\(\\mathbf{x} \\in \\mathbb{R}^D\\) (positions, colors, scales, rotations). The output is a \\(\\sqrt{N} \\times \\sqrt{N}\\) grid where each cell \\(k\\) holds a prototype weight vector \\(\\mathbf{w}_k \\in \\mathbb{R}^D\\).\n\nTraining iterates over Gaussians and updates grid weights so that nearby grid cells respond to similar Gaussian features. After convergence, each Gaussian is assigned to the grid cell whose weight is closest — the **Best Matching Unit (BMU)**.\n\n## BMU Selection\n\nFor each Gaussian feature vector \\(\\mathbf{x}\\), the BMU is the grid cell \\(k^*\\) whose weight vector \\(\\mathbf{w}_{k^*}\\) minimizes Euclidean distance:\n\n$$\\text{BMU}(\\mathbf{x}) = \\arg\\min_{k \\in \\{1,\\ldots,N\\}} \\|\\mathbf{x} - \\mathbf{w}_k\\|_2$$\n\nThis is a nearest-neighbor search in feature space. For large Gaussians fields (hundreds of thousands of Gaussians), this is parallelized on GPU using batched distance computation. The SOM grid size is typically set equal to the number of Gaussians — each Gaussian will ultimately occupy exactly one cell — but during training the assignments are soft and dynamic.\n\n## Weight Update and Temporal Schedule\n\nAfter finding the BMU for a sample \\(\\mathbf{x}\\) at training step \\(t\\), all grid weights are updated:\n\n$$\\mathbf{w}_k(t+1) = \\mathbf{w}_k(t) + \\eta(t) \\cdot h(k,\\, \\text{BMU}(\\mathbf{x}),\\, t) \\cdot \\bigl(\\mathbf{x} - \\mathbf{w}_k(t)\\bigr)$$\n\nwhere \\(\\eta(t) > 0\\) is the learning rate and \\(h(k, c, t)\\) is the neighborhood function. Both \\(\\eta\\) and the neighborhood radius \\(\\sigma\\) decay over time — large early to allow global reorganization, small late for fine-grained local refinement. Typical schedules decay exponentially: \\(\\eta(t) = \\eta_0 \\exp(-t/\\tau_\\eta)\\), \\(\\sigma(t) = \\sigma_0 \\exp(-t/\\tau_\\sigma)\\).\n\n## Neighborhood Function: Spatial Influence Decay\n\nThe neighborhood function \\(h(k, c, t)\\) controls how strongly the BMU's neighbors are updated. The Gaussian neighborhood function is:\n\n$$h(k,\\, c,\\, t) = \\exp\\!\\left(-\\frac{d_{\\text{grid}}(k,\\, c)^2}{2\\,\\sigma(t)^2}\\right)$$\n\nwhere \\(d_{\\text{grid}}(k, c)\\) is the Euclidean distance between cells \\(k\\) and \\(c\\) in the 2D grid (not in feature space). At \\(t=0\\), \\(\\sigma\\) spans nearly the whole grid and updates are global. As \\(\\sigma \\to 0\\), only the BMU itself is updated, and the SOM enters a fine-tuning phase that preserves the already-established topology.\n\nThe exponential form means \\(h(k=c, c, t) = 1\\) (the BMU always gets the full learning signal) and \\(h\\) decays smoothly with distance — cells far from the BMU are moved only slightly, maintaining the continuity of the learned map.\n\n## PLAS: Parallel Linear Assignment Sorting\n\nThe SOM training phase produces a good initialization — a grid whose topology loosely reflects the geometric distribution of Gaussians. However, the final grid assignment must be *injective*: each Gaussian occupies exactly one cell and each cell holds exactly one Gaussian. This is a bipartite matching problem.\n\n**PLAS** (Parallel Linear Assignment Sorting) solves this efficiently by treating the assignment as an optimal transport problem on the GPU. Given the SOM-initialized grid positions, PLAS computes the assignment that minimizes the total feature-space distance between each Gaussian and its assigned cell:\n\n$$\\pi^* = \\arg\\min_{\\pi \\in \\Pi} \\sum_{i} \\|\\mathbf{x}_i - \\mathbf{w}_{\\pi(i)}\\|^2$$\n\nwhere \\(\\Pi\\) is the set of all bijections from Gaussians to grid cells. PLAS achieves this in \\(O(N \\log N)\\) expected time through parallelized local swap passes on the GPU — dramatically faster than the Hungarian algorithm's \\(O(N^3)\\).\n\nThe SOM initialization ensures PLAS starts near a good solution, reducing the number of swap passes needed for convergence.\n\n## SOGS Training Integration\n\nIn the full SOGS pipeline:\n\n1. **Train 3DGS normally** to convergence (or partially — the SOM can be trained on a coarser model and the 3DGS refinement run afterwards).\n2. **Extract Gaussian features**: positions \\((x,y,z)\\), SH coefficients \\(\\mathbf{f}_{dc}\\), scales \\((s_0, s_1, s_2)\\), rotations \\(\\mathbf{q}\\), opacity \\(o\\).\n3. **Train a 2D SOM** on these features to obtain the initial grid layout.\n4. **Run PLAS** to compute the final bijective assignment.\n5. **Write the ordered attributes** as 2D grids (one channel per attribute group), suitable for PNG or video codec storage.\n\nThe SOGS implementation in Hydra uses `wandb` for experiment tracking and `hydra.run.dir` for output management — both can be disabled for standalone Colab use.\n\n## SH Coefficient Quantization: Float32 → Int8\n\n> The 16 basis functions being quantized here are visualized interactively in Reading R3 — the higher-order functions (l=3) tolerate coarser quantization because they encode fine angular detail that is perceptually subtle.\n\nThe largest contributor to 3DGS file size is the 45 higher-order SH coefficients per Gaussian (AC terms). In the standard `.ply` format, each is a float32 (4 bytes). SOGS quantizes these to **int8** — a 4× reduction — using per-channel min-max normalization:\n\n```python\ndef quantize_sh(f_rest, n_bits=8):\n    vmin = f_rest.min(axis=0, keepdims=True)\n    vmax = f_rest.max(axis=0, keepdims=True)\n    scale = (vmax - vmin) / (2**n_bits - 1)\n    quantized = np.round((f_rest - vmin) / scale).astype(np.int8)\n    return quantized, vmin, scale  # store vmin/scale for dequantization\n```\n\nThe SOM ordering ensures that adjacent Gaussians (in grid-scan order) have similar SH values. This spatial coherence means that after quantization, delta coding across rows reduces effective entropy further — typically to 2–3 bits per coefficient in practice.\n\n## Grid Storage and Video Codec Compatibility\n\nAfter ordering, each attribute group is written as a 2D grid image:\n\n- **Position grid**: 3 channels (x, y, z) as float16 or quantized int16 PNG\n- **Color grid**: 3 channels (f_dc RGB) as uint8 PNG — already in PNG-friendly range\n- **SH grid**: 45 channels stored as multiple PNG layers or as a single video frame sequence\n- **Scale/rotation grid**: 6 channels total, quantized to uint8\n\nThe 2D PNG representation is exploitable by standard image codecs (PNG DEFLATE, JPEG 2000) and, for animated scenes, video codecs (HEVC/H.265, AV1). Video codecs achieve additional temporal compression across frames for dynamic scenes. The grid layout also enables **random access** by cell index — a specific Gaussian can be retrieved without decompressing the entire file.",
+  "equationBreakdowns": [
+    {
+      "label": "BMU Selection",
+      "terms": [
+        {
+          "symbol": "\\text{BMU}(\\mathbf{x})",
+          "name": "Best Matching Unit",
+          "desc": "The grid cell k* whose weight vector is closest to the input feature x. During training, BMU assignments change as weights are updated. After training, each Gaussian is permanently assigned to its final BMU."
+        },
+        {
+          "symbol": "\\arg\\min_{k}",
+          "name": "Nearest-neighbour search",
+          "desc": "Finds the grid cell minimising the objective. For N Gaussians and a grid of N cells, this is an O(N) search per sample — parallelised on GPU as a batched matrix norm computation."
+        },
+        {
+          "symbol": "\\|\\mathbf{x} - \\mathbf{w}_k\\|_2",
+          "name": "Euclidean feature-space distance",
+          "desc": "Measures how far the current Gaussian's feature vector is from cell k's prototype. Feature normalisation (per-attribute z-scoring) is critical: without it, position differences (in metres) would dominate over SH coefficient differences (near zero)."
+        }
+      ]
+    },
+    {
+      "label": "SOM Weight Update Rule",
+      "terms": [
+        {
+          "symbol": "\\eta(t)",
+          "name": "Learning rate at step t",
+          "desc": "Controls how far weights move toward the current sample. Decays exponentially over training — large early (global exploration), small late (local refinement). Typical values: η₀ = 0.5, decay to η_final = 0.01 over the full training schedule."
+        },
+        {
+          "symbol": "h(k,\\, \\text{BMU}(\\mathbf{x}),\\, t)",
+          "name": "Neighbourhood influence",
+          "desc": "How strongly cell k is pulled toward the current sample, based on its grid-distance from the BMU. 1.0 at the BMU itself; decays toward 0 for distant cells. Ensures the map learns a smooth, continuous projection of feature space."
+        },
+        {
+          "symbol": "\\mathbf{x} - \\mathbf{w}_k(t)",
+          "name": "Error signal",
+          "desc": "The difference between the input feature and cell k's current weight — the direction the weight should move. This is Hebbian-style: weights that are close to the data are moved closer still, reinforcing the emerging topological structure."
+        },
+        {
+          "symbol": "\\mathbf{w}_k(t+1)",
+          "name": "Updated weight vector",
+          "desc": "The new prototype for cell k. Over training, prototypes converge to represent the local centroid of the Gaussians that repeatedly activate them as BMU, covering the manifold of Gaussian feature space."
+        }
+      ]
+    },
+    {
+      "label": "Gaussian Neighbourhood Function",
+      "terms": [
+        {
+          "symbol": "d_{\\text{grid}}(k,\\, c)",
+          "name": "Grid-space distance",
+          "desc": "The Euclidean distance between cell k and the BMU cell c measured on the 2D SOM grid — not in feature space. Two cells adjacent in the grid are always distance 1 apart regardless of how different their weights are."
+        },
+        {
+          "symbol": "\\sigma(t)",
+          "name": "Neighbourhood radius",
+          "desc": "Controls the spatial extent of weight updates. At t=0, σ spans most of the grid — the whole map reorganises in response to each sample. As σ → 0, only the BMU cell updates, and the topology is locked in."
+        },
+        {
+          "symbol": "\\exp(-\\cdot / 2\\sigma^2)",
+          "name": "Gaussian decay",
+          "desc": "Produces a smooth, differentiable influence profile over the grid. The Gaussian shape avoids hard cutoffs that would introduce discontinuities in the learned map. Alternative shapes (e.g., Mexican hat, bubble) exist but the Gaussian is standard for its mathematical tractability."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Morgenstern et al. 2023",
+      "title": "Compact 3D Gaussian Representation for Radiance Field",
+      "url": "https://arxiv.org/abs/2311.13681"
+    },
+    {
+      "label": "Kohonen 1990",
+      "title": "The Self-Organizing Map",
+      "url": "https://doi.org/10.1109/5.58325"
+    },
+    {
+      "label": "Rainer et al. 2024",
+      "title": "SOGS: Self-Organizing Gaussian Splatting",
+      "url": "https://arxiv.org/abs/2406.05779"
+    }
+  ],
+  "nextItem": {
+    "type": "reading",
+    "id": "r5"
+  },
+  "prevItem": {
+    "type": "reading",
+    "id": "r3"
+  }
+}

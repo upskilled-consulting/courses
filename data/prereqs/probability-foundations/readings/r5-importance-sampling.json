@@ -1,0 +1,87 @@
+{
+  "id": "r5",
+  "moduleId": "probability-foundations",
+  "title": "Importance Sampling",
+  "estimatedMinutes": 14,
+  "learningObjectives": [
+    {
+      "id": "r5-lo1",
+      "verb": "Derive",
+      "description": "Derive the importance sampling identity E_p[f(x)] = E_q[f(x) w(x)] from a change of measure, where w(x) = p(x)/q(x) are the importance weights",
+      "skillTags": ["probability-foundations", "sampling"]
+    },
+    {
+      "id": "r5-lo2",
+      "verb": "Explain",
+      "description": "Explain when vanilla IS fails (high-variance weights from a poor proposal) and state the self-normalized IS estimator used when the normalizing constant of p is unknown",
+      "skillTags": ["probability-foundations", "sampling"]
+    },
+    {
+      "id": "r5-lo3",
+      "verb": "Identify",
+      "description": "Identify importance sampling in off-policy reinforcement learning and policy gradient algorithms, explaining how the importance weight corrects for the mismatch between behavior and target policies",
+      "skillTags": ["probability-foundations", "sampling", "reinforcement-learning"]
+    },
+    {
+      "id": "r5-lo4",
+      "verb": "Explain",
+      "description": "Explain why effective sample size (ESS) quantifies the quality of an IS estimate and state what ESS → 1/N signals about proposal quality",
+      "skillTags": ["probability-foundations", "sampling"]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r4"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r6"
+  },
+  "content": "## The Problem: Sampling From the Wrong Distribution\n\nMany quantities in ML take the form of an expectation:\n\n$$\\mathbb{E}_{x \\sim p}[f(x)] = \\int f(x)\\, p(x)\\, dx$$\n\nFor example:\n- Expected reward under a policy: $\\mathbb{E}_{\\tau \\sim \\pi}[R(\\tau)]$\n- Expected gradient in policy gradient methods\n- Marginal likelihood in a latent variable model\n\nThe standard Monte Carlo estimator draws $N$ samples $x_i \\sim p$ and averages:\n\n$$\\mathbb{E}_p[f(x)] \\approx \\frac{1}{N} \\sum_{i=1}^N f(x_i)$$\n\nBut what if sampling from $p$ is expensive, impossible, or dangerous?\n- In off-policy RL, we collected data under a **behavior policy** $q$ (what we did in the past), but want to evaluate a **target policy** $p$ (what we want to do now)\n- The normalizing constant of $p$ might be unknown (common in Bayesian inference)\n- $p$ might be a rare-event distribution where direct sampling yields too few hits\n\n**Importance sampling** solves all of these by sampling from a different distribution $q$ instead of $p$.\n\n---\n\n## The Importance Sampling Identity\n\nThe key insight is a change of measure. Multiply and divide by $q(x)$:\n\n$$\\mathbb{E}_{x \\sim p}[f(x)] = \\int f(x)\\, p(x)\\, dx = \\int f(x) \\frac{p(x)}{q(x)} q(x)\\, dx = \\mathbb{E}_{x \\sim q}\\!\\left[f(x) \\cdot \\frac{p(x)}{q(x)}\\right]$$\n\nDefine the **importance weight** $w(x) = p(x)/q(x)$. Then:\n\n$$\\boxed{\\mathbb{E}_{x \\sim p}[f(x)] = \\mathbb{E}_{x \\sim q}[f(x)\\, w(x)]}$$\n\nThis is exact — no approximation has been made. The estimator is:\n\n$$\\hat{\\mu}_{\\text{IS}} = \\frac{1}{N} \\sum_{i=1}^N f(x_i)\\, w(x_i), \\quad x_i \\sim q$$\n\n**This estimator is unbiased:** $\\mathbb{E}[\\hat{\\mu}_{\\text{IS}}] = \\mathbb{E}_p[f(x)]$.\n\n**Requirement:** the proposal $q$ must have support wherever $p$ has support — $q(x) > 0$ whenever $p(x) > 0$. Otherwise weights become infinite or undefined.\n\n---\n\n## Variance of the IS Estimator\n\nUnbiasedness is necessary but not sufficient — we also need low variance. The variance of $\\hat{\\mu}_{\\text{IS}}$ is:\n\n$$\\text{Var}(\\hat{\\mu}_{\\text{IS}}) = \\frac{1}{N} \\text{Var}_q[f(x)\\, w(x)]$$\n\n**The variance can be very large if $w(x) = p(x)/q(x)$ varies wildly.** This happens when $q$ and $p$ are very different — some samples get enormous weights while most get near-zero weights.\n\n**Optimal proposal (zero variance):** If $q^*(x) \\propto |f(x)| p(x)$, the estimator has zero variance. But this requires knowing the answer — it's a theoretical baseline, not a practical one.\n\n**Rule of thumb:** The proposal $q$ should be close to $p$ (ideally similar shape and scale) and should cover all high-probability regions of $f(x)\\, p(x)$.\n\n---\n\n## Self-Normalized Importance Sampling\n\nIn Bayesian inference, $p$ is often known only up to a normalizing constant: $p(x) = \\tilde{p}(x) / Z$ where $Z$ is intractable. The raw weights $w(x) = \\tilde{p}(x) / (Z\\, q(x))$ depend on the unknown $Z$.\n\n**Self-normalized IS** avoids this by dividing by the sum of weights:\n\n$$\\hat{\\mu}_{\\text{SNIS}} = \\frac{\\sum_{i=1}^N f(x_i)\\, \\tilde{w}(x_i)}{\\sum_{i=1}^N \\tilde{w}(x_i)}, \\quad \\tilde{w}(x_i) = \\frac{\\tilde{p}(x_i)}{q(x_i)}$$\n\nNote: SNIS is **biased** (the ratio of expectations is not the expectation of the ratio), but the bias decreases as $O(1/N)$ and is often negligible in practice.\n\n---\n\n## Effective Sample Size\n\nHow many *effective* samples does an IS estimate correspond to? The **effective sample size (ESS)** measures this:\n\n$$\\text{ESS} = \\frac{\\left(\\sum_{i=1}^N w_i\\right)^2}{\\sum_{i=1}^N w_i^2}$$\n\nwhere $w_i$ are the normalized weights ($\\sum w_i = 1$).\n\n- $\\text{ESS} = N$: all weights are equal (proposal = target). Perfect.\n- $\\text{ESS} = 1$: one weight dominates. Effectively only one sample is contributing — almost useless.\n- $\\text{ESS}/N$ is the **efficiency** of the IS estimator relative to direct Monte Carlo.\n\n---\n\n## Importance Sampling in Reinforcement Learning\n\nThis is the primary reason Spinning Up lists importance sampling as a prerequisite.\n\n### Off-Policy Evaluation\n\nYou collected $N$ trajectories $\\tau_i$ by following a **behavior policy** $q(\\tau)$. You want to evaluate the expected return under a different **target policy** $p(\\tau)$:\n\n$$\\mathbb{E}_{\\tau \\sim p}[R(\\tau)] = \\mathbb{E}_{\\tau \\sim q}\\!\\left[R(\\tau) \\cdot \\frac{p(\\tau)}{q(\\tau)}\\right]$$\n\nFor a trajectory $\\tau = (s_0, a_0, s_1, a_1, \\ldots)$, the importance weight factorizes as a product of per-step ratios:\n\n$$\\frac{p(\\tau)}{q(\\tau)} = \\prod_{t=0}^{T-1} \\frac{\\pi(a_t \\mid s_t)}{q(a_t \\mid s_t)}$$\n\n### Proximal Policy Optimization (PPO)\n\nPPO uses the IS ratio $r_t(\\theta) = \\pi_\\theta(a_t \\mid s_t) / \\pi_{\\theta_{\\text{old}}}(a_t \\mid s_t)$ to reuse experience from the old policy:\n\n$$\\mathcal{L}^{\\text{CLIP}}(\\theta) = \\mathbb{E}_t\\!\\left[\\min\\left(r_t(\\theta)\\, A_t,\\; \\text{clip}(r_t(\\theta),\\, 1-\\varepsilon,\\, 1+\\varepsilon)\\, A_t\\right)\\right]$$\n\nThe clipping prevents the IS weights from going so large that the optimization step overshoots — a direct consequence of the variance problem with IS weights.\n\n### Trust Region Policy Optimization (TRPO)\n\nTRPO explicitly constrains the KL divergence between old and new policy to keep the IS weights close to 1, preventing high-variance updates.",
+  "equationBreakdowns": [
+    {
+      "label": "Importance Sampling Identity",
+      "heading": "Derivation",
+      "terms": [
+        {
+          "symbol": "\\mathbb{E}_{x \\sim p}[f(x)]",
+          "name": "Target expectation",
+          "desc": "The quantity we want to estimate — the expected value of f(x) when x is drawn from p. We cannot sample from p directly."
+        },
+        {
+          "symbol": "w(x) = p(x)/q(x)",
+          "name": "Importance weight",
+          "desc": "Corrects for the mismatch between the proposal q and the target p. Large w(x) means x is more probable under p than q; small w(x) means the reverse. Samples where p and q agree get weight ≈ 1."
+        },
+        {
+          "symbol": "\\mathbb{E}_{x \\sim q}[f(x)\\,w(x)]",
+          "name": "Reweighted expectation",
+          "desc": "Same value as E_p[f(x)], but computed using samples from q. The weights compensate for drawing from the wrong distribution."
+        }
+      ]
+    },
+    {
+      "label": "Self-Normalized IS",
+      "heading": "Unknown Normalizing Constants",
+      "terms": [
+        {
+          "symbol": "\\tilde{w}(x_i) = \\tilde{p}(x_i)/q(x_i)",
+          "name": "Unnormalized weight",
+          "desc": "Uses the unnormalized target density p̃ (known up to a constant). The normalizing constant Z cancels when we divide by the sum of weights."
+        },
+        {
+          "symbol": "\\sum_i \\tilde{w}(x_i)",
+          "name": "Weight sum (normalizer)",
+          "desc": "Approximates the unknown Z. Dividing by the weight sum converts unnormalized weights into valid probabilities that sum to 1."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "OpenAI Spinning Up — Prerequisites",
+      "title": "The Right Background for Deep RL",
+      "url": "https://spinningup.openai.com/en/latest/spinningup/spinningup.html"
+    }
+  ]
+}

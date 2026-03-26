@@ -1,0 +1,76 @@
+{
+  "id": "q2",
+  "moduleId": "m8",
+  "title": "Concurrency, Distribution & Systems Design",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "questions": [
+    {
+      "id": "q8_q2_1",
+      "type": "code-completion",
+      "prompt": "Complete the Optimistic Offline Lock implementation. The `save_scene()` function should check that the scene's version in the database still matches the version the caller read, then increment and write only if versions match:",
+      "codeTemplate": "class OptimisticLockError(Exception):\n    pass\n\ndef save_scene(conn, scene_id: str, data: dict, expected_version: int) -> None:\n    cur = conn.execute(\n        \"SELECT version FROM scenes WHERE id = ?\", (scene_id,)\n    )\n    row = cur.fetchone()\n    if row is None:\n        raise ValueError(f\"Scene {scene_id} not found\")\n\n    current_version = row[0]\n    if ___BLANK___:\n        raise OptimisticLockError(\n            f\"Version conflict: expected {expected_version}, got {current_version}\"\n        )\n\n    conn.execute(\n        \"UPDATE scenes SET data = ?, version = version + 1 WHERE id = ?\",\n        (str(data), scene_id)\n    )\n    conn.commit()",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "current_version != expected_version",
+        "row[0] != expected_version",
+        "current_version != expected_version:"
+      ],
+      "explanation": "The Optimistic Offline Lock check compares the version the caller read (`expected_version`) against the current version in the database (`current_version`). If they differ, another process has written between the caller's read and this write attempt — a conflict. The conflict is signaled via an exception so the caller can retry with a fresh read. The version increment (`version = version + 1`) is done atomically in the SQL UPDATE so no second process can read the same version number after this write completes. This is equivalent to CAS (Compare-And-Swap) in hardware concurrency primitives.",
+      "hint": "Conflict means the versions are NOT equal."
+    },
+    {
+      "id": "q8_q2_2",
+      "type": "multiple-choice",
+      "prompt": "A 3DGS training cluster has 32 GPU workers simultaneously reading and writing model checkpoints. Workers typically spend 95% of time computing gradients and only 5% writing checkpoints. Checkpoint write conflicts (two workers attempting to write the same version) occur roughly once every 500 write attempts. Should this system use Optimistic or Pessimistic locking, and why?",
+      "options": [
+        { "id": "a", "text": "Pessimistic locking — with 32 workers, the probability of conflict is too high to rely on conflict detection.", "correct": false },
+        { "id": "b", "text": "Optimistic locking — conflicts are rare (0.2% of writes), workers spend most time computing not waiting for locks, and the retry cost (re-reading the checkpoint) is small relative to the compute savings from not blocking.", "correct": true },
+        { "id": "c", "text": "Pessimistic locking — checkpoint correctness is critical; any conflict that reaches the database is unacceptable.", "correct": false },
+        { "id": "d", "text": "Neither — distributed training should use a dedicated parameter server with a queue-based update model, not locking at all.", "correct": false }
+      ],
+      "explanation": "Optimistic locking is correct here. The conflict rate is 0.2% (1/500), workers are compute-bound (95% of time in gradient computation, not lock contention), and the retry cost is low. Pessimistic locking would require each worker to acquire an exclusive lock before writing — serializing all 32 workers' checkpoint writes and introducing 31× wait times. The throughput loss from pessimistic locking dwarfs the cost of occasional retries. The rule is: if conflicts are rare and retries are cheap, optimistic wins. Option D describes a valid architecture but is not a comparison of optimistic vs. pessimistic — it's a different question.",
+      "hint": "Compare the cost of occasional retries vs. the cost of always waiting for a lock."
+    },
+    {
+      "id": "q8_q2_3",
+      "type": "multiple-choice",
+      "prompt": "A 3DGS inference service has three endpoints: `GET /scene/{id}/metadata` (returns scene name, Gaussian count, bounding box — 3 fields), `GET /scene/{id}/gaussians` (returns all 200,000 Gaussian attributes — 62 fields each), and `POST /scene/{id}/compress` (runs compression, returns ratio + quality metrics). A client building a scene browser needs all three for every scene. If each call has 20ms network latency, what is the minimum total latency for the current API, and what Remote Facade design reduces it?",
+      "options": [
+        { "id": "a", "text": "Minimum latency: 20ms (all three calls in parallel). Remote Facade does not help when calls are parallelizable.", "correct": false },
+        { "id": "b", "text": "Minimum latency: 60ms (3 sequential calls × 20ms each). A Remote Facade method `GET /scene/{id}/browser-packet` returning all three payloads in one call reduces it to 20ms.", "correct": true },
+        { "id": "c", "text": "Minimum latency: 20ms (all three calls can be parallelized by the client). Remote Facade would reduce this to 5ms.", "correct": false },
+        { "id": "d", "text": "Minimum latency: 60ms. The fix is to move the service closer to the client (edge deployment), not to change the API design.", "correct": false }
+      ],
+      "explanation": "Sequential API calls cannot be parallelized if later calls depend on earlier results (e.g., you need metadata before deciding whether to fetch Gaussians). Even with parallel execution, three 20ms calls cost at minimum 20ms — one round-trip per batch of parallel calls. In practice, the browser likely fetches metadata first, then conditionally fetches Gaussians: 2 sequential calls = 40ms minimum. A Remote Facade endpoint designed for the browser use case bundles all needed data (metadata, compressed preview, quality indicators) into a single 20ms call. The key insight: Remote Facade is use-case–oriented, not object-oriented. Edge deployment reduces absolute latency but doesn't eliminate the 3× amplification from multiple calls.",
+      "hint": "How many sequential round-trips does the naive API require, and how does a coarse-grained facade collapse them?"
+    },
+    {
+      "id": "q8_q2_4",
+      "type": "multiple-choice",
+      "prompt": "A 3DGS serving system stores compression job state (progress %, intermediate Gaussian counts, estimated time remaining) between API calls. The system must handle 10,000 concurrent compression jobs and be horizontally scalable across 8 servers. Which session state pattern should it use, and what is the deciding factor?",
+      "options": [
+        { "id": "a", "text": "Client Session State — store job progress in a cookie or hidden form field. Eliminates server-side state entirely.", "correct": false },
+        { "id": "b", "text": "Server Session State — store in-memory on the server that received the initial request, using sticky load balancing.", "correct": false },
+        { "id": "c", "text": "Database Session State using a distributed cache (Redis) — any of the 8 servers can serve any poll request, the cache is shared, and 10,000 concurrent sessions fit comfortably in memory.", "correct": true },
+        { "id": "d", "text": "Client Session State — the client polls for job status, so it can carry the session state token and submit it with each poll request.", "correct": false }
+      ],
+      "explanation": "Client Session State (options A and D) fails because compression job state (GPU worker progress, intermediate Gaussian counts, estimated completion time) is generated server-side during processing — it cannot be stored on the client who hasn't received it yet. Server Session State (option B) fails the horizontal scaling requirement: with 8 servers and sticky load balancing, each server handles ≈1,250 sessions, but a server failure loses 1,250 in-progress jobs. Database Session State via Redis is correct: all 8 servers share one Redis cluster, any server can poll any job's status, sessions survive individual server failures, and 10,000 sessions at ≈1KB each = 10MB — well within Redis's capacity. The deciding factor is the combination of server-side state generation and horizontal scalability.",
+      "hint": "Who generates the state (client or server)? Must any server be able to serve any request?"
+    },
+    {
+      "id": "q8_q2_5",
+      "type": "multiple-choice",
+      "prompt": "A developer is building a 3DGS compression framework and writes a `GaussianRepository` class with a `find(scene_id)` method. The method currently queries SQLite. In six months, the team plans to migrate to PostgreSQL. The developer is considering whether to use the Repository pattern or have domain objects call the database directly. What is the Repository pattern's primary architectural benefit here, and what is the concrete evidence that it is working correctly?",
+      "options": [
+        { "id": "a", "text": "Repository is faster than direct database calls because it caches results automatically.", "correct": false },
+        { "id": "b", "text": "Repository hides the database behind a collection-like interface. The concrete evidence it is working: domain objects contain zero SQL strings and zero database imports — all database-specific code lives in the Repository and its mapper.", "correct": true },
+        { "id": "c", "text": "Repository makes the codebase follow the Active Record pattern, which is the most maintainable approach.", "correct": false },
+        { "id": "d", "text": "Repository enables optimistic locking automatically, which direct database calls cannot provide.", "correct": false }
+      ],
+      "explanation": "The Repository pattern's primary benefit is **testability and substitutability via isolation**: domain objects do not import database libraries, do not construct SQL queries, and do not know whether the data comes from SQLite, PostgreSQL, HDF5, or an in-memory mock. The concrete evidence is a `grep` test: if no domain object file contains `import sqlite3`, `import psycopg2`, `SELECT`, or `INSERT`, the repository boundary is clean. The PostgreSQL migration then becomes a matter of writing a new `PostgreSQLGaussianRepository` class implementing the same `find()` and `add()` interface — no domain code changes. Active Record is the opposite of Repository isolation. Repository does not cache automatically (that requires Identity Map). Repository does not provide optimistic locking (that requires version fields and conflict checking).",
+      "hint": "What concrete test verifies that the Repository boundary is correctly enforced?"
+    }
+  ]
+}

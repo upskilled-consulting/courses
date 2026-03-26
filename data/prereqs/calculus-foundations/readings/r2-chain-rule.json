@@ -1,0 +1,86 @@
+{
+  "id": "r2",
+  "moduleId": "calculus-foundations",
+  "title": "The Chain Rule",
+  "estimatedMinutes": 15,
+  "learningObjectives": [
+    {
+      "id": "r3-lo1",
+      "verb": "Apply",
+      "description": "Apply the chain rule to differentiate a composite function f(g(x)), identifying the outer and inner functions",
+      "skillTags": [
+        "calculus-foundations",
+        "derivatives"
+      ]
+    },
+    {
+      "id": "r3-lo2",
+      "verb": "Extend",
+      "description": "Extend the chain rule to chains of three or more composed functions",
+      "skillTags": [
+        "calculus-foundations",
+        "derivatives"
+      ]
+    },
+    {
+      "id": "r3-lo3",
+      "verb": "Connect",
+      "description": "Connect the chain rule to backpropagation: explain how gradients flow backward through a neural network as a repeated application of the chain rule",
+      "skillTags": [
+        "calculus-foundations",
+        "ml-connection",
+        "backpropagation"
+      ]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r1"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r3"
+  },
+  "content": "## Composed Functions\n\nMost functions we care about are not simple polynomials — they are **compositions**: one function applied inside another. For example:\n\n- $h(x) = (x^2 + 1)^{10}$ — raise a polynomial to a power\n- $h(x) = \\sin(3x^2)$ — apply sine to a polynomial\n- $h(x) = \\sqrt{x^2 + 1}$ — take the square root of something\n\nIn each case, $h(x) = f(g(x))$ for some outer function $f$ and inner function $g$. The rules from r2 do not handle this — we need the **chain rule**.\n\n---\n\n## The Chain Rule\n\nIf $h(x) = f(g(x))$, then:\n\n$$h'(x) = f'(g(x)) \\cdot g'(x)$$\n\nIn words: **differentiate the outside, leave the inside alone, then multiply by the derivative of the inside.**\n\n**In Leibniz notation**, let $u = g(x)$ and $y = f(u)$. Then:\n\n$$\\frac{dy}{dx} = \\frac{dy}{du} \\cdot \\frac{du}{dx}$$\n\nThis looks like the $du$'s cancel — they do not literally cancel (they are not fractions), but the intuition is sound and the notation makes the rule easy to remember.\n\n---\n\n## Worked Examples\n\n**Example 1:** $h(x) = (x^2 + 1)^{10}$\n\nOuter function: $f(u) = u^{10}$, so $f'(u) = 10u^9$\nInner function: $g(x) = x^2 + 1$, so $g'(x) = 2x$\n\n$$h'(x) = 10(x^2+1)^9 \\cdot 2x = 20x(x^2+1)^9$$\n\n**Example 2:** $h(x) = \\sin(3x^2)$\n\nOuter: $f(u) = \\sin u$, so $f'(u) = \\cos u$\nInner: $g(x) = 3x^2$, so $g'(x) = 6x$\n\n$$h'(x) = \\cos(3x^2) \\cdot 6x = 6x\\cos(3x^2)$$\n\n**Example 3:** $h(x) = \\sqrt{x^2 + 1} = (x^2+1)^{1/2}$\n\nOuter: $f(u) = u^{1/2}$, so $f'(u) = \\frac{1}{2}u^{-1/2}$\nInner: $g(x) = x^2+1$, so $g'(x) = 2x$\n\n$$h'(x) = \\frac{1}{2}(x^2+1)^{-1/2} \\cdot 2x = \\frac{x}{\\sqrt{x^2+1}}$$\n\n---\n\n## Chains of Three or More\n\nThe chain rule extends to any number of composed functions. For $h(x) = f(g(k(x)))$:\n\n$$h'(x) = f'(g(k(x))) \\cdot g'(k(x)) \\cdot k'(x)$$\n\nIn Leibniz notation, with $v = k(x)$, $u = g(v)$, $y = f(u)$:\n\n$$\\frac{dy}{dx} = \\frac{dy}{du} \\cdot \\frac{du}{dv} \\cdot \\frac{dv}{dx}$$\n\nEach link in the chain contributes a multiplicative factor. The gradient of the output with respect to the input is the product of all the local derivatives along the path.\n\n---\n\n## The Chain Rule and Backpropagation\n\nA feedforward neural network is literally a chain of composed functions. For a simple two-layer network:\n\n$$\\hat{y} = f_2\\!\\left(W_2\\, f_1\\!\\left(W_1 x + b_1\\right) + b_2\\right)$$\n\nwhere $f_1$ and $f_2$ are activation functions. This is $h(x) = f_2(g(f_1(k(x))))$ — a composition.\n\nTo train the network, we need $\\partial \\mathcal{L} / \\partial W_1$ — how does the loss at the output depend on the weights deep in the network? By the chain rule:\n\n$$\\frac{\\partial \\mathcal{L}}{\\partial W_1} = \\frac{\\partial \\mathcal{L}}{\\partial \\hat{y}} \\cdot \\frac{\\partial \\hat{y}}{\\partial z_2} \\cdot \\frac{\\partial z_2}{\\partial a_1} \\cdot \\frac{\\partial a_1}{\\partial z_1} \\cdot \\frac{\\partial z_1}{\\partial W_1}$$\n\n**Backpropagation is exactly this:** traverse the computation graph from output to input, accumulating the product of local derivatives at each step. The chain rule is not merely related to backprop — it *is* backprop.\n\n---\n\n## A Concrete ML Example: Differentiating Through a Neuron\n\nConsider a single neuron with weight $w$, input $x$, bias $b$, and sigmoid activation $\\sigma(z) = 1/(1 + e^{-z})$:\n\n$$a = \\sigma(wx + b)$$\n\nThe loss is the squared error $\\mathcal{L} = (a - y)^2$ for target $y$. We want $\\partial \\mathcal{L}/\\partial w$.\n\nBy the chain rule:\n$$\\frac{\\partial \\mathcal{L}}{\\partial w} = \\frac{\\partial \\mathcal{L}}{\\partial a} \\cdot \\frac{\\partial a}{\\partial z} \\cdot \\frac{\\partial z}{\\partial w}$$\n\nwhere $z = wx + b$.\n\n- $\\partial \\mathcal{L}/\\partial a = 2(a - y)$ (power rule on the loss)\n- $\\partial a/\\partial z = \\sigma(z)(1 - \\sigma(z))$ (sigmoid derivative — derived in r4)\n- $\\partial z/\\partial w = x$ (linear in $w$)\n\nMultiplying: $\\partial \\mathcal{L}/\\partial w = 2(a - y) \\cdot \\sigma(z)(1-\\sigma(z)) \\cdot x$\n\nEach factor has a natural interpretation: how wrong the prediction is, how sensitive the activation is, and how strongly the input influenced the pre-activation. This three-way product structure appears throughout deep learning.\n\n---\n\n## PyTorch and TensorFlow\n\nAutograd builds the computation graph during the forward pass and applies the chain rule backward when `.backward()` is called. You can inspect individual gradients:\n\n```python\nimport torch\n\nw = torch.tensor(0.5, requires_grad=True)\nx_val = torch.tensor(2.0)\nb = torch.tensor(0.0)\ny = torch.tensor(1.0)\n\nz = w * x_val + b\na = torch.sigmoid(z)\nloss = (a - y) ** 2\n\nloss.backward()\nprint(w.grad.item())\n# PyTorch computed dL/dw = 2(a-y) · σ(z)(1-σ(z)) · x automatically\n```\n\n```python\nimport tensorflow as tf\n\nw = tf.Variable(0.5)\nx_val = tf.constant(2.0)\ny = tf.constant(1.0)\n\nwith tf.GradientTape() as tape:\n    z = w * x_val\n    a = tf.sigmoid(z)\n    loss = (a - y) ** 2\n\nprint(tape.gradient(loss, w).numpy())  # same result via chain rule\n```\n\nThe framework never needs to know the analytic form of $\\partial \\mathcal{L}/\\partial w$. It computes it by walking backward through the recorded operations and applying the chain rule at each step.",
+  "equationBreakdowns": [
+    {
+      "label": "Chain Rule",
+      "heading": "Differentiating f(g(x))",
+      "terms": [
+        {
+          "symbol": "f'(g(x))",
+          "name": "Derivative of the outer function",
+          "desc": "Differentiate f with respect to its argument, but evaluate at g(x) — the actual input to f. The inner function stays unchanged here."
+        },
+        {
+          "symbol": "g'(x)",
+          "name": "Derivative of the inner function",
+          "desc": "The derivative of the inner function with respect to x. This is the multiplicative correction for how fast the inner function itself is changing."
+        }
+      ]
+    },
+    {
+      "label": "Leibniz Chain Rule",
+      "heading": "dy/dx = (dy/du)(du/dx)",
+      "terms": [
+        {
+          "symbol": "dy/du",
+          "name": "Output sensitivity to intermediate variable",
+          "desc": "How much y changes per unit change in u — the local derivative at the outer layer."
+        },
+        {
+          "symbol": "du/dx",
+          "name": "Intermediate variable sensitivity to input",
+          "desc": "How much u changes per unit change in x — the local derivative at the inner layer. Multiplying the two gives the total sensitivity of y to x."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "MIT 18.01SC — Session 11",
+      "title": "The Chain Rule",
+      "url": "https://ocw.mit.edu/courses/18-01sc-single-variable-calculus-fall-2010/"
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "id": "r3",
+  "moduleId": "matrix-algebra",
+  "title": "Vector Spaces and Geometry",
+  "estimatedMinutes": 14,
+  "learningObjectives": [
+    {
+      "id": "r3-lo1",
+      "verb": "Test",
+      "description": "Test whether a subset of a vector space is a subspace using the closure conditions",
+      "skillTags": [
+        "matrix-structure"
+      ]
+    },
+    {
+      "id": "r3-lo2",
+      "verb": "Determine",
+      "description": "Determine whether a set of vectors is linearly independent and, if not, express one as a linear combination of the others",
+      "skillTags": [
+        "matrix-structure"
+      ]
+    },
+    {
+      "id": "r3-lo3",
+      "verb": "Describe",
+      "description": "Describe the column space, row space, and null space of a matrix and explain what each represents geometrically",
+      "skillTags": [
+        "matrix-structure",
+        "embedding-geometry"
+      ]
+    },
+    {
+      "id": "r3-lo4",
+      "verb": "Interpret",
+      "description": "Interpret a matrix as a linear transformation and explain how it maps vectors from the domain to the codomain",
+      "skillTags": [
+        "coordinate-frames",
+        "matrix-structure"
+      ]
+    }
+  ],
+  "content": "## Geometric Thinking About Matrices\n\nThe previous readings treated matrices as arrays of numbers obeying algebraic rules. This reading builds the geometric picture — what matrices *do* to space — which is essential for understanding covariance, projections, and transformations in ML.\n\n## Vector Spaces\n\nA **vector space** \\(V\\) is a set of objects (vectors) that can be added together and scaled by scalars, with results that stay in the set. The formal axioms are satisfied by all the vector types we use: column vectors in \\(\\mathbb{R}^n\\), matrices, functions.\n\nThe standard example: \\(\\mathbb{R}^n\\), the set of all \\(n\\)-dimensional column vectors with real entries.\n\n## Linear Combinations\n\nA **linear combination** of vectors \\(\\mathbf{a}_1, \\mathbf{a}_2, \\ldots, \\mathbf{a}_K\\) is any vector of the form:\n\n$$c_1 \\mathbf{a}_1 + c_2 \\mathbf{a}_2 + \\cdots + c_K \\mathbf{a}_K$$\n\nwhere \\(c_1, \\ldots, c_K\\) are scalars. This is the fundamental building block of linear algebra.\n\nFrom the previous reading: the product \\(A\\mathbf{b}\\) is a linear combination of the columns of \\(A\\) with coefficients from \\(\\mathbf{b}\\). Every matrix-vector product is a linear combination.\n\n## Span\n\nThe **span** of a set of vectors \\(\\{\\mathbf{a}_1, \\ldots, \\mathbf{a}_K\\}\\) is the set of *all* linear combinations of those vectors:\n\n$$\\text{span}\\{\\mathbf{a}_1, \\ldots, \\mathbf{a}_K\\} = \\left\\{ \\sum_{k=1}^K c_k \\mathbf{a}_k \\;:\\; c_k \\in \\mathbb{R} \\right\\}$$\n\nGeometrically:\n- Span of one nonzero vector = a line through the origin\n- Span of two linearly independent vectors in \\(\\mathbb{R}^3\\) = a plane through the origin\n- Span of \\(n\\) linearly independent vectors in \\(\\mathbb{R}^n\\) = all of \\(\\mathbb{R}^n\\)\n\nThe span of the columns of a matrix \\(A\\) is called the **column space** of \\(A\\), written \\(\\mathcal{C}(A)\\). The system \\(A\\mathbf{x} = \\mathbf{b}\\) has a solution if and only if \\(\\mathbf{b} \\in \\mathcal{C}(A)\\).\n\n## Linear Independence\n\nVectors \\(\\mathbf{a}_1, \\ldots, \\mathbf{a}_K\\) are **linearly independent** if the only solution to:\n\n$$c_1 \\mathbf{a}_1 + c_2 \\mathbf{a}_2 + \\cdots + c_K \\mathbf{a}_K = \\mathbf{0}$$\n\nis \\(c_1 = c_2 = \\cdots = c_K = 0\\). Otherwise they are **linearly dependent** — at least one vector is a linear combination of the others and contributes no new direction.\n\n**Why this matters for ML**: a covariance matrix whose columns are linearly dependent is singular (non-invertible). PCA exploits linear dependence to find lower-dimensional representations.\n\n## Basis and Dimension\n\nA **basis** for a vector space \\(V\\) is a set of vectors that:\n1. Spans \\(V\\) — every vector in \\(V\\) is a linear combination of the basis vectors\n2. Is linearly independent — no basis vector is redundant\n\nThe number of vectors in any basis for \\(V\\) is the **dimension** of \\(V\\), written \\(\\dim(V)\\).\n\nThe standard basis for \\(\\mathbb{R}^n\\) is \\(\\{\\mathbf{e}_1, \\mathbf{e}_2, \\ldots, \\mathbf{e}_n\\}\\), where \\(\\mathbf{e}_k\\) has a 1 in position \\(k\\) and zeros elsewhere. Any vector \\(\\mathbf{x} \\in \\mathbb{R}^n\\) is uniquely expressed as \\(\\mathbf{x} = x_1 \\mathbf{e}_1 + \\cdots + x_n \\mathbf{e}_n\\) — the coordinates *are* the coefficients.\n\n**Key fact**: if a set of \\(n\\) vectors in \\(\\mathbb{R}^n\\) is linearly independent, it automatically spans \\(\\mathbb{R}^n\\) and is therefore a basis.\n\n## Column Space, Row Space, and Null Space\n\nThree fundamental subspaces are associated with any \\(n \\times K\\) matrix \\(A\\):\n\n| Subspace | Definition | Lives in |\n|---|---|---|\n| Column space \\(\\mathcal{C}(A)\\) | Span of the columns of \\(A\\) | \\(\\mathbb{R}^n\\) |\n| Row space \\(\\mathcal{R}(A)\\) | Span of the rows of \\(A\\) | \\(\\mathbb{R}^K\\) |\n| Null space \\(\\mathcal{N}(A)\\) | All \\(\\mathbf{x}\\) such that \\(A\\mathbf{x} = \\mathbf{0}\\) | \\(\\mathbb{R}^K\\) |\n\nThe null space and row space are **orthogonal complements** in \\(\\mathbb{R}^K\\): every vector in the null space is perpendicular to every vector in the row space, and their dimensions sum to \\(K\\).\n\n## Matrices as Linear Transformations\n\nMultiplying by an \\(n \\times K\\) matrix \\(A\\) defines a **linear map** \\(T: \\mathbb{R}^K \\to \\mathbb{R}^n\\), written \\(T(\\mathbf{x}) = A\\mathbf{x}\\). The map is linear because:\n\n$$A(c\\mathbf{x} + d\\mathbf{y}) = c A\\mathbf{x} + d A\\mathbf{y}$$\n\nEvery linear map between finite-dimensional spaces can be represented as a matrix. This correspondence — matrix ↔ linear transformation — is the central insight of linear algebra.\n\n**Geometric operations as matrices**:\n- **Rotation** by angle \\(\\theta\\) in \\(\\mathbb{R}^2\\): \\(\\begin{bmatrix} \\cos\\theta & -\\sin\\theta \\\\ \\sin\\theta & \\cos\\theta \\end{bmatrix}\\)\n- **Scaling** axes independently: diagonal matrix with scale factors on the diagonal\n- **Projection** onto a subspace: an idempotent matrix (\\(P^2 = P\\))\n- **Reflection**: orthogonal matrix with determinant \\(-1\\)\n\nIn 3D Gaussian Splatting, the covariance matrix \\(\\Sigma = RSS'R'\\) decomposes the Gaussian's shape into a rotation (\\(R\\)) applied to an independent scaling (\\(S\\)) — a direct application of these geometric operations.\n\n## Orthogonality\n\nTwo vectors are **orthogonal** if their inner product is zero: \\(\\mathbf{a}'\\mathbf{b} = 0\\). Orthogonality generalizes perpendicularity to any dimension.\n\nA set of vectors is **orthonormal** if they are mutually orthogonal and each has unit length (\\(\\|\\mathbf{a}_k\\| = 1\\)). An orthonormal basis is maximally convenient: coordinates are computed by simple inner products, and lengths are preserved under transformation.\n\nA square matrix \\(Q\\) is **orthogonal** if its columns form an orthonormal set:\n\n$$Q'Q = QQ' = I$$\n\nOrthogonal matrices represent pure rotations (and reflections) — they preserve lengths and angles. The eigendecomposition of a symmetric matrix (Reading 5) is built entirely from orthogonal matrices.",
+  "equationBreakdowns": [
+    {
+      "label": "Linear Combination",
+      "terms": [
+        {
+          "symbol": "c_1 \\mathbf{a}_1 + \\cdots + c_K \\mathbf{a}_K",
+          "name": "Linear combination",
+          "desc": "A weighted sum of vectors where the weights c₁…cK are arbitrary real scalars. The result is always a vector in the span of the a's. Every matrix-vector product Ax is a linear combination of the columns of A with weights from x."
+        },
+        {
+          "symbol": "\\text{span}\\{\\mathbf{a}_1,\\ldots,\\mathbf{a}_K\\}",
+          "name": "Span",
+          "desc": "The set of ALL possible linear combinations — every vector reachable by varying the scalar weights over all real numbers. Geometrically it is a subspace: a line, plane, or higher-dimensional flat through the origin."
+        },
+        {
+          "symbol": "\\mathbf{0}",
+          "name": "Zero vector",
+          "desc": "The trivial linear combination where all coefficients are zero always produces the zero vector. Linear independence asks whether this is the ONLY way to produce 0 — if not, one vector is redundant."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Strang 2016",
+      "title": "Introduction to Linear Algebra, 5th ed., Ch. 3",
+      "url": null
+    },
+    {
+      "label": "Greene 2003",
+      "title": "Econometric Analysis, 5th ed., Appendix A.3",
+      "url": null
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r2"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r4"
+  }
+}

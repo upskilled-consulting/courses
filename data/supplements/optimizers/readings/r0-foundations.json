@@ -1,0 +1,88 @@
+{
+  "id": "r0",
+  "moduleId": "optimizers",
+  "title": "What Is an Optimizer?",
+  "estimatedMinutes": 12,
+  "learningObjectives": [
+    {
+      "id": "r0-lo1",
+      "verb": "Trace",
+      "description": "Trace the zero_grad → forward → backward → step cycle and explain why gradients must be cleared before each iteration",
+      "skillTags": [
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r0-lo2",
+      "verb": "Configure",
+      "description": "Configure param groups to assign different learning rates and weight decay to different parts of a model",
+      "skillTags": [
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r0-lo3",
+      "verb": "Apply",
+      "description": "Apply gradient clipping by norm and by value and explain why norm clipping is preferred for preserving gradient direction",
+      "skillTags": [
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r0-lo4",
+      "verb": "Select",
+      "description": "Select an optimizer from the practical selection guide given an architecture, task, and training budget",
+      "skillTags": [
+        "training-dynamics"
+      ]
+    }
+  ],
+  "prevItem": null,
+  "nextItem": {
+    "type": "reading",
+    "id": "r1"
+  },
+  "content": "## The Optimization Problem\n\nTraining a neural network reduces to minimizing a loss function $L(\\theta)$ over the model parameters $\\theta$. At each step you observe a mini-batch gradient $g = \\nabla_{\\theta} L$ and need a rule for updating $\\theta$. That rule is the **optimizer**.\n\nThe simplest rule is *steepest descent*:\n$$\\theta_{t+1} = \\theta_t - \\eta \\, g_t$$\n\nBut raw gradient descent on deep networks suffers from ill-conditioning, saddle points, and noisy mini-batch estimates. Modern optimizers address all three.\n\n## The PyTorch Optimizer Interface\n\nEvery `torch.optim` optimizer inherits from `Optimizer` and exposes a uniform API:\n\n```python\noptimizer = torch.optim.SGD(model.parameters(), lr=0.01)\n\nfor x, y in dataloader:\n    optimizer.zero_grad()      # clear gradients from previous step\n    loss = criterion(model(x), y)\n    loss.backward()            # compute gradients via autograd\n    optimizer.step()           # apply update rule\n```\n\n**TensorFlow:**\n```python\noptimizer = tf.keras.optimizers.SGD(learning_rate=0.01)\n\nfor x, y in dataset:\n    with tf.GradientTape() as tape:\n        loss = loss_fn(model(x, training=True), y)\n    grads = tape.gradient(loss, model.trainable_variables)\n    optimizer.apply_gradients(zip(grads, model.trainable_variables))\n```\n\n### zero_grad\n\nPyTorch accumulates gradients by default. You must clear them each step. The `set_to_none=True` flag (default since PyTorch 2.0) sets `.grad` to `None` instead of zeroing — it's faster because it skips the memory write and lets the allocator reuse the buffer:\n\n```python\noptimizer.zero_grad(set_to_none=True)  # faster than zero_grad()\n```\n\n**TensorFlow:** TF/Keras does not accumulate gradients by default — `GradientTape` computes fresh gradients each call, so there is no equivalent of `zero_grad()`.\n\n### State Persistence\n\nOptimizers maintain running statistics (momentum buffers, squared-gradient accumulators) as internal state. Save and restore it with:\n\n```python\ncheckpoint = {\n    'model': model.state_dict(),\n    'optimizer': optimizer.state_dict(),\n    'epoch': epoch,\n}\ntorch.save(checkpoint, 'ckpt.pt')\n\n# Resume\nckpt = torch.load('ckpt.pt')\nmodel.load_state_dict(ckpt['model'])\noptimizer.load_state_dict(ckpt['optimizer'])\n```\n\n## Param Groups\n\nA param group is a dict specifying which parameters use which hyperparameters. This enables per-layer settings:\n\n```python\noptimizer = torch.optim.AdamW([\n    {'params': backbone.parameters(), 'lr': 1e-4, 'weight_decay': 0.01},\n    {'params': head.parameters(),     'lr': 1e-3, 'weight_decay': 0.0},\n])\n```\n\n**TensorFlow:** Keras does not support per-variable optimizer hyperparameters natively. The standard approach is a custom training loop with separate optimizers:\n```python\nbackbone_opt = tf.keras.optimizers.AdamW(learning_rate=1e-4, weight_decay=0.01)\nhead_opt     = tf.keras.optimizers.AdamW(learning_rate=1e-3, weight_decay=0.0)\n\nwith tf.GradientTape() as tape:\n    loss = ...\nall_grads = tape.gradient(loss, model.trainable_variables)\nbackbone_opt.apply_gradients(zip(backbone_grads, backbone.trainable_variables))\nhead_opt.apply_gradients(zip(head_grads, head.trainable_variables))\n```\n\nCommon use cases:\n- **Fine-tuning** — lower LR for pretrained backbone, higher LR for new head\n- **Embedding layers** — disable weight decay to avoid shrinking embeddings\n- **Frozen layers** — set `requires_grad=False` to skip their update entirely\n\n## Key Hyperparameters\n\n| Hyperparameter | Symbol | Typical range | Role |\n|---|---|---|---|\n| Learning rate | $\\eta$ | 1e-4 – 1e-1 | Step size scale |\n| Momentum | $\\beta$ | 0.85 – 0.99 | Exponential average of gradients |\n| Weight decay | $\\lambda$ | 1e-4 – 1e-2 | L2 regularization penalty |\n| Epsilon | $\\varepsilon$ | 1e-8 – 1e-6 | Numerical stability in divisions |\n| Betas | $(\\beta_1, \\beta_2)$ | (0.9, 0.999) | Adam moment decay rates |\n\n## Gradient Clipping\n\nExploding gradients — common in RNNs and transformers — are handled before `optimizer.step()`:\n\n```python\nloss.backward()\ntorch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # L2 norm clip\n# or\ntorch.nn.utils.clip_grad_value_(model.parameters(), clip_value=0.5)  # element-wise clip\noptimizer.step()\n```\n\n**TensorFlow:**\n```python\n# Via optimizer constructor (applied automatically each step):\noptimizer = tf.keras.optimizers.AdamW(learning_rate=1e-3, clipnorm=1.0)\n# or: clipvalue=0.5\n\n# Manual clip in a custom training loop:\ngrads = tape.gradient(loss, model.trainable_variables)\ngrads, _ = tf.clip_by_global_norm(grads, clip_norm=1.0)  # equivalent to clip_grad_norm_\noptimizer.apply_gradients(zip(grads, model.trainable_variables))\n```\n\n`clip_grad_norm_` rescales the entire gradient vector so its L2 norm does not exceed `max_norm`. `clip_grad_value_` clips each element independently to `[-clip_value, clip_value]`. Norm clipping is preferred because it preserves gradient direction.\n\n## Optimizer Selection Guide\n\n| Situation | Recommended optimizer |\n|---|---|\n| General deep learning baseline | AdamW |\n| Large-scale vision (ResNet, ViT) | SGD + momentum or AdamW |\n| Transformers, LLMs | AdamW with cosine + warmup |\n| Sparse embeddings (NLP) | SparseAdam |\n| Small models, L-BFGS tolerance | LBFGS |\n| Convex problems, averaging needed | ASGD |\n| No learning-rate tuning desired | Adadelta |\n| Super-convergence experiments | SGD + OneCycleLR |\n",
+  "equationBreakdowns": [
+    {
+      "label": "Steepest Descent",
+      "heading": "The Optimization Problem",
+      "terms": [
+        {
+          "symbol": "\\theta_{t+1}",
+          "name": "Updated parameters",
+          "desc": "Parameter vector after this step"
+        },
+        {
+          "symbol": "\\theta_t",
+          "name": "Current parameters",
+          "desc": "Parameter vector before this step"
+        },
+        {
+          "symbol": "\\eta",
+          "name": "Learning rate",
+          "desc": "Step size scalar — too large diverges, too small crawls"
+        },
+        {
+          "symbol": "g_t",
+          "name": "Mini-batch gradient",
+          "desc": "∇L evaluated on the current mini-batch"
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "PyTorch Docs",
+      "title": "torch.optim — PyTorch 2.x documentation",
+      "url": "https://docs.pytorch.org/docs/stable/optim.html",
+      "note": "Official API reference for all optimizer and scheduler classes"
+    },
+    {
+      "label": "Ruder 2016",
+      "title": "An overview of gradient descent optimization algorithms",
+      "url": "https://arxiv.org/abs/1609.04747",
+      "note": "Canonical survey of SGD variants, momentum, and adaptive methods"
+    }
+  ]
+}

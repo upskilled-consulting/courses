@@ -1,0 +1,13 @@
+node_modules/
+3dgs-course/
+url_audit.csv
+audit_urls.py
+migrate_urls.py
+fix-vec.js
+scripts/
+*.md
+*.pdf
+*.mp4
+*.wav
+.DS_Store
+Thumbs.db

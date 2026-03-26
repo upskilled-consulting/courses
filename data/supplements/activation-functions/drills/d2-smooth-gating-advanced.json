@@ -1,0 +1,69 @@
+{
+  "id": "d2",
+  "moduleId": "activation-functions",
+  "title": "Smooth, Gating & Advanced Activations",
+  "description": "Flashcards covering GELU, SiLU/Swish, Mish, ELU/CELU/SELU, GLU, Softmax/LogSoftmax, Hardswish, shrinkage functions, and SwiGLU.",
+  "estimatedMinutes": 10,
+  "cards": [
+    {
+      "id": "c01",
+      "front": "**GELU** — formula and probabilistic interpretation",
+      "back": "$$\\text{GELU}(x) = x \\cdot \\Phi(x)$$\n\nwhere $\\Phi(x)$ is the CDF of the standard normal distribution.\n\n**Interpretation:** the input $x$ is multiplied by the probability that a standard normal random variable is less than $x$ — an **input-dependent gate** that softly suppresses small or negative values.\n\n*Default in BERT, GPT-2, ViT. PyTorch: `nn.GELU()`*"
+    },
+    {
+      "id": "c02",
+      "front": "**SiLU / Swish** — formula and self-gating property",
+      "back": "$$\\text{SiLU}(x) = x \\cdot \\sigma(x)$$\n\nThe output is the input **gated by its own sigmoid** — hence \"self-gating\".\n\n**Non-monotonic:** the function dips below zero for small negative inputs before rising, creating a slight negative region that can help gradient flow.\n\n*Discovered by neural architecture search. Used in EfficientNet. PyTorch: `nn.SiLU()`*"
+    },
+    {
+      "id": "c03",
+      "front": "**Mish** — formula and key property",
+      "back": "$$\\text{Mish}(x) = x \\cdot \\tanh(\\text{Softplus}(x))$$\n\n$$= x \\cdot \\tanh(\\ln(1 + e^x))$$\n\nSmooth, non-monotonic, unbounded above and bounded below (~$-0.31$).\n\nSimilar to Swish but uses tanh-gating instead of sigmoid-gating, producing a slightly different negative-region shape.\n\n*Used in YOLOv4. PyTorch: `nn.Mish()`*"
+    },
+    {
+      "id": "c04",
+      "front": "**ELU, CELU, and SELU** — how do they differ?",
+      "back": "$$\\text{ELU}(x) = \\begin{cases} x & x > 0 \\\\ \\alpha(e^x - 1) & x \\leq 0 \\end{cases}$$\n\n| | Negative value | Key property |\n|---|---|---|\n| ELU | $\\alpha(e^x-1)$; saturates at $-\\alpha$ | Smooth, negative outputs |\n| CELU | Continuous derivative at 0 (modified ELU) | Smoother transition |\n| SELU | Fixed $\\alpha, \\lambda$ from theory | Self-normalising: preserves mean 0, var 1 |\n\n**SELU** requires `AlphaDropout` and LeCun normal init to trigger self-normalisation."
+    },
+    {
+      "id": "c05",
+      "front": "**SELU self-normalisation** — what does it mean and what does it require?",
+      "back": "With fixed constants $\\alpha \\approx 1.6733$ and $\\lambda \\approx 1.0507$, SELU is a **scaled ELU** that acts as a contraction mapping: activations are pulled toward mean 0 and variance 1 after each layer.\n\n**Requirements:**\n1. Weights initialised with **LeCun normal** (`lecun_normal`)\n2. Dropout replaced with **AlphaDropout** (preserves mean/variance)\n3. Used in a fully connected (not convolutional) network\n\n*If any condition is violated, self-normalisation breaks.*"
+    },
+    {
+      "id": "c06",
+      "front": "**GLU** (Gated Linear Unit) — formula and information flow",
+      "back": "$$\\text{GLU}(\\mathbf{x}, W, V, b, c) = (\\mathbf{x}W + b) \\otimes \\sigma(\\mathbf{x}V + c)$$\n\nThe input is projected twice: one projection is the **value**, the other is a **sigmoid gate** that controls how much of each dimension flows through.\n\n**Dimension split:** in practice the input $\\mathbf{x}$ is projected to $2d$ then split in half along the feature dimension — the first half is gated by sigmoid of the second half.\n\n*Foundation of SwiGLU and GeGLU used in LLaMA/PaLM.*"
+    },
+    {
+      "id": "c07",
+      "front": "**SwiGLU** — formula and why it dominates modern transformers",
+      "back": "$$\\text{SwiGLU}(\\mathbf{x}) = \\text{SiLU}(\\mathbf{x}W_1) \\otimes (\\mathbf{x}W_2)$$\n\nReplaces the sigmoid gate in GLU with SiLU (Swish), giving a smooth, non-monotonic gate.\n\n**Why preferred:** empirically outperforms ReLU/GELU FFN layers in transformers across multiple benchmarks.\n\n*Default FFN activation in LLaMA, PaLM, Mistral. The FFN expansion is typically $\\frac{2}{3} \\cdot 4d$ to keep parameter count constant with the three-matrix formulation.*"
+    },
+    {
+      "id": "c08",
+      "front": "**Softmax** — formula and key properties",
+      "back": "$$\\text{Softmax}(z_i) = \\frac{e^{z_i}}{\\sum_j e^{z_j}}$$\n\n**Properties:**\n- All outputs $\\in (0, 1)$\n- Outputs sum to 1 → probability distribution\n- **Shift invariance:** $\\text{Softmax}(z + c) = \\text{Softmax}(z)$ — subtract max for numerical stability\n\n*Used at output layer for multi-class classification. In attention: normalises scaled dot-product scores.*"
+    },
+    {
+      "id": "c09",
+      "front": "**LogSoftmax vs Softmax** — why is LogSoftmax numerically preferred?",
+      "back": "$$\\text{LogSoftmax}(z_i) = z_i - \\log\\sum_j e^{z_j}$$\n\n**Numerical stability:** computing $\\log(\\text{Softmax}(z))$ naively can overflow ($e^z$ for large $z$) or underflow (log of tiny probability). LogSoftmax uses the log-sum-exp trick internally.\n\n**Combined with NLLLoss** (`nn.NLLLoss`): expects log-probabilities as input → `LogSoftmax + NLLLoss` is equivalent to `CrossEntropyLoss` but allows inspection of log-probs.\n\n*PyTorch: `nn.LogSoftmax(dim=1)`*"
+    },
+    {
+      "id": "c10",
+      "front": "**Hardswish** — formula and advantage over Swish",
+      "back": "$$\\text{Hardswish}(x) = x \\cdot \\frac{\\text{ReLU6}(x+3)}{6}$$\n\nPiecewise-linear approximation of Swish ($x \\cdot \\sigma(x)$):\n\n$$= \\begin{cases} 0 & x \\leq -3 \\\\ x(x+3)/6 & -3 < x < 3 \\\\ x & x \\geq 3 \\end{cases}$$\n\n**Advantage:** eliminates sigmoid computation — no $e^x$ — making it ~3–5× faster on hardware without sigmoid support.\n\n*Used in MobileNetV3. PyTorch: `nn.Hardswish()`*"
+    },
+    {
+      "id": "c11",
+      "front": "**Shrinkage activations** — Hardshrink, Softshrink, and Softplus",
+      "back": "**Hardshrink:** sets inputs within $(-\\lambda, \\lambda)$ to zero; discontinuous at threshold.\n$$f(x) = \\begin{cases} x & |x| > \\lambda \\\\ 0 & |x| \\leq \\lambda \\end{cases}$$\n\n**Softshrink:** shifts larger inputs toward zero by $\\lambda$; continuous:\n$$f(x) = \\begin{cases} x - \\lambda & x > \\lambda \\\\ x + \\lambda & x < -\\lambda \\\\ 0 & \\text{otherwise} \\end{cases}$$\n\n**Softplus:** smooth approximation of ReLU — $\\log(1 + e^x)$; differentiable everywhere including at zero."
+    },
+    {
+      "id": "c12",
+      "front": "Compare FFN activations: **GPT-2, LLaMA, PaLM**",
+      "back": "| Model | FFN Activation | Family |\n|---|---|---|\n| GPT-2 | GELU | Smooth-modern |\n| LLaMA | SwiGLU | Gating (GLU + SiLU) |\n| PaLM | SwiGLU | Gating (GLU + SiLU) |\n\n**Trend:** early large transformers used GELU; modern architectures converged on SwiGLU after PaLM (2022) demonstrated its advantages.\n\n*Note: SwiGLU requires a three-matrix FFN (gate, value, output projections) vs the two-matrix GELU FFN — parameter budget adjusted by using $\\frac{2}{3}\\times$ the hidden dimension.*"
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "id": "r2",
+  "moduleId": "m7",
+  "title": "The GPU Memory Hierarchy: CGMA Ratio, Coalescing & Shared-Memory Tiling",
+  "estimatedMinutes": 20,
+  "learningObjectives": [
+    {
+      "id": "m7r2-lo1",
+      "verb": "Compute",
+      "description": "Compute the CGMA ratio for a given kernel and use the Roofline model to determine whether it is compute-bound or memory-bound, identifying the ridge point for a target GPU",
+      "skillTags": [
+        "memory-optimization",
+        "cuda-programming"
+      ]
+    },
+    {
+      "id": "m7r2-lo2",
+      "verb": "Explain",
+      "description": "Explain memory coalescing requirements for global memory access and identify which access patterns (stride-1, stride-2, scattered) result in single vs. multiple transactions",
+      "skillTags": [
+        "memory-optimization",
+        "cuda-programming"
+      ]
+    },
+    {
+      "id": "m7r2-lo3",
+      "verb": "Apply",
+      "description": "Apply shared-memory tiling to a matrix multiply kernel, derive the improved CGMA ratio as a function of tile width T, and state the theoretical speedup relative to the naïve implementation",
+      "skillTags": [
+        "memory-optimization",
+        "cuda-programming"
+      ]
+    },
+    {
+      "id": "m7r2-lo4",
+      "verb": "Identify",
+      "description": "Identify where the 3DGS rasterizer sits on the Roofline model and explain which hardware resource (memory bandwidth vs. compute) limits its throughput",
+      "skillTags": [
+        "memory-optimization",
+        "rendering-pipeline"
+      ]
+    }
+  ],
+  "content": "## Memory Is the Bottleneck\n\nAfter correctly mapping threads to data (Reading 1), the next question is how fast those threads can actually run. For most real kernels the answer is determined not by the arithmetic units but by the **memory subsystem**: how quickly can operands be delivered to the CUDA cores? This reading develops the key quantitative framework — the CGMA ratio and the roofline model — and shows exactly how it applies to the 3DGS rasterizer.\n\n## The GPU Memory Hierarchy\n\nCUDA exposes five distinct memory spaces with radically different latency and bandwidth:\n\n| Memory Type | Scope | Location | Latency | Size (per SM) |\n|---|---|---|---|---|\n| Registers | Per thread | On-chip | ≈1 cycle | ≈64K 32-bit regs |\n| Shared memory | Per block | On-chip | ≈5–30 cycles | 48–100 KB |\n| L1 cache | Per SM | On-chip | ≈30–40 cycles | 32–128 KB |\n| L2 cache | Per device | On-chip | ≈200 cycles | 4–50 MB |\n| Global memory (DRAM/HBM) | Per device | Off-chip | ≈500–800 cycles | GBs |\n| Constant memory | Per device | Off-chip, cached | ≈5 (hit) / ≈500 (miss) | 64 KB |\n\nIn CUDA source code, memory type is controlled by variable declaration:\n\n```cuda\n__global__ void kernel(float* d_data) {\n    float reg_var;                   // register (per-thread, on-chip)\n    __shared__ float s_tile[16][16]; // shared memory (per-block, on-chip)\n    // d_data is in global memory (off-chip)\n    __constant__ float c_val;        // constant memory (read-only, cached)\n}\n```\n\nThe enormous latency gap between registers/shared memory (≈1–30 cycles) and global memory (≈500–800 cycles) is the fundamental challenge of GPU programming. A kernel that frequently stalls waiting for global memory reads is **memory-bound** — it wastes the compute capacity of the ALUs.\n\n## The CGMA Ratio: Quantifying the Bottleneck\n\nKirk & Hwu define the **Compute-to-Global-Memory-Access (CGMA) ratio** as the number of floating-point operations performed per byte of global memory accessed:\n\n$$\\text{CGMA} = \\frac{\\text{Floating-point operations}}{\\text{Global memory accesses (bytes)}}$$\n\nThis single number determines whether a kernel is compute-bound or memory-bound on a given GPU.\n\n### Case Study: Naïve Matrix Multiply\n\nFor an \\(N \\times N\\) matrix multiplication \\(P = M \\times N\\), each output element \\(P[i][j]\\) requires:\n- \\(N\\) multiply-add operations = \\(2N\\) floating-point operations\n- \\(2N\\) reads from global memory: one element from row \\(i\\) of \\(M\\) and one from column \\(j\\) of \\(N\\)\n\nWith 4 bytes per float32:\n\n$$\\text{CGMA}_{\\text{naive}} = \\frac{2N \\text{ FP ops}}{2N \\times 4 \\text{ bytes}} = \\frac{1}{4} = 0.25 \\text{ FLOPs/byte}$$\n\nThe maximum achievable throughput is then:\n\n$$\\text{Achievable FLOP/s} = \\min\\left(\\text{Peak FLOP/s},\\ \\text{Bandwidth} \\times \\text{CGMA}\\right)$$\n\nOn the NVIDIA G80 (the architecture analyzed throughout Kirk & Hwu):\n- Peak FP32 throughput: **367 GFlop/s**\n- Global memory bandwidth: **86.4 GB/s**\n- Achievable at CGMA = 0.25: \\(86.4 \\times 0.25 = 21.6\\) GFlop/s\n\nThe naïve matrix multiply achieves only **5.9%** of the G80's peak compute capability, purely because of memory bandwidth limitation.\n\nThis result is not specific to the G80. On a modern NVIDIA A100:\n- Peak FP32 throughput: **19.5 TFlop/s**\n- HBM2e bandwidth: **2.0 TB/s**\n- Achievable at CGMA = 0.25: \\(2.0 \\times 10^3 \\times 0.25 = 500\\) GFlop/s = **2.6%** of peak\n\nDespite 23× more bandwidth than the G80, the A100 is *more* compute-bound at low CGMA ratios because its arithmetic throughput grew even faster than its bandwidth. The memory wall intensifies with each GPU generation.\n\n## Memory Coalescing\n\nGlobal memory bandwidth is not simply a fixed pipeline — its effective throughput depends critically on the **access pattern** of the 32 threads in a warp.\n\n**The coalescing rule**: when all 32 threads in a warp access a contiguous, naturally aligned block of memory in a single instruction, the hardware coalesces those 32 accesses into **one memory transaction**. When the accesses are scattered, each may require a separate transaction.\n\n| Access pattern | Transactions | Effective bandwidth |\n|---|---|---|\n| Stride-1 (consecutive), aligned | 1 | 100% |\n| Stride-2 (every other address) | 2 | 50% |\n| Stride-4 | 4 | 25% |\n| Random (32 distinct cache lines) | up to 32 | ≈3% |\n\nThe practical implication: **array-of-structures (AoS) layouts are often uncoalesced; structure-of-arrays (SoA) layouts coalesce naturally**.\n\nExample — suppose each Gaussian has `{float x, y, z, opacity}` and we store them as AoS:\n```\nGaussian[0].x, Gaussian[0].y, Gaussian[0].z, Gaussian[0].opacity,\nGaussian[1].x, Gaussian[1].y, Gaussian[1].z, Gaussian[1].opacity,\n...\n```\nWhen thread `k` reads `Gaussian[k].x`, consecutive threads read addresses that are 16 bytes apart (the stride of one full struct), not 4 bytes apart. Each read requires a separate cache line. With 32 threads: up to 32 transactions instead of 1.\n\nWith SoA layout:\n```\nall_x[0], all_x[1], ..., all_x[N-1],\nall_y[0], all_y[1], ...\n```\nThread `k` reading `all_x[k]` accesses addresses spaced 4 bytes apart — stride-1, perfectly coalesced.\n\nIn the 3DGS training pipeline, Gaussian attributes (positions, colors, scales, rotations, opacities) are stored as separate contiguous tensors (SoA), which is why the CUDA kernels achieve reasonable bandwidth utilization.\n\n## Shared-Memory Tiling: Multiplying the CGMA Ratio\n\nThe solution to the CGMA problem is **tiling with shared memory**: load data from slow global memory into fast shared memory once, then let all threads in the block reuse it.\n\n### Tiled Matrix Multiply\n\nDivide the matrices into \\(T \\times T\\) tiles. Each thread block loads one tile of \\(M\\) and one tile of \\(N\\) into shared memory cooperatively (one element per thread), computes partial dot products using the shared-memory data, then advances to the next tile:\n\n```cuda\n__shared__ float M_tile[TILE_WIDTH][TILE_WIDTH];\n__shared__ float N_tile[TILE_WIDTH][TILE_WIDTH];\n\nfor (int phase = 0; phase < N / TILE_WIDTH; phase++) {\n    // Cooperative load: each thread loads one element\n    M_tile[ty][tx] = M[row * N + (phase * TILE_WIDTH + tx)];\n    N_tile[ty][tx] = N[(phase * TILE_WIDTH + ty) * N + col];\n    __syncthreads();\n\n    // Compute partial dot product from shared memory (fast!)\n    for (int k = 0; k < TILE_WIDTH; k++)\n        Pvalue += M_tile[ty][k] * N_tile[k][tx];\n    __syncthreads();\n}\n```\n\nWith tile width \\(T\\):\n- Each element is loaded from global memory **once** and used **T times**\n- CGMA increases to:\n\n$$\\text{CGMA}_{\\text{tiled}} = T \\times \\text{CGMA}_{\\text{naive}} = \\frac{T}{4}$$\n\nFor \\(T = 16\\): CGMA = 4.0. For \\(T = 32\\): CGMA = 8.0.\n\nOn the G80 with \\(T = 16\\): achievable throughput rises from 21.6 GFlop/s to \\(86.4 \\times 4.0 = 345.6\\) GFlop/s — **94% of peak** instead of 5.9%. Shared-memory tiling is the single most impactful optimization for memory-bound kernels.\n\nThe 3DGS rasterizer applies exactly this principle: rather than each pixel thread independently fetching each Gaussian's attributes from global memory, the block cooperatively loads a batch of Gaussians into `__shared__` arrays, then all 256 pixel threads iterate over the shared batch. This is the `BLOCK_SIZE = 16` loading loop in `forward.cu`.\n\n## The Roofline Model\n\nThe roofline model (Williams et al., 2009) provides a visual framework for understanding performance limits. For a given GPU:\n\n- **Peak compute ceiling**: \\(\\pi\\) FLOP/s (e.g., 19.5 TFlop/s for A100 FP32)\n- **Memory bandwidth ceiling**: \\(\\beta \\times I\\) where \\(\\beta\\) is bandwidth (GB/s) and \\(I\\) is the **arithmetic intensity** (= CGMA) in FLOP/byte\n\nThe achievable performance \\(P\\) for a kernel with arithmetic intensity \\(I\\):\n\n$$P = \\min(\\pi,\\ \\beta \\times I)$$\n\nThe **ridge point** is the arithmetic intensity at which the two ceilings meet:\n\n$$I^* = \\frac{\\pi}{\\beta}$$\n\nFor the A100: \\(I^* = 19,500 / 2,000 = 9.75\\) FLOP/byte. Kernels with \\(I < 9.75\\) are **memory-bound** — bounded by bandwidth. Kernels with \\(I > 9.75\\) are **compute-bound** — bounded by ALU throughput.\n\n| GPU | Peak FP32 (TFlop/s) | Bandwidth (TB/s) | Ridge point (FLOP/byte) |\n|---|---|---|---|\n| NVIDIA G80 (2006) | 0.367 | 0.086 | 4.3 |\n| NVIDIA V100 (2017) | 14.0 | 0.900 | 15.6 |\n| NVIDIA A100 (2020) | 19.5 | 2.000 | 9.75 |\n| NVIDIA H100 (2022) | 51.2 | 3.350 | 15.3 |\n\n### Where Does the 3DGS Rasterizer Sit?\n\nA rough estimate for the 3DGS alpha-blending inner loop:\n- Per Gaussian per pixel: ≈20 FP ops (2D Gaussian evaluation, alpha computation, color accumulation)\n- Per Gaussian per pixel: ≈40 bytes read from shared memory (position, cov2D, color, opacity)\n- Arithmetic intensity ≈ 20/40 = **0.5 FLOP/byte**\n\nOn the A100, with \\(I = 0.5 < I^* = 9.75\\), the rasterizer inner loop is **deeply memory-bound** even when using shared memory. Optimization strategies must focus on increasing data reuse or reducing the number of Gaussians processed per tile — not on arithmetic throughput.\n\n## Warp Occupancy and Latency Hiding\n\nHigh occupancy (many active warps per SM) is the GPU's primary strategy for hiding memory latency. While one warp waits 500 cycles for a global memory load, the SM's warp scheduler switches to another warp that has its operands ready.\n\n**Theoretical occupancy** is limited by three resources per SM:\n1. **Registers**: if a kernel uses \\(r\\) registers per thread and the SM has \\(R_{\\max}\\) total registers, at most \\(\\lfloor R_{\\max} / (r \\times B) \\rfloor\\) blocks of size \\(B\\) fit simultaneously, where \\(\\lfloor \\cdot \\rfloor\\) denotes floor to the nearest integer multiple of the warp size.\n2. **Shared memory**: if a kernel uses \\(s\\) bytes of shared memory per block and the SM has \\(S_{\\max}\\) bytes, at most \\(\\lfloor S_{\\max} / s \\rfloor\\) blocks fit.\n3. **Block count limit**: hardware caps the number of concurrent blocks per SM (typically 32).\n\nAchieved occupancy = (actual active warps) / (maximum warps per SM). The NVIDIA Occupancy Calculator or `ncu --metrics sm__warps_active.avg.pct_of_peak_sustained_active` provides the measured value.\n\nA key insight: **100% occupancy is not always necessary**. If memory latency is fully hidden with 50% occupancy, increasing to 100% provides no throughput gain — and the extra register pressure required might force register spillage to local memory, making things worse. The optimization goal is *sufficient* occupancy to hide the dominant latency, not maximum possible occupancy.",
+  "references": [
+    {
+      "label": "Kirk & Hwu 2010",
+      "title": "Programming Massively Parallel Processors — Chapter 5: CUDA Memories, Chapter 6: Performance Considerations",
+      "url": "https://www.elsevier.com/books/programming-massively-parallel-processors/kirk/978-0-12-381472-2"
+    },
+    {
+      "label": "Williams et al. 2009",
+      "title": "Roofline: An Insightful Visual Performance Model for Floating-Point Programs and Multicore Architectures",
+      "url": "https://dl.acm.org/doi/10.1145/1498765.1498785"
+    },
+    {
+      "label": "NVIDIA 2023",
+      "title": "Nsight Compute Roofline Analysis",
+      "url": "https://docs.nvidia.com/nsight-compute/NsightComputeCli/index.html"
+    }
+  ],
+  "nextItem": {
+    "type": "reading",
+    "id": "r3"
+  },
+  "prevItem": {
+    "type": "reading",
+    "id": "r1"
+  }
+}

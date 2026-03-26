@@ -1,0 +1,118 @@
+{
+  "id": "q1",
+  "moduleId": "calculus-foundations",
+  "title": "Derivatives and Differentiation Rules",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "type": "reading", "id": "r4" },
+  "nextItem": { "type": "reading", "id": "r5" },
+  "questions": [
+    {
+      "id": "q1_1",
+      "type": "multiple-choice",
+      "prompt": "The derivative $f'(x)$ is defined as:\n$$f'(x) = \\lim_{h \\to 0} \\frac{f(x+h) - f(x)}{h}$$\nWhy can't we simply substitute $h = 0$ directly?",
+      "options": [
+        { "id": "a", "text": "The function $f$ might not be defined at $x$", "correct": false },
+        { "id": "b", "text": "Substituting $h = 0$ gives $0/0$, which is undefined — we must simplify first so the denominator cancels", "correct": true },
+        { "id": "c", "text": "Limits only work for polynomial functions", "correct": false },
+        { "id": "d", "text": "We need $h$ to be negative, not zero", "correct": false }
+      ],
+      "explanation": "The difference quotient $[f(x+h)-f(x)]/h$ is a $0/0$ indeterminate form when $h=0$ — both numerator and denominator vanish. The limit process asks: what value does the ratio approach as $h$ gets arbitrarily small? We simplify the expression algebraically first (e.g., expanding $(x+h)^2$) so the $h$ in the denominator cancels, leaving a finite limit.",
+      "hint": "Substitute $h=0$ into both numerator and denominator separately. What do you get?"
+    },
+    {
+      "id": "q1_2",
+      "type": "multiple-choice",
+      "prompt": "Using the power rule, what is $\\frac{d}{dx}[4x^3 - 6x + 2]$?",
+      "options": [
+        { "id": "a", "text": "$12x^2 - 6$", "correct": true },
+        { "id": "b", "text": "$12x^2 - 6x$", "correct": false },
+        { "id": "c", "text": "$4x^2 - 6$", "correct": false },
+        { "id": "d", "text": "$12x^3 - 6$", "correct": false }
+      ],
+      "explanation": "Apply power rule term by term: $\\frac{d}{dx}[4x^3] = 12x^2$, $\\frac{d}{dx}[-6x] = -6$, $\\frac{d}{dx}[2] = 0$. Sum: $12x^2 - 6$. Common error: forgetting to reduce the exponent (getting $4x^2$ instead of $12x^2$), or failing to eliminate the constant term.",
+      "hint": "Differentiate each term separately using $\\frac{d}{dx}[cx^n] = cnx^{n-1}$."
+    },
+    {
+      "id": "q1_3",
+      "type": "multiple-choice",
+      "prompt": "Which expression correctly applies the product rule to $h(x) = x^3 \\cos x$?",
+      "options": [
+        { "id": "a", "text": "$h'(x) = 3x^2 \\cdot (-\\sin x)$", "correct": false },
+        { "id": "b", "text": "$h'(x) = 3x^2 \\cos x - x^3 \\sin x$", "correct": true },
+        { "id": "c", "text": "$h'(x) = 3x^2 \\cos x + x^3 \\cos x$", "correct": false },
+        { "id": "d", "text": "$h'(x) = -3x^2 \\sin x$", "correct": false }
+      ],
+      "explanation": "Product rule: $(fg)' = f'g + fg'$. Here $f = x^3$, $g = \\cos x$, so $f' = 3x^2$ and $g' = -\\sin x$. Result: $3x^2 \\cdot \\cos x + x^3 \\cdot (-\\sin x) = 3x^2\\cos x - x^3\\sin x$. Option (a) ignores the $f'g$ term entirely. Options (c) and (d) use wrong derivative of $\\cos x$.",
+      "hint": "$(fg)' = f'g + fg'$. Here $f = x^3$ and $g = \\cos x$. What is $\\frac{d}{dx}[\\cos x]$?"
+    },
+    {
+      "id": "q1_4",
+      "type": "multiple-choice",
+      "prompt": "What is $\\frac{d}{dx}\\left[(2x^2 + 1)^6\\right]$?",
+      "options": [
+        { "id": "a", "text": "$6(2x^2+1)^5$", "correct": false },
+        { "id": "b", "text": "$24x(2x^2+1)^5$", "correct": true },
+        { "id": "c", "text": "$6(4x)^5$", "correct": false },
+        { "id": "d", "text": "$12x(2x^2+1)^6$", "correct": false }
+      ],
+      "explanation": "Chain rule: outer function $f(u) = u^6$ gives $f'(u) = 6u^5$; inner function $g(x) = 2x^2+1$ gives $g'(x) = 4x$. Result: $6(2x^2+1)^5 \\cdot 4x = 24x(2x^2+1)^5$. Option (a) forgets to multiply by the inner derivative $4x$. Option (c) incorrectly differentiates the inner function.",
+      "hint": "Identify the outer function $f(u) = u^6$ and inner function $g(x) = 2x^2+1$. Apply chain rule: $f'(g(x)) \\cdot g'(x)$."
+    },
+    {
+      "id": "q1_5",
+      "type": "multiple-choice",
+      "prompt": "The function $\\sigma(x) = \\frac{1}{1 + e^{-x}}$ (sigmoid) has derivative $\\sigma'(x) = \\sigma(x)(1-\\sigma(x))$. At $x = 0$, what is $\\sigma'(0)$?",
+      "options": [
+        { "id": "a", "text": "$0$", "correct": false },
+        { "id": "b", "text": "$0.25$", "correct": true },
+        { "id": "c", "text": "$0.5$", "correct": false },
+        { "id": "d", "text": "$1$", "correct": false }
+      ],
+      "explanation": "At $x=0$: $\\sigma(0) = 1/(1+e^0) = 1/2$. Then $\\sigma'(0) = \\sigma(0)(1-\\sigma(0)) = \\frac{1}{2} \\cdot \\frac{1}{2} = \\frac{1}{4} = 0.25$. This is the **maximum** of the sigmoid's derivative — it is steepest at $x=0$. At large $|x|$, the sigmoid saturates and its derivative approaches 0.",
+      "hint": "First compute $\\sigma(0)$, then substitute into $\\sigma'(x) = \\sigma(x)(1-\\sigma(x))$."
+    },
+    {
+      "id": "q1_6",
+      "type": "multiple-choice",
+      "prompt": "Which statement about the derivative of $\\ln x$ is correct?",
+      "options": [
+        { "id": "a", "text": "$\\frac{d}{dx}[\\ln x] = e^x$", "correct": false },
+        { "id": "b", "text": "$\\frac{d}{dx}[\\ln x] = \\frac{1}{x}$, so the gradient of $-\\ln \\hat{p}$ with respect to $\\hat{p}$ is $-1/\\hat{p}$ — growing large when $\\hat{p} \\to 0$", "correct": true },
+        { "id": "c", "text": "$\\frac{d}{dx}[\\ln x] = x$", "correct": false },
+        { "id": "d", "text": "$\\frac{d}{dx}[\\ln x] = \\frac{1}{x^2}$", "correct": false }
+      ],
+      "explanation": "$\\frac{d}{dx}[\\ln x] = 1/x$. Applied to the cross-entropy loss $-\\ln\\hat{p}$: the gradient with respect to $\\hat{p}$ is $-1/\\hat{p}$. When the model is very confident but wrong ($\\hat{p} \\approx 0$ for the correct class), this gradient is enormous — the loss sends a strong corrective signal. This automatic scaling of the gradient to prediction confidence is one reason cross-entropy is preferred over mean squared error for classification.",
+      "hint": "Recall $\\frac{d}{dx}[\\ln x] = 1/x$. Apply the chain rule: $\\frac{d}{d\\hat{p}}[-\\ln \\hat{p}] = ?$"
+    },
+    {
+      "id": "q1_7",
+      "type": "multiple-choice",
+      "prompt": "In backpropagation through a two-layer network, the gradient of the loss with respect to the first layer's weight $w_1$ requires which of the following?\n\n$$\\frac{\\partial \\mathcal{L}}{\\partial w_1} = \\frac{\\partial \\mathcal{L}}{\\partial a_2} \\cdot \\frac{\\partial a_2}{\\partial z_2} \\cdot \\frac{\\partial z_2}{\\partial a_1} \\cdot \\frac{\\partial a_1}{\\partial z_1} \\cdot \\frac{\\partial z_1}{\\partial w_1}$$",
+      "options": [
+        { "id": "a", "text": "The sum rule applied repeatedly", "correct": false },
+        { "id": "b", "text": "The chain rule applied across each composed function in the forward pass", "correct": true },
+        { "id": "c", "text": "The product rule applied to the weight matrices", "correct": false },
+        { "id": "d", "text": "The quotient rule applied to the loss function", "correct": false }
+      ],
+      "explanation": "The expression $\\partial \\mathcal{L}/\\partial w_1$ is the derivative of a composition $\\mathcal{L}(a_2(z_2(a_1(z_1(w_1)))))$. By the chain rule for multiple composed functions, this is the product of local derivatives at each step. Each factor represents how sensitive one quantity is to the previous one — exactly the Leibniz chain rule $dy/dx = (dy/du)(du/dv)(dv/dx)$ extended to five variables. Backpropagation is this chain rule applied systematically across the computation graph.",
+      "hint": "Look at the structure: each $\\partial/\\partial$ factor is a local derivative at one step of the composition. Which rule handles compositions?"
+    },
+    {
+      "id": "q1_8",
+      "type": "code-completion",
+      "prompt": "Complete the function that computes the derivative of the sigmoid $\\sigma(x) = 1/(1+e^{-x})$ at a given value of $x$, using the identity $\\sigma'(x) = \\sigma(x)(1-\\sigma(x))$. `sigmoid_derivative(0.0)` should return `0.25`.",
+      "codeTemplate": "import math\n\ndef sigmoid(x):\n    return 1 / (1 + math.exp(-x))\n\ndef sigmoid_derivative(x):\n    \"\"\"\n    Return σ'(x) = σ(x) · (1 - σ(x))\n    \"\"\"\n    s = sigmoid(x)\n    return ___BLANK___",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "s * (1 - s)",
+        "s * (1-s)",
+        "(s) * (1 - s)",
+        "s*(1-s)"
+      ],
+      "explanation": "The sigmoid derivative $\\sigma'(x) = \\sigma(x)(1-\\sigma(x))$ uses the already-computed sigmoid value $s$. At $x=0$: $s = 0.5$, so $s(1-s) = 0.5 \\times 0.5 = 0.25$. This form is efficient in practice: if $\\sigma(x)$ is already computed during the forward pass, the derivative costs only one multiplication and one subtraction — no re-evaluation of the exponential needed.",
+      "hint": "The function $\\sigma(x)$ is already computed as $s$. The derivative is $s \\times (1 - s)$."
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "id": "r2",
+  "moduleId": "linear-algebra",
+  "title": "Solution Sets and the Homogeneous Structure",
+  "estimatedMinutes": 16,
+  "learningObjectives": [
+    {
+      "id": "r2-lo1",
+      "verb": "Express",
+      "description": "Express the complete solution set of a linear system as General = Particular + Homogeneous",
+      "skillTags": [
+        "matrix-structure",
+        "linear-fitting"
+      ]
+    },
+    {
+      "id": "r2-lo2",
+      "verb": "Write",
+      "description": "Write a basis for the null space using free variables as parameters",
+      "skillTags": [
+        "matrix-structure"
+      ]
+    },
+    {
+      "id": "r2-lo3",
+      "verb": "Apply",
+      "description": "Apply the Linear Combination Lemma to verify whether a proposed vector satisfies a system",
+      "skillTags": [
+        "matrix-structure"
+      ]
+    },
+    {
+      "id": "r2-lo4",
+      "verb": "Relate",
+      "description": "Relate the number of free variables to solution multiplicity: unique, infinitely many, or none",
+      "skillTags": [
+        "matrix-structure",
+        "linear-fitting"
+      ]
+    }
+  ],
+  "content": "## Describing the Solution Set\n\nWhen a linear system has infinitely many solutions, we need a compact description. The standard form is **parametric**: express each pivot variable in terms of the free variables, which become the parameters.\n\n### Example\n\nConsider the reduced system:\n\n$$\\left[\\begin{array}{rrrr|r} 1 & 2 & 0 & 1 & 3 \\\\ 0 & 0 & 1 & -1 & 2 \\\\ 0 & 0 & 0 & 0 & 0 \\end{array}\\right]$$\n\n<div class=\"parametric-embed\"></div>\n\nPivot variables: $x_1$ (column 1) and $x_3$ (column 3). Free variables: $x_2$ and $x_4$.\n\nReading off the equations:\n- $x_1 = 3 - 2x_2 - x_4$\n- $x_3 = 2 + x_4$\n- $x_2, x_4$ free (any value)\n\nParametric form (let $x_2 = s$, $x_4 = t$):\n\n$$\\vec{x} = \\begin{pmatrix} 3 \\\\ 0 \\\\ 2 \\\\ 0 \\end{pmatrix} + s\\begin{pmatrix} -2 \\\\ 1 \\\\ 0 \\\\ 0 \\end{pmatrix} + t\\begin{pmatrix} -1 \\\\ 0 \\\\ 1 \\\\ 1 \\end{pmatrix}, \\quad s,t \\in \\mathbb{R}$$\n\nThis is the **solution set** expressed as an affine combination of vectors. Its geometric shape is a 2-dimensional flat (plane) in $\\mathbb{R}^4$.\n\n<div class=\"solution-set-embed\"></div>\n\n## General = Particular + Homogeneous\n\nThe parametric form reveals a fundamental structural theorem. Let $\\vec{p}$ be any **particular solution** (any single solution to $A\\vec{x} = \\vec{b}$) and let $\\vec{h}$ range over all solutions of the **homogeneous system** $A\\vec{x} = \\vec{0}$.\n\nThen the complete solution set of $A\\vec{x} = \\vec{b}$ is:\n\n$$\\{\\vec{x} : A\\vec{x} = \\vec{b}\\} = \\{\\vec{p} + \\vec{h} : A\\vec{h} = \\vec{0}\\}$$\n\n**Why**: if $A\\vec{p} = \\vec{b}$ and $A\\vec{h} = \\vec{0}$, then $A(\\vec{p} + \\vec{h}) = A\\vec{p} + A\\vec{h} = \\vec{b} + \\vec{0} = \\vec{b}$. And if $A\\vec{x} = \\vec{b}$ then $A(\\vec{x} - \\vec{p}) = \\vec{0}$, so $\\vec{x} - \\vec{p}$ is a homogeneous solution.\n\n**Geometric picture**: the solution set of $A\\vec{x} = \\vec{b}$ is the solution set of the homogeneous system *translated* by $\\vec{p}$. It is a flat (affine subspace) passing through $\\vec{p}$, parallel to the null space $\\mathcal{N}(A)$.\n\n## The Homogeneous System\n\nThe system $A\\vec{x} = \\vec{0}$ always has at least one solution: $\\vec{x} = \\vec{0}$. This is the **trivial solution**.\n\nThe solution set $\\mathcal{N}(A) = \\{\\vec{x} : A\\vec{x} = \\vec{0}\\}$ is the **null space** of $A$. It is always a subspace (it contains $\\vec{0}$ and is closed under addition and scaling).\n\n**When is the trivial solution the only one?** When there are no free variables — i.e., every column of $A$ contains a pivot. For an $n \\times n$ square matrix, this is equivalent to $A$ being invertible.\n\n## The Linear Combination Lemma\n\nThis core lemma formalizes why row operations preserve the solution set:\n\n> If $\\vec{x}$ solves both $a_1 x_1 + \\cdots + a_n x_n = b$ and $c_1 x_1 + \\cdots + c_n x_n = d$, then it also solves every linear combination $k(a_1 x_1 + \\cdots + a_n x_n) + m(c_1 x_1 + \\cdots + c_n x_n) = kb + md$.\n\nThis means: any equation derivable from the original equations by linear combination is automatically satisfied by every solution of the original system. Row operations are just a systematic way of creating useful linear combinations.\n\n## Existence and Uniqueness\n\n**Existence** ($A\\vec{x} = \\vec{b}$ has a solution): $\\vec{b}$ must lie in the column space of $A$ — it must be expressible as a linear combination of the columns of $A$.\n\n**Uniqueness** (the solution, if it exists, is unique): $\\mathcal{N}(A) = \\{\\vec{0}\\}$ — the only homogeneous solution is trivial.\n\nFor a square $n \\times n$ matrix $A$:\n\n| Condition | Interpretation |\n|---|---|\n| $\\text{rank}(A) = n$ | $A$ has full rank; unique solution for every $\\vec{b}$ |\n| $\\text{rank}(A) < n$ | $A$ is rank-deficient; either no solution or $\\infty$ many |\n| $\\det(A) \\neq 0$ | Equivalent to full rank for square matrices |\n\nThis interplay between existence, uniqueness, rank, and determinant is the central theorem of linear systems — you will encounter it repeatedly as you study optimization and regression.\n\n## Computing the Decomposition\n\nThe parametric form derived above is not just pencil-and-paper algebra — you can read it directly into code. Using the same matrix:\n\n```python\nimport numpy as np\n\nA  = np.array([[1., 2., 0.,  1.],\n               [0., 0., 1., -1.],\n               [0., 0., 0.,  0.]])\nb  = np.array([3., 2., 0.])\n\n# Particular solution: set free variables (x2, x4) to zero\np  = np.array([ 3., 0.,  2.,  0.])\n\n# Null-space basis read directly from the parametric form\nh1 = np.array([-2., 1.,  0.,  0.])  # coefficient of free variable x2\nh2 = np.array([-1., 0.,  1.,  1.])  # coefficient of free variable x4\n\n# Any x = p + s*h1 + t*h2 satisfies A @ x = b  (General = Particular + Homogeneous)\ns, t = 3., -1.\nx = p + s*h1 + t*h2\nprint('A @ x:', np.einsum('ij,j->i', A, x))        # [3. 2. 0.]\nprint('residual:', np.einsum('ij,j->i', A, x) - b)  # [0. 0. 0.]\n\n# Programmatic null space via SVD (when you cannot read it off by hand)\n_, S, Vh = np.linalg.svd(A, full_matrices=True)\nrank       = int(np.sum(S > 1e-9))\nnull_basis = Vh[rank:]   # rows are null vectors; shape (2, 4)\nprint('null basis (rows):')\nprint(np.round(null_basis, 4))\n```\n\nThe `einsum` string `'ij,j->i'` is identical in NumPy, PyTorch (`torch.einsum`), and TensorFlow (`tf.einsum`). The SVD-based null space is in an orthonormal basis rather than the free-variable basis, but it spans the same subspace as the parametric vectors above. For large systems, `np.linalg.lstsq` (or its PyTorch/TF equivalents) finds a minimum-norm particular solution automatically, without needing to identify free variables by hand.",
+  "equationBreakdowns": [
+    {
+      "label": "General = Particular + Homogeneous",
+      "terms": [
+        {
+          "symbol": "\\vec{p}",
+          "name": "Particular solution",
+          "desc": "Any single vector satisfying Ax = b. The choice of particular solution doesn't matter — all choices give the same complete solution set because they differ by a homogeneous solution."
+        },
+        {
+          "symbol": "\\{\\vec{h} : A\\vec{h} = \\vec{0}\\}",
+          "name": "Null space N(A)",
+          "desc": "The set of all solutions to the homogeneous system. Always a subspace. Its dimension (nullity) counts the number of free variables."
+        },
+        {
+          "symbol": "\\vec{p} + \\vec{h}",
+          "name": "General solution",
+          "desc": "Every solution to Ax = b is obtained by taking the particular solution and adding any homogeneous solution. The set of all such sums is an affine subspace — a translated copy of N(A)."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Hefferon 2020",
+      "title": "Linear Algebra, Ch. One §I.2–I.3: Solution Sets, General=Particular+Homogeneous",
+      "url": null
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r1"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r2b"
+  }
+}

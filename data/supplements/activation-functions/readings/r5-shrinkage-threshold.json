@@ -1,0 +1,116 @@
+{
+  "id": "r5",
+  "moduleId": "activation-functions",
+  "title": "Shrinkage & Threshold Functions",
+  "estimatedMinutes": 13,
+  "learningObjectives": [
+    {
+      "id": "r5-lo1",
+      "verb": "Explain",
+      "description": "Explain the shrinkage principle: setting small-magnitude inputs to zero while shifting larger inputs toward zero by a threshold",
+      "skillTags": [
+        "shrinkage"
+      ]
+    },
+    {
+      "id": "r5-lo2",
+      "verb": "Distinguish",
+      "description": "Distinguish Hardshrink (hard threshold, discontinuous) from Softshrink (soft threshold, continuous) in terms of their effect on near-zero inputs",
+      "skillTags": [
+        "shrinkage"
+      ]
+    },
+    {
+      "id": "r5-lo3",
+      "verb": "Apply",
+      "description": "Apply Softplus as a smooth differentiable approximation to ReLU and explain when continuity at zero matters for gradient-based optimisation",
+      "skillTags": [
+        "shrinkage",
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r5-lo4",
+      "verb": "Connect",
+      "description": "Connect Softshrink to the proximal operator of the L1 norm and explain its role in sparse signal recovery",
+      "skillTags": [
+        "shrinkage"
+      ]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r4"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r6"
+  },
+  "content": "## The Shrinkage Principle\n\nShrinkage functions selectively suppress activations based on magnitude. They are connected to sparsity-inducing regularization: **Hardshrink** corresponds to hard thresholding, **Softshrink** is the proximal operator of the L1 norm (appearing in LASSO), and **Tanhshrink** is a smooth alternative. These functions are most useful in sparse autoencoders, compressed sensing models, and signal denoising networks.\n\n## Hardshrink\n\n$$f(x) = \\begin{cases} x & |x| > \\lambda \\\\ 0 & |x| \\leq \\lambda \\end{cases}$$\n\nHardshrink zeroes out all values within $[-\\lambda, \\lambda]$ and passes values outside this band through unchanged. The output range is $(-\\infty, -\\lambda] \\cup \\{0\\} \\cup [\\lambda, \\infty)$ — there is a gap of zeros around the origin.\n\n**Gradient:** $f'(x) = 1$ for $|x| > \\lambda$, $f'(x) = 0$ for $|x| < \\lambda$. Non-differentiable at $x = \\pm\\lambda$. This hard discontinuity can cause gradient issues, but the sparsity it induces is exact — activations either survive completely or are fully zeroed.\n\n**Use case:** Sparse coding, denoising autoencoders where you want exactly zero activations for small features.\n\n**PyTorch:**\n```python\nx = torch.tensor([-2., -0.3, 0., 0.3, 2.])\nprint(nn.Hardshrink(lambd=0.5)(x))   # tensor([-2., 0., 0., 0., 2.])\nprint(F.hardshrink(x, lambd=0.5))    # identical\n```\n\n**TensorFlow:**\n```python\n# No built-in Hardshrink; implement with tf.where\nx = tf.constant([-2., -0.3, 0., 0.3, 2.])\nlambd = 0.5\nhardshrink = lambda x, l: tf.where(tf.abs(x) > l, x, tf.zeros_like(x))\nprint(hardshrink(x, lambd))   # [-2.  0.  0.  0.  2.]\n```\n\n## Softshrink — Soft Thresholding\n\n$$f(x) = \\text{sign}(x) \\cdot \\max(0, |x| - \\lambda) = \\begin{cases} x - \\lambda & x > \\lambda \\\\ 0 & |x| \\leq \\lambda \\\\ x + \\lambda & x < -\\lambda \\end{cases}$$\n\nSoftshrink is the **proximal operator of the L1 norm**: minimizing $\\frac{1}{2}\\|u - x\\|^2 + \\lambda\\|u\\|_1$ with respect to $u$ yields $u = \\text{Softshrink}(x, \\lambda)$. This connects directly to LASSO regression and compressed sensing.\n\n**Gradient:** $f'(x) = 1$ for $|x| > \\lambda$, 0 for $|x| < \\lambda$. Non-differentiable at $\\pm\\lambda$.\n\n**Difference from Hardshrink:** Hardshrink passes values as-is when they exceed $\\lambda$. Softshrink *shifts* them toward zero by $\\lambda$. Softshrink is bias-corrected — the surviving values are smaller.\n\n**PyTorch:**\n```python\nx = torch.tensor([-2., -0.3, 0., 0.3, 2.])\nprint(nn.Softshrink(lambd=0.5)(x))   # tensor([-1.5,  0.0,  0.0,  0.0,  1.5])\n# Values that survive are shifted toward zero by lambd\n```\n\n**TensorFlow:**\n```python\n# No built-in Softshrink; implement as proximal operator of L1\nx = tf.constant([-2., -0.3, 0., 0.3, 2.])\nlambd = 0.5\nsoftshrink = lambda x, l: tf.math.sign(x) * tf.nn.relu(tf.abs(x) - l)\nprint(softshrink(x, lambd))   # [-1.5  0.   0.   0.   1.5]\n```\n\n## Tanhshrink\n\n$$f(x) = x - \\tanh(x)$$\n\nTanhshrink computes the residual between the identity and Tanh. Since $\\tanh(x) \\approx x$ near the origin, $f(x) \\approx 0$ for small $x$ — the function shrinks small values without a hard threshold. For large $|x|$, $\\tanh(x) \\to \\pm 1$, so $f(x) \\approx x \\mp 1$.\n\n**Gradient:** $f'(x) = 1 - \\tanh'(x) = 1 - (1 - \\tanh^2(x)) = \\tanh^2(x)$\n\nSmooth everywhere; gradient is always in $[0, 1]$. No dead zones, but shrinks most at the origin.\n\n**PyTorch:**\n```python\nx = torch.tensor([-2., -1., 0., 1., 2.])\nprint(nn.Tanhshrink()(x))   # tensor([-1.0036, -0.2384,  0.0000,  0.2384,  1.0036])\n# = x - tanh(x); smooth; no hard threshold\n```\n\n**TensorFlow:**\n```python\nx = tf.constant([-2., -1., 0., 1., 2.])\ntanhshrink = lambda x: x - tf.math.tanh(x)\nprint(tanhshrink(x))   # [-1.0036 -0.2384  0.      0.2384  1.0036]\n```\n\n## Threshold\n\n$$f(x) = \\begin{cases} x & x > \\text{threshold} \\\\ \\text{value} & x \\leq \\text{threshold} \\end{cases}$$\n\nThreshold is the most general step function: values above the threshold pass through unchanged; values at or below are replaced with a specified constant `value`. Unlike Hardshrink, the replacement value can be anything (not necessarily 0).\n\n**Example:** `nn.Threshold(0.1, 20)` replaces all $x \\leq 0.1$ with 20 — this is an unusual but valid setup for binary indicator logic.\n\n**Gradient:** 1 for $x > \\text{threshold}$, 0 otherwise — always non-differentiable at the threshold.\n\n**PyTorch:**\n```python\nx = torch.tensor([-1., 0., 0.1, 0.5, 2.])\n# Values <= 0.1 replaced with 0.0\nprint(nn.Threshold(threshold=0.1, value=0.0)(x))   # tensor([0.0, 0.0, 0.0, 0.5, 2.0])\n```\n\n**TensorFlow:**\n```python\nx = tf.constant([-1., 0., 0.1, 0.5, 2.])\nthreshold, value = 0.1, 0.0\nprint(tf.where(x > threshold, x, tf.fill(tf.shape(x), value)))\n# [0.  0.  0.  0.5 2. ]\n```\n\n## Softplus — Smooth ReLU\n\n$$f(x) = \\frac{1}{\\beta} \\log\\!\\left(1 + e^{\\beta x}\\right)$$\n\nSoftplus is a smooth, always-positive approximation of ReLU. As $\\beta \\to \\infty$, Softplus converges to ReLU. The default $\\beta = 1$ gives a smooth curve that crosses $(0, \\ln 2)$ and grows linearly for large $x$.\n\n**Always positive:** Unlike ReLU, Softplus is strictly $> 0$ for all $x$. This makes it ideal for network outputs that must be positive, such as:\n- **Variance parameters** in VAEs: `var = F.softplus(log_var)`\n- **Scale parameters** in normalizing flows\n- **Poisson rate parameters** in count models\n\n**Note on threshold parameter:** For $|\\beta x| > \\text{threshold}$ (default 20), PyTorch falls back to the linear approximation to avoid overflow: $f(x) \\approx x$ for large $x$.\n\n**Gradient:** $f'(x) = \\sigma(\\beta x)$ — the gradient of Softplus is exactly the sigmoid.\n\n**PyTorch:**\n```python\nx = torch.tensor([-2., -1., 0., 1., 2.])\nprint(nn.Softplus(beta=1)(x))   # tensor([0.1269, 0.3133, 0.6931, 1.3133, 2.1269])\n# Always positive; approaches ReLU as beta → ∞\n# Use for variance outputs: var = F.softplus(raw_var)\n```\n\n**TensorFlow:**\n```python\nx = tf.constant([-2., -1., 0., 1., 2.])\nprint(tf.keras.activations.softplus(x))   # [0.1269 0.3133 0.6931 1.3133 2.1269]\nprint(tf.nn.softplus(x))                  # identical\n```\n\n## Comparison Table\n\n| Function | Formula | Gradient at small $x$ | Smoothness |\n|----------|---------|----------------------|------------|\n| Hardshrink | $x$ if $|x| > \\lambda$, else $0$ | 0 | Discontinuous |\n| Softshrink | $\\text{sign}(x)\\max(0,|x|-\\lambda)$ | 0 | Discontinuous |\n| Tanhshrink | $x - \\tanh(x)$ | $\\tanh^2(x) \\to 0$ | Smooth |\n| Threshold | $x$ if $x > t$, else $v$ | 0 | Discontinuous |\n| Softplus | $(1/\\beta)\\log(1+e^{\\beta x})$ | $\\sigma(\\beta x) > 0$ | Smooth |",
+  "equationBreakdowns": [
+    {
+      "label": "Hardshrink formula",
+      "terms": [
+        {
+          "symbol": "|x| > \\lambda",
+          "name": "Survival condition",
+          "desc": "Only activations with magnitude exceeding $\\lambda$ survive; the rest are zeroed"
+        },
+        {
+          "symbol": "\\lambda",
+          "name": "Threshold parameter",
+          "desc": "Controls the size of the zero band around the origin; larger $\\lambda$ = more sparsity"
+        }
+      ]
+    },
+    {
+      "label": "Softshrink formula",
+      "terms": [
+        {
+          "symbol": "\\text{sign}(x)",
+          "name": "Sign preservation",
+          "desc": "Maintains the sign of $x$ so positive values stay positive, negative stay negative"
+        },
+        {
+          "symbol": "\\max(0, |x| - \\lambda)",
+          "name": "Bias-corrected magnitude",
+          "desc": "Reduces the magnitude by $\\lambda$; values smaller than $\\lambda$ collapse to 0"
+        }
+      ]
+    },
+    {
+      "label": "Softplus formula",
+      "terms": [
+        {
+          "symbol": "\\log(1 + e^{\\beta x})",
+          "name": "Smooth max approximation",
+          "desc": "Smooth version of $\\max(0, \\beta x)$ — always positive, linear for large $x$"
+        },
+        {
+          "symbol": "1/\\beta",
+          "name": "Scale factor",
+          "desc": "Normalizes the output so it approximates ReLU at $\\beta = 1$"
+        },
+        {
+          "symbol": "\\beta",
+          "name": "Sharpness parameter",
+          "desc": "Higher $\\beta$ makes Softplus approach ReLU; lower $\\beta$ makes it smoother near 0"
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Donoho (1995) — Soft Thresholding and Wavelet Denoising",
+      "title": "Established soft thresholding (Softshrink) as the proximal operator of L1 norm",
+      "url": null,
+      "note": "Established soft thresholding (Softshrink) as the proximal operator of L1 norm"
+    },
+    {
+      "label": "Glorot et al. (2011) — Deep Sparse Rectifier Networks",
+      "title": "Discussed sparsity properties of ReLU activations in relation to shrinkage",
+      "url": null,
+      "note": "Discussed sparsity properties of ReLU activations in relation to shrinkage"
+    }
+  ]
+}

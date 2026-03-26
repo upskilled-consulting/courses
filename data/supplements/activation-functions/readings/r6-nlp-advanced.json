@@ -1,0 +1,195 @@
+{
+  "id": "r6",
+  "moduleId": "activation-functions",
+  "title": "NLP & Advanced Activations",
+  "estimatedMinutes": 14,
+  "learningObjectives": [
+    {
+      "id": "r6-lo1",
+      "verb": "Explain",
+      "description": "Explain adaptive softmax cluster assignment and state why it reduces computation for large-vocabulary language modelling",
+      "skillTags": [
+        "nlp-advanced"
+      ]
+    },
+    {
+      "id": "r6-lo2",
+      "verb": "Trace",
+      "description": "Trace the multi-head attention forward pass from Q, K, V inputs to the output projection and identify where softmax and scaling appear",
+      "skillTags": [
+        "nlp-advanced",
+        "gating"
+      ]
+    },
+    {
+      "id": "r6-lo3",
+      "verb": "State",
+      "description": "State the SwiGLU formula and explain why it has become the default FFN activation in modern transformer architectures",
+      "skillTags": [
+        "nlp-advanced",
+        "smooth-modern"
+      ]
+    },
+    {
+      "id": "r6-lo4",
+      "verb": "Compare",
+      "description": "Compare the FFN activation choices across GPT-2, LLaMA, and PaLM and relate each to a specific activation function family",
+      "skillTags": [
+        "nlp-advanced"
+      ]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r5"
+  },
+  "nextItem": {
+    "type": "quiz",
+    "id": "q2"
+  },
+  "content": "## LogSigmoid\n\n$$f(x) = \\log\\sigma(x) = \\log\\frac{1}{1+e^{-x}} = -\\log(1 + e^{-x})$$\n\nLogSigmoid outputs $(-\\infty, 0]$ — the log of a probability. It pairs directly with `nn.NLLLoss` for binary classification, in the same way that `nn.LogSoftmax` pairs with `nn.NLLLoss` for multi-class.\n\n**Numerically stable implementation:** PyTorch uses:\n\n$$f(x) = \\begin{cases} -\\log(1 + e^{-x}) & x \\geq 0 \\\\ x - \\log(1 + e^x) & x < 0 \\end{cases}$$\n\nThe two-branch form avoids overflow: for large positive $x$, computing $e^{-x}$ is safe (it's tiny); for large negative $x$, computing $e^{x}$ is safe (also tiny).\n\n**Relationship to BCEWithLogitsLoss:** `BCEWithLogitsLoss(logits, labels)` ≡ $-[y \\cdot f(x) + (1-y) \\cdot f(-x)]$ where $f$ is LogSigmoid. The loss function and the activation are two sides of the same coin.\n\n**PyTorch:**\n```python\nx = torch.tensor([-3., -1., 0., 1., 3.])\nprint(nn.LogSigmoid()(x))   # tensor([-3.0486, -1.3133, -0.6931, -0.3133, -0.0486])\n# Use with nn.NLLLoss for binary classification (like BCEWithLogitsLoss)\n```\n\n**TensorFlow:**\n```python\nx = tf.constant([-3., -1., 0., 1., 3.])\nprint(tf.math.log_sigmoid(x))   # [-3.0486 -1.3133 -0.6931 -0.3133 -0.0486]\n# Equivalent: -tf.math.softplus(-x)\n```\n\n## AdaptiveLogSoftmaxWithLoss — Large Vocabulary NLP\n\nFor standard Softmax, computing the partition function $Z = \\sum_{j=1}^{V} e^{x_j}$ over a vocabulary of size $V$ (often $V = 50{,}000$ or more) costs $O(V)$ at every forward pass. For a batch of 512 tokens, this dominates the compute.\n\n**Adaptive Softmax** (Grave et al., 2017) reduces this to approximately $O(\\sqrt{V})$ using **hierarchical clustering**. Words are split into frequency clusters:\n- **Head cluster:** The most frequent $c_0$ words (e.g., top 2,000) get computed with a full softmax — these are the words that appear in nearly every batch.\n- **Tail clusters:** Rarer words are grouped into clusters with progressively smaller projection dimensions (controlled by `div_value`). A cluster head token is added to the head vocabulary; if the head selects a cluster head, a second smaller softmax is applied within that cluster.\n\n$$P(w) = \\begin{cases} P(\\text{head} = w) & w \\in \\text{head cluster} \\\\ P(\\text{head} = c_k) \\cdot P(w \\mid c_k) & w \\in \\text{tail cluster } k \\end{cases}$$\n\nThe probability is log-additive: $\\log P(w) = \\log P(c_k) + \\log P(w \\mid c_k)$.\n\n**PyTorch API:**\n```python\nadaptive_sm = nn.AdaptiveLogSoftmaxWithLoss(\n    in_features=512,      # input embedding size\n    n_classes=50000,      # vocabulary size\n    cutoffs=[2000, 10000], # cluster boundaries\n    div_value=4.0          # dimension reduction factor per cluster\n)\noutput, loss = adaptive_sm(embeddings, targets)  # combined forward+loss\nlog_probs = adaptive_sm.log_prob(embeddings)     # inference\n```\n\n**PyTorch:**\n```python\nadaptive_sm = nn.AdaptiveLogSoftmaxWithLoss(\n    in_features=512,\n    n_classes=50000,\n    cutoffs=[2000, 10000],\n    div_value=4.0\n)\noutput, loss = adaptive_sm(embeddings, targets)   # combined forward + loss\nlog_probs = adaptive_sm.log_prob(embeddings)      # inference: log P(w)\n```\n\n**TensorFlow:**\n```python\n# No equivalent built-in; approximate with sampled softmax for large vocabularies\nloss = tf.nn.sampled_softmax_loss(\n    weights=embedding_matrix,   # (vocab_size, embed_dim)\n    biases=bias,\n    labels=targets,\n    inputs=embeddings,\n    num_sampled=1000,\n    num_classes=50000\n)\n# For inference: tf.nn.log_softmax(embeddings @ embedding_matrix.T + bias)\n```\n\n## MultiheadAttention\n\n$$\\text{MultiHead}(Q, K, V) = \\text{Concat}(\\text{head}_1, \\ldots, \\text{head}_h) W^O$$\n\n$$\\text{head}_i = \\text{Attention}(Q W_i^Q,\\; K W_i^K,\\; V W_i^V)$$\n\n$$\\text{Attention}(Q, K, V) = \\text{softmax}\\!\\left(\\frac{Q K^\\top}{\\sqrt{d_k}}\\right) V$$\n\nMulti-head attention is the core of the Transformer. Rather than computing one attention pattern over the full dimension, it runs $h$ attention heads in parallel, each projecting queries, keys, and values into a lower-dimensional subspace ($d_k = d_{\\text{model}} / h$). The heads learn different relationship patterns (positional, syntactic, semantic) and their outputs are concatenated and projected back.\n\n**Key design decisions:**\n- **$1/\\sqrt{d_k}$ scaling:** Without this, the dot product $QK^\\top$ grows in magnitude with $d_k$, pushing Softmax into saturation where gradients vanish.\n- **Causal masking:** For decoder/generation models, an attention mask sets future positions to $-\\infty$ before Softmax, preventing the model from attending to future tokens.\n- **`batch_first=True`:** Modern PyTorch convention; if `False` (old default), tensors are `(seq, batch, dim)` not `(batch, seq, dim)`.\n\n**PyTorch API:**\n```python\nattn = nn.MultiheadAttention(\n    embed_dim=512,\n    num_heads=8,\n    dropout=0.1,\n    batch_first=True\n)\noutput, weights = attn(query, key, value, attn_mask=causal_mask)\n```\n\n**Memory complexity:** $O(n^2 \\cdot d)$ in sequence length $n$ — quadratic attention is the scaling bottleneck that FlashAttention, sparse attention, and linear attention variants aim to address.\n\n**PyTorch:**\n```python\nattn = nn.MultiheadAttention(embed_dim=512, num_heads=8, dropout=0.1, batch_first=True)\n# query, key, value: (batch, seq_len, embed_dim)\noutput, weights = attn(query, key, value, attn_mask=causal_mask)\n```\n\n**TensorFlow:**\n```python\nattn = tf.keras.layers.MultiHeadAttention(num_heads=8, key_dim=64, dropout=0.1)\n# query, value: (batch, seq_len, embed_dim); key optional (defaults to value)\noutput = attn(query, value, key=key, attention_mask=causal_mask)\n```\n\n## SwiGLU — The Modern FFN Standard\n\nWhile not a standalone PyTorch module, SwiGLU is the modern replacement for the transformer FFN's ReLU/GELU:\n\n$$\\text{SwiGLU}(x, W, V, b, c) = (xW + b) \\otimes \\text{SiLU}(xV + c)$$\n\nIt is GLU but with SiLU replacing Sigmoid as the gate. Used in PaLM, LLaMA, Mistral, Gemma. To maintain parameter count, the hidden dimension is typically scaled to $8d/3$ instead of $4d$.\n\n**PyTorch (SwiGLU FFN block):**\n```python\nclass SwiGLUFFN(nn.Module):\n    def __init__(self, d_model, d_ff):\n        super().__init__()\n        # Three projections: gate, value, output\n        self.w1 = nn.Linear(d_model, d_ff, bias=False)   # gate\n        self.w2 = nn.Linear(d_ff, d_model, bias=False)   # output\n        self.w3 = nn.Linear(d_model, d_ff, bias=False)   # value\n\n    def forward(self, x):\n        return self.w2(nn.functional.silu(self.w1(x)) * self.w3(x))\n```\n\n**TensorFlow (SwiGLU FFN block):**\n```python\nclass SwiGLUFFN(tf.keras.layers.Layer):\n    def __init__(self, d_model, d_ff):\n        super().__init__()\n        self.w1 = tf.keras.layers.Dense(d_ff, use_bias=False)   # gate\n        self.w2 = tf.keras.layers.Dense(d_model, use_bias=False) # output\n        self.w3 = tf.keras.layers.Dense(d_ff, use_bias=False)   # value\n\n    def call(self, x):\n        return self.w2(tf.nn.swish(self.w1(x)) * self.w3(x))\n```\n\n## Putting It Together: Transformer FFN Variants\n\n| FFN Type | Activation | Used In |\n|----------|-----------|----------|\n| Original | ReLU | Vaswani et al. 2017 |\n| BERT | GELU | BERT, GPT-2, RoBERTa |\n| GLU-based | GeGLU | T5v1.1, Flan-T5 |\n| SwiGLU | SiLU gate | LLaMA, Mistral, PaLM |\n| MixGLU | Mish gate | Research |\n\nThe trend is clear: smooth, self-gating activations have replaced ReLU in large-scale NLP, with GLU-variant FFNs becoming the de facto standard.",
+  "equationBreakdowns": [
+    {
+      "label": "LogSigmoid definition",
+      "heading": "LogSigmoid",
+      "terms": [
+        {
+          "symbol": "\\log \\sigma(x)",
+          "name": "Log-probability output",
+          "desc": "Log of the sigmoid; always $\\leq 0$ because $\\sigma(x) \\in (0,1)$ and $\\log$ of a value less than 1 is negative"
+        },
+        {
+          "symbol": "-\\log(1 + e^{-x})",
+          "name": "Numerically stable form",
+          "desc": "Equivalent to $\\log\\sigma(x)$ but avoids computing $\\sigma(x)$ directly, which would lose precision near 0"
+        }
+      ]
+    },
+    {
+      "label": "LogSigmoid — numerically stable branches",
+      "heading": "LogSigmoid",
+      "terms": [
+        {
+          "symbol": "-\\log(1 + e^{-x})",
+          "name": "Branch for $x \\geq 0$",
+          "desc": "$e^{-x}$ is small and safe to compute; no overflow risk"
+        },
+        {
+          "symbol": "x - \\log(1 + e^x)",
+          "name": "Branch for $x < 0$",
+          "desc": "$e^x$ is small and safe to compute; avoids $e^{-x}$ which would be large. The two branches are mathematically identical but numerically complementary"
+        }
+      ]
+    },
+    {
+      "label": "Multi-head attention output",
+      "heading": "MultiheadAttention",
+      "terms": [
+        {
+          "symbol": "\\text{Concat}(\\text{head}_1, \\ldots, \\text{head}_h)",
+          "name": "Head concatenation",
+          "desc": "Outputs of all $h$ attention heads concatenated along the feature dimension"
+        },
+        {
+          "symbol": "W^O",
+          "name": "Output projection",
+          "desc": "Linear projection that maps concatenated heads back to $d_{\\text{model}}$ dimensions"
+        }
+      ]
+    },
+    {
+      "label": "Single attention head",
+      "heading": "MultiheadAttention",
+      "terms": [
+        {
+          "symbol": "Q",
+          "name": "Query matrix",
+          "desc": "Projected queries: what each position is looking for"
+        },
+        {
+          "symbol": "K",
+          "name": "Key matrix",
+          "desc": "Projected keys: what each position offers to match against"
+        },
+        {
+          "symbol": "V",
+          "name": "Value matrix",
+          "desc": "Projected values: the content retrieved when a position is attended to"
+        },
+        {
+          "symbol": "\\sqrt{d_k}",
+          "name": "Scaling factor",
+          "desc": "Prevents $QK^\\top$ growing large in magnitude with head dimension $d_k$, which would push softmax into saturation"
+        }
+      ]
+    },
+    {
+      "label": "Scaled dot-product attention",
+      "heading": "MultiheadAttention",
+      "terms": [
+        {
+          "symbol": "Q K^\\top",
+          "name": "Attention scores",
+          "desc": "Dot product of queries and keys — unnormalized similarity matrix of shape $(n, n)$"
+        },
+        {
+          "symbol": "\\sqrt{d_k}",
+          "name": "Scaling factor",
+          "desc": "Prevents dot products from growing too large in magnitude; $d_k$ = head dimension"
+        },
+        {
+          "symbol": "\\text{softmax}(\\cdot)",
+          "name": "Attention weights",
+          "desc": "Normalizes scores to a probability distribution over positions; rows sum to 1"
+        },
+        {
+          "symbol": "V",
+          "name": "Value matrix",
+          "desc": "The information to aggregate — weighted by attention probabilities"
+        }
+      ]
+    },
+    {
+      "label": "Adaptive Softmax probability",
+      "heading": "AdaptiveLogSoftmaxWithLoss",
+      "terms": [
+        {
+          "symbol": "P(\\text{head} = c_k)",
+          "name": "Cluster probability",
+          "desc": "Probability of selecting cluster $k$ from the head vocabulary"
+        },
+        {
+          "symbol": "P(w \\mid c_k)",
+          "name": "Within-cluster probability",
+          "desc": "Probability of word $w$ given that cluster $k$ was selected"
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Vaswani et al. (2017) — Attention Is All You Need",
+      "title": "Introduced the Transformer with multi-head attention",
+      "url": null,
+      "note": "Introduced the Transformer with multi-head attention"
+    },
+    {
+      "label": "Grave et al. (2017) — Efficient softmax approximation for GPUs (Adaptive Softmax)",
+      "title": "Introduced AdaptiveLogSoftmax for large vocabulary NLP",
+      "url": null,
+      "note": "Introduced AdaptiveLogSoftmax for large vocabulary NLP"
+    },
+    {
+      "label": "Shazeer (2020) — GLU Variants Improve Transformer (SwiGLU)",
+      "title": "Showed SwiGLU consistently outperforms GELU/ReLU FFNs",
+      "url": null,
+      "note": "Showed SwiGLU consistently outperforms GELU/ReLU FFNs"
+    },
+    {
+      "label": "Touvron et al. (2023) — LLaMA",
+      "title": "Popularized SwiGLU for open-weight large language models",
+      "url": null,
+      "note": "Popularized SwiGLU for open-weight large language models"
+    }
+  ]
+}

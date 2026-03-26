@@ -1,0 +1,168 @@
+{
+  "id": "q3",
+  "moduleId": "linear-algebra",
+  "title": "Linear Maps, Change of Basis, and Projection",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "questions": [
+    {
+      "id": "q3_1",
+      "type": "multiple-choice",
+      "prompt": "A linear map $T: V \\to W$ has $\\dim(\\mathcal{N}(T)) = 5$ and $\\dim(\\mathcal{R}(T)) = 3$. What is $\\dim(V)$?",
+      "options": [
+        {
+          "id": "a",
+          "text": "2",
+          "correct": false
+        },
+        {
+          "id": "b",
+          "text": "8",
+          "correct": true
+        },
+        {
+          "id": "c",
+          "text": "15",
+          "correct": false
+        },
+        {
+          "id": "d",
+          "text": "Cannot be determined without knowing $\\dim(W)$",
+          "correct": false
+        }
+      ],
+      "explanation": "Rank-nullity applies to the domain: $\\dim(V) = \\dim(\\mathcal{R}(T)) + \\dim(\\mathcal{N}(T)) = 3 + 5 = 8$. The codimension of $W$ is irrelevant — only the domain dimension is constrained. Note: $\\dim(W)$ could be anything $\\geq 3$.",
+      "hint": "Rank-nullity: $\\dim(\\text{domain}) = \\text{rank} + \\text{nullity}$."
+    },
+    {
+      "id": "q3_2",
+      "type": "multiple-choice",
+      "prompt": "Attention computes $Q = XW_Q$, $K = XW_K$, $V = XW_V$ where $W_Q, W_K, W_V \\in \\mathbb{R}^{d \\times d_k}$. In linear algebra terms, each projection $W$ is:",
+      "options": [
+        {
+          "id": "a",
+          "text": "A rotation of $X$ that preserves all inner products",
+          "correct": false
+        },
+        {
+          "id": "b",
+          "text": "A change-of-basis map projecting $X$ into a $d_k$-dimensional subspace",
+          "correct": true
+        },
+        {
+          "id": "c",
+          "text": "An orthogonal projection onto the column space of $X$",
+          "correct": false
+        },
+        {
+          "id": "d",
+          "text": "The inverse of the covariance matrix of $X$",
+          "correct": false
+        }
+      ],
+      "explanation": "Each $W \\in \\mathbb{R}^{d \\times d_k}$ is a linear map from $\\mathbb{R}^d$ to $\\mathbb{R}^{d_k}$, implementing a change of representation. The three heads use different bases ($W_Q$, $W_K$, $W_V$) to project the same input into different subspaces — which is why multi-head attention can capture different relationship types simultaneously.",
+      "hint": "$W$ maps from $\\mathbb{R}^d$ to $\\mathbb{R}^{d_k}$. What does such a map do geometrically when $d_k < d$?"
+    },
+    {
+      "id": "q3_3",
+      "type": "code-completion",
+      "prompt": "Project vector `v` onto the subspace spanned by the columns of `U`, where `U` has orthonormal columns. The projection matrix is $P = UU^T$.",
+      "codeTemplate": "import torch\n\ndef project_onto_subspace(U, v):\n    # U: (n, k) with orthonormal columns\n    # v: (n,)\n    return ___BLANK___",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "U @ U.T @ v",
+        "U @ (U.T @ v)",
+        "torch.mv(U @ U.T, v)",
+        "torch.mv(U, U.T @ v)",
+        "(U @ U.mT) @ v",
+        "U @ U.mT @ v"
+      ],
+      "explanation": "When $U$ has orthonormal columns, $P = UU^T$ is the orthogonal projector onto $\\text{col}(U)$. The efficient computation is $U(U^T\\vec{v})$: first project $\\vec{v}$ onto each basis vector (giving coordinates), then reconstruct. This avoids forming the $n\\times n$ matrix $UU^T$ explicitly. This pattern appears in Gram-Schmidt, QR decomposition, and attention.",
+      "hint": "The projection is $P\\vec{v} = UU^T\\vec{v}$. Can you factor the computation to avoid building the full $n\\times n$ matrix?"
+    },
+    {
+      "id": "q3_4",
+      "type": "multiple-choice",
+      "prompt": "Two $n\\times n$ matrices $A$ and $B$ are similar: $B = P^{-1}AP$ for some invertible $P$. Which of the following is the same for $A$ and $B$?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Their entries",
+          "correct": false
+        },
+        {
+          "id": "b",
+          "text": "Their eigenvectors",
+          "correct": false
+        },
+        {
+          "id": "c",
+          "text": "Their eigenvalues (and hence trace and determinant)",
+          "correct": true
+        },
+        {
+          "id": "d",
+          "text": "Their column spaces",
+          "correct": false
+        }
+      ],
+      "explanation": "Similar matrices represent the same linear map in different bases ($P$ is the change-of-basis matrix). The eigenvalues, trace, determinant, rank, characteristic polynomial, and Jordan structure are all basis-independent invariants. Eigenvectors do change (they transform by $P$), and column spaces are entirely different subspaces.",
+      "hint": "Similar matrices represent the same map seen from different coordinate systems. What properties of a map don't depend on the coordinate system?"
+    },
+    {
+      "id": "q3_5",
+      "type": "code-completion",
+      "prompt": "One Gram-Schmidt step: subtract the projection of column `i` of `A` onto the already-orthogonalised column `j` of `Q`. Fill in the projection being subtracted.",
+      "codeTemplate": "import numpy as np\n\ndef gram_schmidt(A):\n    Q = np.zeros_like(A, dtype=float)\n    for i in range(A.shape[1]):\n        v = A[:, i].copy()\n        for j in range(i):\n            v -= ___BLANK___\n        Q[:, i] = v / np.linalg.norm(v)\n    return Q",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "np.dot(Q[:, j], A[:, i]) * Q[:, j]",
+        "(Q[:, j] @ A[:, i]) * Q[:, j]",
+        "np.dot(A[:, i], Q[:, j]) * Q[:, j]",
+        "(A[:, i] @ Q[:, j]) * Q[:, j]",
+        "np.dot(Q[:,j], A[:,i]) * Q[:,j]",
+        "(Q[:,j] @ A[:,i]) * Q[:,j]"
+      ],
+      "explanation": "The projection of $\\vec{v}$ onto a unit vector $\\vec{q}_j$ is $(\\vec{q}_j \\cdot \\vec{v})\\vec{q}_j$. Subtracting all such projections removes every component of $A[:,i]$ in the directions already spanned, leaving a vector orthogonal to all previous $Q$ columns. Gram-Schmidt is the algorithm behind QR decomposition and is the heart of the Householder/CGS methods used in practice.",
+      "hint": "The projection of $\\vec{v}$ onto unit vector $\\vec{q}$ is $(\\vec{q}\\cdot\\vec{v})\\vec{q}$. Here $Q[:,j]$ is already a unit vector."
+    },
+    {
+      "id": "q3_6",
+      "type": "multiple-choice",
+      "prompt": "Least-squares regression finds $\\hat{\\vec{w}} = (X^TX)^{-1}X^T\\vec{y}$. The fitted values $\\hat{\\vec{y}} = X\\hat{\\vec{w}}$ are geometrically:",
+      "options": [
+        {
+          "id": "a",
+          "text": "The solution to $X\\vec{w}=\\vec{0}$ closest to $\\vec{y}$",
+          "correct": false
+        },
+        {
+          "id": "b",
+          "text": "The orthogonal projection of $\\vec{y}$ onto the column space of $X$",
+          "correct": true
+        },
+        {
+          "id": "c",
+          "text": "The eigenvector of $X^TX$ corresponding to the largest eigenvalue",
+          "correct": false
+        },
+        {
+          "id": "d",
+          "text": "The vector in $\\mathbb{R}^n$ with the same $\\ell^2$ norm as $\\vec{y}$",
+          "correct": false
+        }
+      ],
+      "explanation": "$\\hat{\\vec{y}} = X(X^TX)^{-1}X^T\\vec{y} = P_X\\vec{y}$ where $P_X$ is the orthogonal projector onto $\\mathcal{C}(X)$. The residual $\\vec{y}-\\hat{\\vec{y}}$ is orthogonal to every column of $X$ (the normal equations say exactly this). Minimising $\\|\\vec{y}-X\\vec{w}\\|^2$ is identical to finding the closest point in $\\mathcal{C}(X)$ to $\\vec{y}$.",
+      "hint": "Least-squares minimises $\\|\\vec{y} - X\\vec{w}\\|^2$. What is the closest point in $\\mathcal{C}(X)$ to $\\vec{y}$?"
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r8"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r9"
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "id": "r0",
+  "moduleId": "regularization",
+  "title": "Overfitting and the Bias-Variance Tradeoff",
+  "estimatedMinutes": 13,
+  "learningObjectives": [
+    {
+      "id": "r0-lo1",
+      "verb": "Distinguish",
+      "description": "Distinguish underfitting (high bias) from overfitting (high variance) using training and validation loss curves, and identify the symptoms of each in practice",
+      "skillTags": ["regularization", "training-dynamics"]
+    },
+    {
+      "id": "r0-lo2",
+      "verb": "Explain",
+      "description": "Explain the bias-variance decomposition of expected test error and state what each term measures",
+      "skillTags": ["regularization", "training-dynamics"]
+    },
+    {
+      "id": "r0-lo3",
+      "verb": "Define",
+      "description": "Define regularization precisely — any technique that reduces generalization error, possibly at the cost of higher training error — and explain why this encompasses techniques that do not add an explicit penalty term",
+      "skillTags": ["regularization"]
+    },
+    {
+      "id": "r0-lo4",
+      "verb": "Identify",
+      "description": "Identify the double-descent phenomenon and explain why modern overparameterized models can interpolate the training data and still generalize well",
+      "skillTags": ["regularization", "training-dynamics"]
+    }
+  ],
+  "prevItem": null,
+  "nextItem": { "type": "reading", "id": "r1" },
+  "content": "## The Fundamental Problem\n\nA model trained to minimize training loss has no direct incentive to do well on unseen data. The gap between training performance and test performance is the **generalization gap**, and closing it is the central concern of regularization.\n\nTwo failure modes sit at opposite ends:\n\n**Underfitting (high bias):** The model is too simple to capture the true structure in the data. Training loss and test loss are both high. More capacity or more training will help.\n\n**Overfitting (high variance):** The model has memorized the training data, including its noise. Training loss is low but test loss is high — the learned function does not generalize.\n\n---\n\n## Reading the Loss Curves\n\nThe clearest diagnostic tool is plotting training loss and validation loss against training steps:\n\n```\nLoss\n |\n |\\  training loss\n | \\ \\___________\n |  \\              validation loss\n |   \\___    _____/\n |       \\__/\n |         ↑\n |     optimal early stop point\n +----------------------------→ Steps\n```\n\n- **Training loss always decreases** (the optimizer is minimizing it directly)\n- **Validation loss decreases, then rises** — the point at which it stops decreasing is the onset of overfitting\n- The gap between the two curves is the generalization gap\n\nA large gap with high training accuracy = overfitting. Both losses high = underfitting.\n\n---\n\n## Bias-Variance Decomposition\n\nFor a squared loss regression problem, the expected test error decomposes as:\n\n$$\\mathbb{E}\\bigl[(y - \\hat{f}(x))^2\\bigr] = \\underbrace{\\text{Bias}[\\hat{f}(x)]^2}_{\\text{systematic error}} + \\underbrace{\\text{Var}[\\hat{f}(x)]}_{\\text{sensitivity to training set}} + \\underbrace{\\sigma^2}_{\\text{irreducible noise}}$$\n\n- **Bias:** how far the average prediction (over all possible training sets) is from the true answer. High when the model family is too restricted.\n- **Variance:** how much predictions vary across different training sets. High when the model is too sensitive to the specific data seen — overfitting.\n- **Irreducible noise** $\\sigma^2$: inherent noise in the labels; cannot be reduced by any model.\n\n**The classical tradeoff:** increasing model complexity reduces bias but increases variance. The goal is to find the complexity that minimizes their sum.\n\n---\n\n## What Is Regularization?\n\nA broad and useful definition (Goodfellow et al., 2016):\n\n> **Regularization** is any modification we make to a learning algorithm intended to reduce its generalization error but not its training error.\n\nThis encompasses far more than explicit penalty terms:\n\n| Technique | Mechanism |\n|---|---|\n| L2 weight penalty | Shrinks weights toward zero |\n| Dropout | Stochastic masking of activations |\n| Early stopping | Stops before overfitting region |\n| Data augmentation | Expands effective training set |\n| Batch normalization | Implicit regularization via noise |\n| Weight initialization | Constrains initial function class |\n| SGD noise | Implicit bias toward flat minima |\n\nAll of these reduce generalization error, often at the cost of higher training error (or at least not minimizing training error as aggressively).\n\n---\n\n## Double Descent\n\nThe classical bias-variance tradeoff predicts a U-shaped test error curve — there is an optimal capacity, and going past it hurts. This was the prevailing view until the deep learning era revealed a more complex picture.\n\n**Double descent** (Belkin et al., 2019): as model capacity increases past the interpolation threshold (where training loss reaches zero), test error can *decrease again* — even though the model perfectly memorizes the training data.\n\n```\nTest error\n     |\n     |         classical\n     |\\        regime   /↑ modern regime\n     | \\      /        /\n     |  \\    /        /↓ test error decreases again!\n     |   \\  /\n     |    \\/\n     +------|----------→ Model capacity\n            ↑\n       interpolation\n       threshold\n```\n\n**Why it happens:** In the overparameterized regime, there are many functions that interpolate the training data. SGD with appropriate implicit biases (e.g., small initialization, weight decay) finds the *minimum-norm* interpolant — and for well-structured data, this turns out to generalize.\n\n**Practical implication:** modern neural networks operate far in the overparameterized regime and still generalize. Classical regularization techniques remain valuable, but they work *alongside* this implicit regularization — not instead of it.\n\n---\n\n## PyTorch and TensorFlow\n\nThe bias-variance tradeoff is most directly observable through learning curves — plotting train and validation loss over epochs. This is the first diagnostic to run when a model overfits or underfits.\n\n**PyTorch** — minimal training loop with learning curve tracking:\n\n```python\nimport torch\nimport torch.nn as nn\n\nmodel     = nn.Sequential(nn.Linear(64, 128), nn.ReLU(), nn.Linear(128, 1))\noptimizer = torch.optim.Adam(model.parameters(), lr=1e-3)\ncriterion = nn.MSELoss()\n\ntrain_losses, val_losses = [], []\n\nfor epoch in range(100):\n    # Training step\n    model.train()\n    train_pred = model(X_train)\n    train_loss = criterion(train_pred, y_train)\n    optimizer.zero_grad()\n    train_loss.backward()\n    optimizer.step()\n\n    # Validation step — no gradients, eval mode (matters for Dropout/BatchNorm)\n    model.eval()\n    with torch.no_grad():\n        val_loss = criterion(model(X_val), y_val)\n\n    train_losses.append(train_loss.item())\n    val_losses.append(val_loss.item())\n\n# Diagnose: large gap between train_losses and val_losses → overfitting\n# Both curves high and similar → underfitting (high bias)\n# Both curves low and similar → good generalization\n```\n\n**TensorFlow / Keras:**\n\n```python\nimport tensorflow as tf\n\nmodel = tf.keras.Sequential([\n    tf.keras.layers.Dense(128, activation='relu', input_shape=(64,)),\n    tf.keras.layers.Dense(1),\n])\nmodel.compile(optimizer='adam', loss='mse')\n\n# history.history['loss'] and history.history['val_loss'] are the learning curves\nhistory = model.fit(\n    X_train, y_train,\n    validation_data=(X_val, y_val),\n    epochs=100,\n    verbose=0,\n)\n\ntrain_losses = history.history['loss']\nval_losses   = history.history['val_loss']\n# Persistent val_loss > train_loss → overfitting; add regularization\n# val_loss ≈ train_loss but both high → underfitting; use a larger model\n```",
+  "equationBreakdowns": [
+    {
+      "label": "Bias-Variance Decomposition",
+      "heading": "Bias-Variance Decomposition",
+      "terms": [
+        {
+          "symbol": "\\text{Bias}[\\hat{f}(x)]^2",
+          "name": "Squared bias",
+          "desc": "How wrong the model is on average, across all possible training datasets of the same size. Reduced by using a more flexible model family."
+        },
+        {
+          "symbol": "\\text{Var}[\\hat{f}(x)]",
+          "name": "Variance",
+          "desc": "How much the prediction at x changes if we retrain on a different sample of the same size. High variance = overfitting = sensitivity to which specific examples were in the training set."
+        },
+        {
+          "symbol": "\\sigma^2",
+          "name": "Irreducible noise",
+          "desc": "The variance of the true label y around the true function f(x). No model can do better than this — it is the label noise floor."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Belkin et al. 2019",
+      "title": "Reconciling modern machine-learning practice and the classical bias-variance trade-off",
+      "url": "https://arxiv.org/abs/1812.11118"
+    }
+  ]
+}

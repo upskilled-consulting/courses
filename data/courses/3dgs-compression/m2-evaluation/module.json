@@ -1,0 +1,48 @@
+{
+  "id": "m2",
+  "title": "Evaluation & Survey",
+  "order": 2,
+  "color": "#22c55e",
+  "prereq": "m1",
+  "learningObjectives": [
+    "Derive and implement PSNR, SSIM, and LPIPS from first principles and explain what each captures about image quality.",
+    "Describe the properties and scene types of Tanks & Temples, Deep Blending, Mip-NeRF 360, and Synthetic NeRF datasets.",
+    "Explain why cross-paper 3DGS quality comparisons are unreliable without a standardized testing protocol.",
+    "Identify the key standardization decisions (resolution, train/test split, initialization) that affect reported metrics."
+  ],
+  "readings": [
+    {
+      "id": "r1",
+      "title": "Image Quality Metrics: PSNR, SSIM, and LPIPS",
+      "estimatedMinutes": 14,
+      "dataPath": "data/courses/3dgs-compression/m2-evaluation/readings/r1-metrics.json"
+    },
+    {
+      "id": "r2",
+      "title": "Benchmark Datasets for Novel View Synthesis",
+      "estimatedMinutes": 10,
+      "dataPath": "data/courses/3dgs-compression/m2-evaluation/readings/r2-datasets.json"
+    },
+    {
+      "id": "r3",
+      "title": "Standardized Testing Protocol and the 3DGS.zip Survey",
+      "estimatedMinutes": 10,
+      "dataPath": "data/courses/3dgs-compression/m2-evaluation/readings/r3-testing-protocol.json"
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "q1",
+      "title": "Metrics and Evaluation Protocol",
+      "questionCount": 5,
+      "passingScore": 0.7,
+      "dataPath": "data/courses/3dgs-compression/m2-evaluation/quizzes/q1-metrics-quiz.json"
+    }
+  ],
+  "lab": {
+    "id": "lab2",
+    "title": "Implementing Evaluation Metrics from Scratch",
+    "estimatedMinutes": 40,
+    "dataPath": "data/courses/3dgs-compression/m2-evaluation/labs/lab2.json"
+  }
+}

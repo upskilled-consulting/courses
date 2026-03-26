@@ -1,0 +1,220 @@
+{
+  "id": "r3",
+  "moduleId": "m6",
+  "title": "The .splat Binary Format: Opacity Sorting, SH Coefficients & Byte Layout",
+  "estimatedMinutes": 14,
+  "learningObjectives": [
+    {
+      "id": "m6r3-lo1",
+      "verb": "Decode",
+      "description": "Decode the 32-byte .splat format layout — position (12 B), scale (12 B), color+alpha (4 B), rotation (4 B) — and identify how each attribute is quantized from float32",
+      "skillTags": [
+        "compression",
+        "3dgs-fundamentals"
+      ]
+    },
+    {
+      "id": "m6r3-lo2",
+      "verb": "Explain",
+      "description": "Explain the normalization applied to the DC spherical harmonic coefficient for .splat uint8 color storage, including the SH₀ constant factor and the sigmoid-to-uint8 opacity encoding",
+      "skillTags": [
+        "compression",
+        "gaussian-math"
+      ]
+    },
+    {
+      "id": "m6r3-lo3",
+      "verb": "Explain",
+      "description": "Explain the opacity-weighted volume sort heuristic V_k·α_k and state why it produces a view-independent Gaussian ordering suitable for real-time rendering without per-frame sorting",
+      "skillTags": [
+        "rendering-pipeline",
+        "compression"
+      ]
+    },
+    {
+      "id": "m6r3-lo4",
+      "verb": "Implement",
+      "description": "Implement a field-aware PLY-to-.splat converter that detects whether a PLY file is a standard 3DGS PLY or a simple point cloud and dispatches to the correct conversion path",
+      "skillTags": [
+        "compression",
+        "3dgs-fundamentals"
+      ]
+    }
+  ],
+  "content": "## Two Formats, One Pipeline\n\nA completed 3DGS training run produces a `.ply` file — a standard polygon mesh container storing every Gaussian's full attribute set. A web viewer such as antimatter15's splat.js consumes a `.splat` file — a compact binary format designed for streaming and real-time rendering in the browser. Converting between them requires understanding both formats precisely, and the conversion encodes several non-trivial mathematical decisions.\n\n## The 3DGS .ply Attribute Schema\n\nA 3DGS `.ply` file stores one vertex per Gaussian with the following fields (59 floats total):\n\n| Field group | Field names | Count | Semantics |\n|---|---|---|---|\n| Position | `x, y, z` | 3 | World-space mean \\(\\boldsymbol{\\mu}\\) |\n| Normals | `nx, ny, nz` | 3 | Unused in 3DGS; always zero |\n| DC SH | `f_dc_0, f_dc_1, f_dc_2` | 3 | Zeroth-order spherical harmonic coefficients for RGB |\n| AC SH | `f_rest_0, …, f_rest_44` | 45 | Higher-order view-dependent SH coefficients |\n| Opacity | `opacity` | 1 | Pre-sigmoid opacity \\(o\\) (raw logit) |\n| Scale | `scale_0, scale_1, scale_2` | 3 | Log-scale axes \\(\\log s_k\\) |\n| Rotation | `rot_0, rot_1, rot_2, rot_3` | 4 | Unit quaternion \\(\\mathbf{q}\\) (raw, before normalization) |\n\nTotal: 3+3+3+45+1+3+4 = **62 fields** at float32 = **248 bytes per Gaussian**.\n\nA *simple* point cloud `.ply` (e.g., from COLMAP or a LiDAR scanner) has only `x, y, z, red, green, blue`. When you attempt to access `scale_0` on such a file, you get:\n\n```\nValueError: no field of name scale_0\n```\n\nThe correct diagnostic is to inspect the available fields before assuming a format:\n\n```python\nplydata = PlyData.read(path)\nprint(plydata['vertex'].data.dtype.names)\n# ('x', 'y', 'z', 'red', 'green', 'blue')  ← simple cloud\n# ('x', 'y', 'z', 'nx', 'ny', 'nz', 'f_dc_0', ..., 'rot_3')  ← 3DGS\n```\n\n## The .splat Binary Format: 32 Bytes per Gaussian\n\nThe `.splat` format strips all data the browser renderer doesn't need and reencodes the remainder in a compact binary layout. Each Gaussian occupies exactly **32 bytes**:\n\n```\nBytes  0–11  │  Position     │  3 × float32   │  x, y, z (raw world-space)\nBytes 12–23  │  Scale        │  3 × float32   │  exp(scale_0), exp(scale_1), exp(scale_2)\nBytes 24–27  │  Color + α    │  4 × uint8     │  R, G, B (SH₀), α (sigmoid)\nBytes 28–31  │  Rotation     │  4 × uint8     │  q_w, q_x, q_y, q_z (normalized, encoded)\n```\n\nTotal: 12 + 12 + 4 + 4 = **32 bytes vs. 248 bytes** → **7.75× size reduction** before any compression. The viewer reconstructs scale from the stored values via identity (already exp-activated); it reconstructs opacity via sigmoid (already applied); it reconstructs rotation by reversing the uint8 encoding.\n\n## The Zeroth-Order Spherical Harmonic Coefficient\n\nThe DC color fields `f_dc_0, f_dc_1, f_dc_2` are the coefficients of the zeroth-order real spherical harmonic — the constant function on the sphere:\n\n$$Y_0^0(\\boldsymbol{\\omega}) = \\frac{1}{2\\sqrt{\\pi}} = SH_{C0} \\approx 0.28209479177387814$$\n\nThis is derived from the normalization condition \\(\\int_{S^2} |Y_0^0|^2 \\, d\\boldsymbol{\\omega} = 1\\).\n\nThe full spherical harmonic color model in 3DGS is:\n\n$$\\mathbf{c}(\\boldsymbol{\\omega}) = \\sum_{l=0}^{L} \\sum_{m=-l}^{l} \\mathbf{c}_{lm} Y_l^m(\\boldsymbol{\\omega})$$\n\nwhere \\(L=3\\) for the standard 3DGS SH degree. The 16 real SH basis functions for \\(l=0\\ldots3\\) are shown in the interactive viewer below — green lobes indicate positive values, red indicate negative. Click any function to see its interpretation in the 3DGS context.\n\n<div class=\"sh-viz-embed\"></div>\n\nThe DC contribution — the view-independent base color — is:\n\n$$\\mathbf{c}_0(\\boldsymbol{\\omega}) = \\mathbf{f}_{dc} \\cdot SH_{C0}$$\n\nThe `.splat` viewer uses only this DC term (no view-dependent AC), so the color encoding is:\n\n$$R = \\text{clip}\\!\\left( (0.5 + SH_{C0} \\cdot f_{dc,0}) \\times 255, \\, 0, 255 \\right)$$\n\nThe 0.5 offset ensures that `f_dc = 0` maps to `R = 128` (neutral gray), not black. The \\(SH_{C0}\\) scale ensures that \\(f_{dc} \\approx \\pm 1.77\\) drives the channel to 0 or 255 — the realistic range of trained 3DGS coefficients.\n\n## Opacity Encoding\n\nThe `opacity` field stores a **pre-sigmoid logit** \\(o\\). The activated opacity (probability of being opaque) is:\n\n$$\\alpha = \\sigma(o) = \\frac{1}{1 + e^{-o}}$$\n\nIn the `.splat` format, this is stored as a uint8:\n\n$$\\text{opacity\\_byte} = \\text{clip}(\\alpha \\times 255, 0, 255)$$\n\nThe browser decodes \\(\\alpha = \\text{opacity\\_byte} / 255\\) — no sigmoid needed at render time.\n\n## Scale Encoding\n\nThe `scale_k` fields store **log-scale** values — the log of each Gaussian's half-axis length. In the `.splat` format:\n\n$$\\text{scale\\_float}_k = \\exp(\\texttt{scale\\_k})$$\n\nThis stores the activated (positive) scale directly as a float32. The Gaussian's 3D covariance is reconstructed in the browser as:\n\n$$\\Sigma = R S S^\\top R^\\top, \\quad S = \\text{diag}(s_0, s_1, s_2)$$\n\nwhere \\(R\\) is the rotation matrix from the quaternion and \\(s_k = \\text{scale\\_float}_k\\).\n\n## Quaternion Encoding\n\nThe rotation quaternion \\(\\mathbf{q} = (q_0, q_1, q_2, q_3)\\) is stored in the `.ply` as raw floats (not guaranteed to be unit norm due to training dynamics). The `.splat` encoder normalizes and then maps to uint8:\n\n```python\nrot_normalized = q / np.linalg.norm(q)          # unit quaternion\nrot_bytes = (rot_normalized * 128 + 128)          # map [-1,1] → [0,256]\n             .clip(0, 255).astype(np.uint8)\n```\n\nDecoding inverts this: \\(\\mathbf{q} = (\\text{byte} - 128) / 128\\), followed by renormalization. The quantization error is \\(\\pm 1/128 \\approx 0.0078\\) per component — small enough that orientation artifacts are imperceptible for typical Gaussians.\n\n## The Opacity-Weighted Volume Sort\n\nThe `.splat` format requires pre-sorted Gaussians. Web viewer alpha compositing traverses the array in order, blending each Gaussian's color with the accumulated transmittance:\n\n$$C = \\sum_k \\mathbf{c}_k \\alpha_k \\prod_{j < k} (1 - \\alpha_j)$$\n\nFor depth-correct rendering, Gaussians should be sorted front-to-back or back-to-front relative to the viewer. However, a static `.splat` file has no per-frame depth information. Instead, the converter uses a **view-independent importance heuristic**:\n\n$$\\text{sort key}_k = \\frac{\\exp(s_{0,k} + s_{1,k} + s_{2,k})}{1 + \\exp(-o_k)} = V_k \\cdot \\alpha_k$$\n\nwhere:\n- \\(V_k = \\exp(s_{0,k} + s_{1,k} + s_{2,k}) = s_{0,k}^{\\exp} \\cdot s_{1,k}^{\\exp} \\cdot s_{2,k}^{\\exp}\\) is proportional to the **log-volume** of the Gaussian ellipsoid\n- \\(\\alpha_k\\) is the activated opacity\n\nGaussians are sorted **descending** by this key — large, opaque Gaussians first. The rationale: large opaque Gaussians dominate the visual contribution regardless of viewpoint. Rendering them early saturates the transmittance quickly, correctly obscuring smaller Gaussians behind them. Small or nearly transparent Gaussians contribute little regardless of order.\n\nThis is an approximation: it can produce artifacts at oblique views where a small-but-foreground Gaussian is obscured by a large-but-background one. Depth-sorted rendering (computed per frame on the GPU) would be exact but is too expensive for real-time browser use. The sort heuristic works well in practice for scenes with normal viewing distance distributions.\n\n## A Robust Field-Aware Converter\n\nProduction converters must handle both simple and 3DGS PLY files:\n\n```python\ndef detect_ply_type(plydata):\n    fields = set(plydata['vertex'].data.dtype.names)\n    required_3dgs = {'scale_0', 'scale_1', 'scale_2', 'opacity',\n                     'f_dc_0', 'f_dc_1', 'f_dc_2',\n                     'rot_0', 'rot_1', 'rot_2', 'rot_3'}\n    if required_3dgs.issubset(fields):\n        return '3dgs'\n    elif {'red', 'green', 'blue'}.issubset(fields):\n        return 'simple'\n    else:\n        raise ValueError(f\"Unrecognized PLY schema: {fields}\")\n\ndef convert(plydata, ply_type):\n    if ply_type == '3dgs':\n        return process_ply_to_splat(plydata)     # full encoder\n    elif ply_type == 'simple':\n        return process_simple_ply_to_splat(plydata)  # fixed-scale fallback\n```\n\nThe simple fallback assigns unit scale and identity rotation — representing each point as a small spherical Gaussian — which is geometrically approximate but sufficient for point-cloud preview. This pattern — inspect schema, dispatch to type-specific handler, fail explicitly on unknown schema — will recur in Module 8 as a foundational enterprise application pattern.",
+  "equationBreakdowns": [
+    {
+      "label": "Zeroth-Order Spherical Harmonic Y₀⁰",
+      "terms": [
+        {
+          "symbol": "Y_0^0(\\boldsymbol{\\omega})",
+          "name": "Zeroth-order SH basis function",
+          "desc": "A function defined on the unit sphere S² that returns the same constant value regardless of direction ω. It is the 'DC' basis — it contributes the same amount to every view direction."
+        },
+        {
+          "symbol": "\\frac{1}{2\\sqrt{\\pi}}",
+          "name": "Normalisation constant",
+          "desc": "Chosen so that ∫_{S²} |Y₀⁰|² dω = 1. This orthonormality means SH coefficients can be computed independently for each basis function via projection, and the reconstruction is free of cross-term interference."
+        },
+        {
+          "symbol": "SH_{C0} \\approx 0.28209",
+          "name": "Numerical value",
+          "desc": "The constant used in code to convert stored f_dc coefficients to RGB colours. Multiplying f_dc by SH_C0 gives the view-independent colour contribution before adding higher-order view-dependent terms."
+        }
+      ]
+    },
+    {
+      "label": "Full Spherical Harmonic Colour Model",
+      "terms": [
+        {
+          "symbol": "\\mathbf{c}(\\boldsymbol{\\omega})",
+          "name": "View-dependent colour",
+          "desc": "The RGB colour of this Gaussian as seen from direction ω. Different viewing directions yield different colours — enabling specular highlights, subsurface scattering approximations, and other non-Lambertian effects."
+        },
+        {
+          "symbol": "\\sum_{l=0}^{L} \\sum_{m=-l}^{l}",
+          "name": "Sum over SH bands and orders",
+          "desc": "Iterates over all SH basis functions up to degree L=3. Band l=0 has 1 function (DC), l=1 has 3, l=2 has 5, l=3 has 7 — totalling 16 per channel, 48 across RGB."
+        },
+        {
+          "symbol": "\\mathbf{c}_{lm}",
+          "name": "SH coefficient vector",
+          "desc": "A learned 3-vector (RGB) for basis function (l,m). These are the f_dc and f_rest parameters stored in the .ply file. Optimised during 3DGS training via backpropagation through the rasterizer."
+        },
+        {
+          "symbol": "Y_l^m(\\boldsymbol{\\omega})",
+          "name": "SH basis function",
+          "desc": "The real spherical harmonic of degree l and order m, evaluated at view direction ω. Precomputed and fixed — only the coefficients c_lm are learned."
+        }
+      ]
+    },
+    null,
+    {
+      "label": "DC Colour → uint8 Encoding",
+      "terms": [
+        {
+          "symbol": "0.5 + SH_{C0} \\cdot f_{dc,0}",
+          "name": "Linearised colour value",
+          "desc": "Converts the stored SH coefficient to a [0,1] linear colour value. The 0.5 offset maps f_dc=0 to neutral grey (128), not black. Without it, an untrained Gaussian (f_dc≈0) would render as black rather than grey."
+        },
+        {
+          "symbol": "\\times 255",
+          "name": "Scale to byte range",
+          "desc": "Converts the [0,1] float to a [0,255] integer range for uint8 storage. The .splat format stores colour as 4 bytes (R,G,B,α), trading the view-dependent AC terms for file compactness."
+        },
+        {
+          "symbol": "\\text{clip}(\\cdot, 0, 255)",
+          "name": "Clamp to valid range",
+          "desc": "Prevents overflow/underflow. SH coefficients can theoretically produce values outside [0,1] for extreme view angles; clamping ensures a valid byte value at the cost of colour accuracy for those edge cases."
+        }
+      ]
+    },
+    {
+      "label": "Sigmoid Opacity Activation",
+      "terms": [
+        {
+          "symbol": "o",
+          "name": "Raw logit (pre-sigmoid opacity)",
+          "desc": "The value stored in the .ply opacity field. It is unconstrained (can be any real number). Large positive values → nearly opaque; large negative values → nearly transparent. Stored as a logit so that gradient descent can freely move opacity in either direction."
+        },
+        {
+          "symbol": "\\sigma(o) = \\frac{1}{1+e^{-o}}",
+          "name": "Sigmoid function",
+          "desc": "Maps any real number to (0,1). Ensures the activated opacity α is always a valid probability — the Gaussian can never be exactly opaque or exactly transparent, which stabilises training."
+        },
+        {
+          "symbol": "\\alpha",
+          "name": "Activated opacity",
+          "desc": "The fraction of light blocked by this Gaussian. Used directly in alpha compositing. Stored as a uint8 in the .splat format after multiplying by 255 — no sigmoid needed at render time."
+        }
+      ]
+    },
+    null,
+    null,
+    {
+      "label": "3D Gaussian Covariance Matrix",
+      "terms": [
+        {
+          "symbol": "\\Sigma",
+          "name": "3D covariance matrix",
+          "desc": "A 3×3 positive semi-definite matrix defining the shape and orientation of the Gaussian ellipsoid. Its eigenvectors are the principal axes; eigenvalues are the squared half-axis lengths."
+        },
+        {
+          "symbol": "R",
+          "name": "Rotation matrix",
+          "desc": "A 3×3 orthogonal matrix derived from the stored unit quaternion q. Defines the orientation of the Gaussian's principal axes in world space."
+        },
+        {
+          "symbol": "S = \\text{diag}(s_0, s_1, s_2)",
+          "name": "Scale matrix",
+          "desc": "A diagonal matrix with the three half-axis lengths (already exp-activated). RSS^T R^T is the standard parameterisation that guarantees Σ is always positive semi-definite regardless of optimisation updates to R and S."
+        }
+      ]
+    },
+    {
+      "label": "Alpha Compositing (Front-to-Back)",
+      "terms": [
+        {
+          "symbol": "C",
+          "name": "Final pixel colour",
+          "desc": "The accumulated RGB value for this pixel after blending all Gaussians that cover it. Each Gaussian contributes its colour weighted by its opacity and the fraction of light that survived absorption by all Gaussians in front of it."
+        },
+        {
+          "symbol": "\\mathbf{c}_k \\alpha_k",
+          "name": "Colour contribution of Gaussian k",
+          "desc": "How much colour Gaussian k adds to the pixel: its RGB colour scaled by its opacity. A fully transparent Gaussian (α=0) contributes nothing; a fully opaque one contributes its full colour."
+        },
+        {
+          "symbol": "\\prod_{j < k}(1 - \\alpha_j)",
+          "name": "Accumulated transmittance",
+          "desc": "The fraction of light that reaches Gaussian k without being absorbed by the k−1 Gaussians in front of it. Starts at 1.0 and decreases as each opaque Gaussian absorbs more light. When this product approaches 0, further Gaussians contribute negligibly."
+        }
+      ]
+    },
+    {
+      "label": "Opacity-Weighted Volume Sort Key",
+      "terms": [
+        {
+          "symbol": "\\exp(s_{0,k} + s_{1,k} + s_{2,k})",
+          "name": "Proportional Gaussian volume",
+          "desc": "The product of the three activated scale values — proportional to the volume of the Gaussian ellipsoid. Large Gaussians cover more pixels and dominate the scene structure regardless of viewpoint."
+        },
+        {
+          "symbol": "\\frac{1}{1+\\exp(-o_k)}",
+          "name": "Activated opacity α_k",
+          "desc": "The sigmoid-activated opacity of Gaussian k. Multiplying volume by opacity gives a score that rewards Gaussians that are both large and opaque — those most likely to be visually important from any viewpoint."
+        },
+        {
+          "symbol": "V_k \\cdot \\alpha_k",
+          "name": "View-independent importance heuristic",
+          "desc": "The final sort key. Gaussians are sorted descending by this value so the largest, most opaque ones render first. This approximates correct depth ordering for scenes viewed from typical distances, avoiding the per-frame GPU sort that real-time viewers cannot afford."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Kerbl et al. 2023",
+      "title": "3D Gaussian Splatting for Real-Time Radiance Field Rendering",
+      "url": "https://arxiv.org/abs/2308.04079"
+    },
+    {
+      "label": "antimatter15",
+      "title": "splat: WebGL 3D Gaussian Splat Viewer",
+      "url": "https://github.com/antimatter15/splat"
+    },
+    {
+      "label": "Sloan 2008",
+      "title": "Stupid Spherical Harmonics (SH) Tricks",
+      "url": "https://www.ppsloan.org/publications/StupidSH36.pdf"
+    }
+  ],
+  "nextItem": {
+    "type": "reading",
+    "id": "r4"
+  },
+  "prevItem": {
+    "type": "reading",
+    "id": "r2"
+  }
+}

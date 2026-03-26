@@ -1,0 +1,95 @@
+{
+  "id": "matrix-algebra",
+  "type": "prereq",
+  "title": "Matrix Algebra Foundations",
+  "description": "Core linear algebra for ML practitioners. Covers matrix notation, arithmetic operations, geometric interpretation, determinants, matrix inversion, and eigendecomposition — the mathematical backbone of optimization, coordinate transforms, and covariance geometry in modern ML systems.",
+  "level": "Foundational",
+  "estimatedHours": 3,
+  "color": "#1a3c75",
+  "accentLight": "#c8d9f0",
+  "readings": [
+    {
+      "id": "r0",
+      "title": "Notation Reference",
+      "estimatedMinutes": 5,
+      "description": "Symbolic conventions, set notation, and Greek letter pronunciation used throughout these readings.",
+      "dataPath": "data/prereqs/matrix-algebra/readings/r0-notation.json"
+    },
+    {
+      "id": "r1",
+      "title": "Matrices and Vectors",
+      "estimatedMinutes": 14,
+      "description": "Matrix notation, indexing conventions, special matrix types, and vectors.",
+      "dataPath": "data/prereqs/matrix-algebra/readings/r1-terminology.json"
+    },
+    {
+      "id": "r2",
+      "title": "Matrix Operations",
+      "estimatedMinutes": 16,
+      "description": "Transposition, addition, scalar multiplication, inner products, and matrix multiplication.",
+      "dataPath": "data/prereqs/matrix-algebra/readings/r2-operations.json"
+    },
+    {
+      "id": "r3",
+      "title": "Vector Spaces and Geometry",
+      "estimatedMinutes": 14,
+      "description": "Linear combinations, span, linear independence, basis, and geometric interpretation of matrices.",
+      "dataPath": "data/prereqs/matrix-algebra/readings/r3-vector-spaces.json"
+    },
+    {
+      "id": "r4",
+      "title": "Determinants and Matrix Rank",
+      "estimatedMinutes": 13,
+      "description": "Determinant computation, rank, null space, and the connection to invertibility.",
+      "dataPath": "data/prereqs/matrix-algebra/readings/r4-determinants.json"
+    },
+    {
+      "id": "r5",
+      "title": "Eigenvalues, Eigenvectors, and Decompositions",
+      "estimatedMinutes": 18,
+      "description": "Eigendecomposition, spectral theorem for symmetric matrices, SVD, and applications to PCA and covariance analysis.",
+      "dataPath": "data/prereqs/matrix-algebra/readings/r5-eigendecomposition.json"
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "q1",
+      "title": "Matrix Arithmetic",
+      "questionCount": 6,
+      "passingScore": 0.7,
+      "dataPath": "data/prereqs/matrix-algebra/quizzes/q1-arithmetic.json"
+    }
+  ],
+  "drills": [
+    {
+      "id": "d1",
+      "title": "Notation & Matrix Operations",
+      "cardCount": 12,
+      "estimatedMinutes": 8,
+      "dataPath": "data/prereqs/matrix-algebra/drills/d1-notation-operations.json"
+    },
+    {
+      "id": "d2",
+      "title": "Decompositions, Norms & Spectral Structure",
+      "cardCount": 14,
+      "estimatedMinutes": 10,
+      "dataPath": "data/prereqs/matrix-algebra/drills/d2-decompositions-norms.json"
+    }
+  ],
+  "labs": [
+    {
+      "id": "lab1",
+      "title": "Einsum in PyTorch",
+      "estimatedMinutes": 45,
+      "description": "Translate matrix operations to torch.einsum — unary ops, binary products, batched variants, attention, and 3DGS covariance construction.",
+      "dataPath": "data/prereqs/matrix-algebra/labs/lab1-einsum-pytorch.json"
+    },
+    {
+      "id": "lab2",
+      "title": "Einsum in TensorFlow",
+      "estimatedMinutes": 40,
+      "description": "Reproduce einsum operations in TensorFlow, build a custom Keras layer, differentiate through einsum with GradientTape, and benchmark tf.function compilation.",
+      "dataPath": "data/prereqs/matrix-algebra/labs/lab2-einsum-tensorflow.json"
+    }
+  ]
+}

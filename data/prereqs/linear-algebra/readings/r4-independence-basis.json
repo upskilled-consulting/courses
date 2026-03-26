@@ -1,0 +1,90 @@
+{
+  "id": "r4",
+  "moduleId": "linear-algebra",
+  "title": "Linear Independence and Bases",
+  "estimatedMinutes": 16,
+  "learningObjectives": [
+    {
+      "id": "r4-lo1",
+      "verb": "Test",
+      "description": "Test a set of vectors for linear independence by solving the homogeneous equation",
+      "skillTags": [
+        "matrix-structure"
+      ]
+    },
+    {
+      "id": "r4-lo2",
+      "verb": "Construct",
+      "description": "Construct a basis for a subspace from a spanning set by removing dependent vectors via row reduction",
+      "skillTags": [
+        "matrix-structure",
+        "coordinate-frames"
+      ]
+    },
+    {
+      "id": "r4-lo3",
+      "verb": "Compute",
+      "description": "Compute the coordinate representation of a vector in a non-standard basis",
+      "skillTags": [
+        "coordinate-frames"
+      ]
+    },
+    {
+      "id": "r4-lo4",
+      "verb": "Explain",
+      "description": "Explain why word and token embeddings implicitly define coordinate systems and what linear independence means in that context",
+      "skillTags": [
+        "embedding-geometry",
+        "coordinate-frames"
+      ]
+    }
+  ],
+  "content": "## Linear Independence\n\nA set of vectors $\\{\\vec{v}_1, \\ldots, \\vec{v}_k\\}$ from a vector space $V$ is **linearly independent** if the only way to write $\\vec{0}$ as a linear combination is the trivial one:\n\n$$c_1 \\vec{v}_1 + c_2 \\vec{v}_2 + \\cdots + c_k \\vec{v}_k = \\vec{0} \\implies c_1 = c_2 = \\cdots = c_k = 0$$\n\nIf any non-trivial combination exists, the set is **linearly dependent** — at least one vector is redundant (it lies in the span of the others).\n\n### Testing for Independence\n\nForm the matrix $A$ whose columns are $\\vec{v}_1, \\ldots, \\vec{v}_k$ and row-reduce $[A \\mid \\vec{0}]$. The set is independent iff the only solution is $\\vec{c} = \\vec{0}$, i.e., iff every column contains a pivot (no free variables).\n\n### Dependency Relations\n\nIf the set is dependent, the reduction reveals the dependency: any free variable corresponds to a non-trivial combination equaling $\\vec{0}$. This tells you exactly which vector is redundant and how to express it.\n\n**Example**: are $\\vec{v}_1 = (1,2,0)'$, $\\vec{v}_2 = (0,1,1)'$, $\\vec{v}_3 = (1,4,2)'$ independent?\n\n$$\\left[\\begin{array}{rrr|r}1&0&1&0\\\\2&1&4&0\\\\0&1&2&0\\end{array}\\right] \\to \\left[\\begin{array}{rrr|r}1&0&1&0\\\\0&1&2&0\\\\0&0&0&0\\end{array}\\right]$$\n\nFree variable $c_3$: set $c_3 = 1$ to get $c_2 = -2$, $c_1 = -1$. So $\\vec{v}_3 = \\vec{v}_1 + 2\\vec{v}_2$ — the set is dependent.\n\n<div class=\"li-test-embed\"></div>\n\n## Basis\n\nA **basis** for a vector space $V$ is a set of vectors $B = \\{\\vec{\\beta}_1, \\ldots, \\vec{\\beta}_n\\}$ that simultaneously:\n1. **Spans** $V$: every vector in $V$ is a linear combination of the $\\vec{\\beta}_i$\n2. **Is linearly independent**: no vector is redundant\n\nA basis is the minimal spanning set — remove any vector and it no longer spans. It is also the maximal independent set — add any vector and dependence appears.\n\n### Existence of Bases\n\nEvery vector space has a basis (this requires the Axiom of Choice for infinite-dimensional spaces, but is elementary for finite-dimensional ones). Starting from any spanning set, you can build a basis by removing redundant vectors one at a time until independence is achieved.\n\n### The Standard Basis for $\\mathbb{R}^n$\n\nThe **standard basis** $\\mathcal{E}_n = \\{\\vec{e}_1, \\ldots, \\vec{e}_n\\}$ has $\\vec{e}_i$ equal to the column of the identity matrix $I_n$ with a $1$ in position $i$:\n\n$$\\vec{e}_1 = \\begin{pmatrix}1\\\\0\\\\\\vdots\\\\0\\end{pmatrix}, \\quad \\vec{e}_2 = \\begin{pmatrix}0\\\\1\\\\\\vdots\\\\0\\end{pmatrix}, \\quad \\ldots, \\quad \\vec{e}_n = \\begin{pmatrix}0\\\\0\\\\\\vdots\\\\1\\end{pmatrix}$$\n\nAny vector $\\vec{v} = (v_1, \\ldots, v_n)'$ is uniquely expressed as $v_1\\vec{e}_1 + \\cdots + v_n\\vec{e}_n$.\n\n### Other Bases for $\\mathcal{P}_2$\n\nThe space of degree-$\\leq 2$ polynomials has basis $\\{1, x, x^2\\}$ (standard) or equally $\\{1, 1+x, 1+x+x^2\\}$ — any three independent polynomials that span $\\mathcal{P}_2$.\n\n## Unique Representation\n\nThe most important property of a basis is uniqueness of representation:\n\n> **Theorem**: if $B = \\{\\vec{\\beta}_1, \\ldots, \\vec{\\beta}_n\\}$ is a basis for $V$, then every $\\vec{v} \\in V$ can be written as $c_1\\vec{\\beta}_1 + \\cdots + c_n\\vec{\\beta}_n$ in *exactly one way*.\n\n**Proof**: suppose $\\vec{v} = \\sum c_i\\vec{\\beta}_i = \\sum d_i\\vec{\\beta}_i$. Subtracting: $\\sum (c_i - d_i)\\vec{\\beta}_i = \\vec{0}$. Independence forces $c_i = d_i$ for all $i$.\n\nThe coefficients $(c_1, \\ldots, c_n)$ are the **coordinates** of $\\vec{v}$ with respect to basis $B$, written $\\mathrm{Rep}_B(\\vec{v})$. Choosing a basis is choosing a coordinate system.\n\n## Why Bases Matter for ML\n\nIn machine learning, features are basis representations: the columns of a data matrix form (implicitly) a basis for the feature space. PCA changes basis to one aligned with the directions of maximum variance. Neural network weight matrices change basis between layers. Understanding what a basis *is* — a minimal, non-redundant, complete coordinate system — makes all of these operations transparent.\n\n## Testing Independence and Computing Representations\n\n```python\nimport numpy as np\n\n# Columns of A are v1, v2, v3\nA = np.array([[1., 0., 1.],\n              [2., 1., 4.],\n              [0., 1., 2.]])\n\n# Rank via SVD: independent iff rank equals number of columns\n_, S, Vh = np.linalg.svd(A, full_matrices=True)\nrank    = int(np.sum(S > 1e-9))\nnullity = A.shape[1] - rank\nprint('rank:', rank)        # 2  (< 3 → dependent)\nprint('nullity:', nullity)  # 1\n\n# Null vector reveals the dependency: c1*v1 + c2*v2 + c3*v3 = 0\nnull_vec = Vh[-1]             # last row of Vh (smallest singular value)\nc = null_vec / null_vec[-1]   # scale so c3 = 1\nprint('dependency (c1,c2,c3):', np.round(c, 4))  # [-1. -2.  1.] → v3 = v1 + 2*v2\n\n# Coordinate representation Rep_B(v): solve B @ coords = v\nB = np.array([[1., 0., 0.],\n              [1., 1., 0.],\n              [0., 1., 1.]])\nv = np.array([2., 3., 1.])\ncoords = np.linalg.solve(B, v)\nprint('Rep_B(v):', np.round(coords, 4))\nprint('verify:  ', np.round(np.einsum('ij,j->i', B, coords), 4))\n```\n\nThe `einsum` string `'ij,j->i'` is the matrix–vector product $A\\vec{x}$, identical in NumPy, PyTorch (`torch.einsum`), and TensorFlow (`tf.einsum`). The SVD-based null vector is in an orthonormal basis; `c = null_vec / null_vec[-1]` rescales it to the free-variable parameterization from the row-reduction.",
+  "equationBreakdowns": [
+    {
+      "label": "Linear Independence Condition",
+      "terms": [
+        {
+          "symbol": "c_1\\vec{v}_1 + \\cdots + c_k\\vec{v}_k = \\vec{0}",
+          "name": "Homogeneous combination",
+          "desc": "The test for dependence is always the homogeneous equation. If the only solution is all-zero coefficients, the vectors are independent. Any nonzero solution reveals a dependency."
+        },
+        {
+          "symbol": "c_1 = \\cdots = c_k = 0",
+          "name": "Trivial solution only",
+          "desc": "Independence means the zero vector cannot be built from these vectors in any nontrivial way. Geometrically: no vector in the set lies in the span of the others."
+        }
+      ]
+    },
+    {
+      "label": "Coordinate Representation",
+      "terms": [
+        {
+          "symbol": "\\mathrm{Rep}_B(\\vec{v})",
+          "name": "Representation of v in basis B",
+          "desc": "The unique tuple of coordinates (c₁,…,cₙ) such that v = c₁β₁ + ⋯ + cₙβₙ. Changing the basis changes the coordinates while the underlying vector remains the same."
+        },
+        {
+          "symbol": "c_i",
+          "name": "i-th coordinate",
+          "desc": "The coefficient of basis vector βᵢ in the unique expansion of v. These coordinates are what gets stored in a computer — the basis is implied by the context."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Hefferon 2020",
+      "title": "Linear Algebra, Ch. Two §II–III: Linear Independence, Basis",
+      "url": null
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r3"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r5"
+  }
+}

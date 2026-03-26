@@ -1,0 +1,163 @@
+{
+  "id": "q2",
+  "moduleId": "linear-algebra",
+  "title": "Vector Spaces and Dimension",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "questions": [
+    {
+      "id": "q2_1",
+      "type": "multiple-choice",
+      "prompt": "A token embedding matrix $E \\in \\mathbb{R}^{50000 \\times 768}$ has rank $600$. In what subspace do all 50,000 token embeddings actually live?",
+      "options": [
+        {
+          "id": "a",
+          "text": "$\\mathbb{R}^{50000}$ — one dimension per token",
+          "correct": false
+        },
+        {
+          "id": "b",
+          "text": "The full $\\mathbb{R}^{768}$ embedding space",
+          "correct": false
+        },
+        {
+          "id": "c",
+          "text": "A 600-dimensional subspace of $\\mathbb{R}^{768}$",
+          "correct": true
+        },
+        {
+          "id": "d",
+          "text": "A 168-dimensional subspace $(= 768 - 600)$",
+          "correct": false
+        }
+      ],
+      "explanation": "The column space of $E$ has dimension $= \\text{rank}(E) = 600$. All 50,000 token embeddings are rows of $E$ and therefore live in a 600-dimensional subspace of $\\mathbb{R}^{768}$ — 168 dimensions are unused. This intrinsic dimensionality collapse happens naturally during training and is why low-rank matrix factorisation works well for embedding compression.",
+      "hint": "The column space of $E$ contains all achievable embedding vectors. What is its dimension?"
+    },
+    {
+      "id": "q2_2",
+      "type": "multiple-choice",
+      "prompt": "A data matrix $X \\in \\mathbb{R}^{1000 \\times 512}$ has rank $47$. By the rank-nullity theorem, $\\dim(\\mathcal{N}(X)) =$",
+      "options": [
+        {
+          "id": "a",
+          "text": "47",
+          "correct": false
+        },
+        {
+          "id": "b",
+          "text": "465",
+          "correct": true
+        },
+        {
+          "id": "c",
+          "text": "953",
+          "correct": false
+        },
+        {
+          "id": "d",
+          "text": "Cannot be determined without the singular values",
+          "correct": false
+        }
+      ],
+      "explanation": "Rank-nullity: $\\text{rank}(X) + \\text{nullity}(X) = n$ where $n = 512$ is the number of columns. So $\\text{nullity}(X) = 512 - 47 = 465$. These 465 directions in $\\mathbb{R}^{512}$ are completely erased by multiplying by $X$.",
+      "hint": "Rank-nullity: rank + nullity = number of columns (input dimension), not rows."
+    },
+    {
+      "id": "q2_3",
+      "type": "code-completion",
+      "prompt": "Complete the function to compute the numerical rank of matrix `A` via SVD. A singular value counts as nonzero only if it exceeds `tol`.",
+      "codeTemplate": "import numpy as np\n\ndef numerical_rank(A, tol=1e-9):\n    _, S, _ = np.linalg.svd(A, full_matrices=False)\n    return ___BLANK___",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "int(np.sum(S > tol))",
+        "np.sum(S > tol)",
+        "(S > tol).sum()",
+        "int((S > tol).sum())"
+      ],
+      "explanation": "SVD gives singular values in descending order. Counting those above a threshold gives the numerical rank — more reliable than `np.linalg.matrix_rank` for near-singular matrices, since floating-point errors make truly-zero singular values appear small but nonzero. PyTorch: `torch.linalg.svdvals(A)` then threshold.",
+      "hint": "S is an array of singular values in descending order. How do you count how many exceed tol?"
+    },
+    {
+      "id": "q2_4",
+      "type": "multiple-choice",
+      "prompt": "PCA finds the $k$-dimensional subspace of $\\mathbb{R}^d$ maximising variance in a centred dataset $X$. This subspace is spanned by:",
+      "options": [
+        {
+          "id": "a",
+          "text": "The $k$ columns of $X$ with largest $\\ell^2$ norm",
+          "correct": false
+        },
+        {
+          "id": "b",
+          "text": "The $k$ eigenvectors of $X^TX$ with the largest eigenvalues",
+          "correct": true
+        },
+        {
+          "id": "c",
+          "text": "Any $k$ orthonormal vectors in $\\mathbb{R}^d$",
+          "correct": false
+        },
+        {
+          "id": "d",
+          "text": "The $k$ rows of $X$ with largest $\\ell^2$ norm",
+          "correct": false
+        }
+      ],
+      "explanation": "$X^TX$ is symmetric PSD; its eigenvectors form an orthonormal basis and its eigenvalues equal the squared singular values of $X$ (scaled by $n-1$). The top-$k$ eigenvectors span the direction of maximum variance — the principal subspace. Equivalently these are the top-$k$ right singular vectors of $X$ from SVD.",
+      "hint": "The covariance matrix is $\\frac{1}{n-1}X^TX$. What do its eigenvectors represent?"
+    },
+    {
+      "id": "q2_5",
+      "type": "code-completion",
+      "prompt": "Given a basis matrix `B` (columns are basis vectors) and vector `v`, find the coordinates of `v` in that basis — solve $B\\vec{c} = \\vec{v}$ for $\\vec{c}$.",
+      "codeTemplate": "import numpy as np\n\ndef coords_in_basis(B, v):\n    # B: (n, k) matrix, v: (n,) vector\n    return ___BLANK___",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "np.linalg.solve(B, v)",
+        "np.linalg.lstsq(B, v, rcond=None)[0]",
+        "np.linalg.lstsq(B, v)[0]"
+      ],
+      "explanation": "Coordinate representation is solving the linear system $B\\vec{c} = \\vec{v}$. `np.linalg.solve` works when $B$ is square invertible; `lstsq` handles overdetermined systems. In PyTorch: `torch.linalg.solve(B, v)` or `torch.linalg.lstsq(B, v).solution`. The resulting $\\vec{c}$ uniquely identifies $\\vec{v}$ relative to the chosen basis.",
+      "hint": "Coordinates satisfy $B\\vec{c} = \\vec{v}$. Which numpy function solves a linear system?"
+    },
+    {
+      "id": "q2_6",
+      "type": "multiple-choice",
+      "prompt": "Which of the following subsets of $\\mathbb{R}^3$ is **not** a subspace?",
+      "options": [
+        {
+          "id": "a",
+          "text": "$\\{(x_1,x_2,x_3) : x_1 + x_2 + x_3 = 0\\}$",
+          "correct": false
+        },
+        {
+          "id": "b",
+          "text": "$\\text{span}\\{(1,0,0),\\,(0,1,0)\\}$",
+          "correct": false
+        },
+        {
+          "id": "c",
+          "text": "$\\{\\vec{x} : \\|\\vec{x}\\|_2 \\leq 1\\}$ — the closed unit ball",
+          "correct": true
+        },
+        {
+          "id": "d",
+          "text": "$\\mathcal{N}(A)$ for any $3\\times 3$ matrix $A$",
+          "correct": false
+        }
+      ],
+      "explanation": "The unit ball fails scalar-multiplication closure: $(1,0,0)$ is in the ball, but $2(1,0,0)=(2,0,0)$ is not. A subspace must be closed under all scalars, including those $>1$. Every null space automatically satisfies all three subspace conditions (contains $\\vec{0}$, closed under addition, closed under scaling), so option (d) is always a subspace.",
+      "hint": "Check: closed under scalar multiplication? What happens when you scale a vector on the boundary of the ball by 2?"
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r5"
+  },
+  "nextItem": {
+    "type": "lab",
+    "id": "lab1"
+  }
+}

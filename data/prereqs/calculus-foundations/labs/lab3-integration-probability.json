@@ -1,0 +1,20 @@
+{
+  "id": "lab3",
+  "moduleId": "calculus-foundations",
+  "title": "Integration and Probability",
+  "estimatedMinutes": 40,
+  "description": "## Lab 3: Integration and Probability\n\nIntegration connects calculus to probability: probability densities are defined by integrals, expected values are integrals, entropy is an integral. This lab makes those connections concrete — you will compute integrals numerically and analytically, verify the Fundamental Theorem, and recover the key probabilistic quantities you will use throughout the rest of the platform.\n\n### What You'll Build\n\n- A **trapezoidal integrator** from scratch and a convergence plot showing error vs number of trapezoids, confirming the $O(1/n^2)$ rate\n- A **Fundamental Theorem verifier**: compare $\\int_a^b f(x)\\,dx$ computed numerically vs $F(b) - F(a)$ from the analytic antiderivative, for several $f$ and interval pairs\n- A **Gaussian normalization check**: numerically integrate the standard normal PDF over $[-\\infty, \\infty]$ (using a wide finite range) and confirm the result is 1 — then verify the 68–95–99.7 rule by integrating over $[-1\\sigma, 1\\sigma]$, $[-2\\sigma, 2\\sigma]$, $[-3\\sigma, 3\\sigma]$\n- A **Monte Carlo integrator**: estimate $\\pi$ by sampling uniform points in the unit square and checking whether they fall in the unit circle (area $= \\pi/4$), then plot how the estimate improves with sample count\n- A **KL divergence calculator**: numerically integrate $D_{\\text{KL}}(p \\| q) = \\int p(x) \\ln(p(x)/q(x))\\,dx$ for two Gaussians with different means, confirming non-negativity and asymmetry ($D_{\\text{KL}}(p\\|q) \\neq D_{\\text{KL}}(q\\|p)$)\n\n### Key Concepts Practiced\n\nBy the end you will understand that the probabilistic quantities from the probability-foundations module — PDFs, expected values, KL divergence — are all just integrals, and that numerical integration via Monte Carlo sampling is why those quantities are tractable in high-dimensional ML systems.",
+  "objectives": [
+    "Implement the trapezoidal rule and verify that integration error decreases as O(1/n²) with the number of subintervals.",
+    "Confirm the Fundamental Theorem numerically: show that ∫_a^b f(x)dx ≈ F(b) − F(a) for at least three different functions.",
+    "Integrate the standard normal PDF and verify the 68–95–99.7 rule by computing P(|X| ≤ kσ) for k = 1, 2, 3.",
+    "Implement a Monte Carlo estimator for π and plot the convergence of the estimate as a function of sample count.",
+    "Numerically compute D_KL(p‖q) and D_KL(q‖p) for two Gaussians and confirm that KL divergence is non-negative and asymmetric."
+  ],
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/calculus-foundations/lab3_integration_probability.ipynb",
+  "prevItem": {
+    "type": "lab",
+    "id": "lab2"
+  },
+  "nextItem": null
+}

@@ -1,0 +1,84 @@
+{
+  "id": "d5",
+  "moduleId": "linear-algebra",
+  "title": "Determinants, Eigenvalues & SVD",
+  "description": "Flashcards for the determinant, characteristic polynomial, eigendecomposition, SVD, Eckart-Young, and spectral structure.",
+  "estimatedMinutes": 10,
+  "cards": [
+    {
+      "id": "c01",
+      "front": "**Eigenvalue equation**",
+      "back": "$$A\\vec{v} = \\lambda\\vec{v}, \\quad \\vec{v}\\neq\\vec{0}$$\n\n$\\lambda$ = eigenvalue; $\\vec{v}$ = eigenvector.\n\n$A$ scales $\\vec{v}$ without rotating it (or reverses direction if $\\lambda<0$).\n\n*Usage: diagonalisation, PCA, PageRank, stability analysis of dynamical systems*"
+    },
+    {
+      "id": "c02",
+      "front": "**Characteristic equation**",
+      "back": "$$\\det(A - \\lambda I) = 0$$\n\nEigenvalues are the roots of this equation.\n\n*Usage: solve for $\\lambda$ first; then find $\\vec{v}$ by solving $(A-\\lambda I)\\vec{v}=\\vec{0}$*"
+    },
+    {
+      "id": "c03",
+      "front": "**Characteristic polynomial** of $A\\in\\mathbb{R}^{n\\times n}$",
+      "back": "$$p(\\lambda) = \\det(\\lambda I - A)$$\n\nDegree-$n$ polynomial in $\\lambda$. Its roots are the eigenvalues (counted with algebraic multiplicity).\n\n*Usage: $p(\\lambda) = \\lambda^n - (\\mathrm{tr}\\,A)\\lambda^{n-1} + \\cdots + (-1)^n\\det A$*"
+    },
+    {
+      "id": "c04",
+      "front": "**Eigendecomposition** of a diagonalisable matrix",
+      "back": "$$A = P\\Lambda P^{-1}$$\n\n- $\\Lambda = \\mathrm{diag}(\\lambda_1,\\ldots,\\lambda_n)$ — eigenvalues on diagonal\n- $P$ — columns are eigenvectors $\\vec{v}_1,\\ldots,\\vec{v}_n$\n\nRequires $n$ linearly independent eigenvectors (guaranteed for symmetric $A$).\n\n*Usage: $A^k = P\\Lambda^k P^{-1}$; exponential $e^{At} = Pe^{\\Lambda t}P^{-1}$*"
+    },
+    {
+      "id": "c05",
+      "front": "**Matrix powers via eigendecomposition**: $A^k = ?$",
+      "back": "$$A^k = P\\Lambda^k P^{-1}, \\quad \\Lambda^k = \\mathrm{diag}(\\lambda_1^k,\\ldots,\\lambda_n^k)$$\n\n*Usage: long-run Markov chain behaviour; gradient descent convergence — iterates contract if $|\\lambda_i|<1$ for all $i$*"
+    },
+    {
+      "id": "c06",
+      "front": "**Singular Value Decomposition (SVD)**",
+      "back": "$$A = U\\Sigma V^T, \\quad A\\in\\mathbb{R}^{m\\times n}$$\n\n- $U\\in\\mathbb{R}^{m\\times m}$ — left singular vectors (orthogonal)\n- $\\Sigma\\in\\mathbb{R}^{m\\times n}$ — diagonal, $\\sigma_1\\geq\\sigma_2\\geq\\cdots\\geq 0$\n- $V\\in\\mathbb{R}^{n\\times n}$ — right singular vectors (orthogonal)\n\n*Usage: PCA, low-rank approximation, pseudoinverse, condition number*"
+    },
+    {
+      "id": "c07",
+      "front": "**Singular values** — how do they relate to eigenvalues?",
+      "back": "$$\\sigma_i(A) = \\sqrt{\\lambda_i(A^TA)}$$\n\nSingular values are always $\\geq 0$. For symmetric PSD matrices, singular values = eigenvalues.\n\n*Usage: $\\sigma_1 = \\|A\\|_2$ (spectral norm); condition number $\\kappa(A)=\\sigma_1/\\sigma_n$*"
+    },
+    {
+      "id": "c08",
+      "front": "**Eckart-Young Theorem** (best low-rank approximation)",
+      "back": "$$A_k = \\sum_{i=1}^{k}\\sigma_i\\vec{u}_i\\vec{v}_i^T$$\n\nMinimises both spectral and Frobenius norm:\n\n$$\\min_{\\mathrm{rank}(B)\\leq k}\\|A-B\\|_F = \\sqrt{\\sigma_{k+1}^2+\\cdots+\\sigma_r^2}$$\n\n*Usage: image compression, noise reduction, matrix completion*"
+    },
+    {
+      "id": "c09",
+      "front": "$$\\det A = ? \\text{ in terms of eigenvalues}$$",
+      "back": "$$\\det A = \\prod_{i=1}^n \\lambda_i$$\n\nProduct of all eigenvalues (with multiplicity).\n\n*Usage: $\\det A=0 \\iff$ at least one eigenvalue is zero $\\iff$ $A$ is singular*"
+    },
+    {
+      "id": "c10",
+      "front": "$$\\mathrm{tr}(A) = ? \\text{ in terms of eigenvalues}$$",
+      "back": "$$\\mathrm{tr}(A) = \\sum_{i=1}^n \\lambda_i = \\sum_{i=1}^n a_{ii}$$\n\nTrace = sum of diagonal entries = sum of eigenvalues.\n\n*Usage: $\\mathrm{tr}(AB)=\\mathrm{tr}(BA)$; nuclear norm $\\|A\\|_* = \\mathrm{tr}(\\Sigma)$ in SVD*"
+    },
+    {
+      "id": "c11",
+      "front": "**Frobenius norm** in terms of singular values",
+      "back": "$$\\|A\\|_F = \\sqrt{\\sum_{i,j}a_{ij}^2} = \\sqrt{\\sum_i \\sigma_i^2} = \\sqrt{\\mathrm{tr}(A^TA)}$$\n\n*Usage: measures total energy in a matrix; Eckart-Young truncation error is $\\sqrt{\\sum_{i>k}\\sigma_i^2}$*"
+    },
+    {
+      "id": "c12",
+      "front": "**Nuclear norm** $\\|A\\|_*$",
+      "back": "$$\\|A\\|_* = \\sum_i \\sigma_i = \\mathrm{tr}(\\Sigma)$$\n\nSum of all singular values.\n\n*Usage: convex surrogate for matrix rank; nuclear-norm minimisation promotes low-rank solutions (matrix LASSO)*"
+    },
+    {
+      "id": "c13",
+      "front": "**Rank of $A$** in terms of singular values",
+      "back": "$$\\mathrm{rank}(A) = \\text{number of non-zero singular values}$$\n\nNumerically: count $\\sigma_i > \\epsilon$ for some tolerance $\\epsilon$ (e.g. $\\epsilon = \\sigma_1 \\times 10^{-12}$).\n\n*Usage: Eckart-Young at rank $k$ retains the $k$ largest singular values*"
+    },
+    {
+      "id": "c14",
+      "front": "**Invertibility via eigenvalues** — when is $A$ invertible?",
+      "back": "$$A \\text{ invertible} \\iff \\det A \\neq 0 \\iff 0 \\notin \\{\\lambda_1,\\ldots,\\lambda_n\\}$$\n\nAlso equivalent: all singular values $>0$.\n\n*Usage: gradient descent on $\\frac12\\|Ax-b\\|^2$ converges iff $A$ has no zero singular values*"
+    },
+    {
+      "id": "c15",
+      "front": "**Spectral convergence** of power iteration",
+      "back": "Power iteration $\\vec{x}_{k+1} = A\\vec{x}_k / \\|A\\vec{x}_k\\|$ converges to the dominant eigenvector at rate\n\n$$\\left|\\frac{\\lambda_2}{\\lambda_1}\\right|^k \\to 0$$\n\n*Usage: convergence is fast when eigenvalue gap $|\\lambda_1|-|\\lambda_2|$ is large; PageRank uses this*"
+    }
+  ]
+}

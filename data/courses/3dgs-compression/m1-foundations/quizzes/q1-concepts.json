@@ -1,0 +1,72 @@
+{
+  "id": "q1",
+  "moduleId": "m1",
+  "title": "3DGS Core Concepts",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "questions": [
+    {
+      "id": "q1_1",
+      "type": "multiple-choice",
+      "prompt": "In the alpha compositing formula \\(c(\\mathbf{p}) = \\sum_{i} c_i \\alpha_i' \\prod_{j<i}(1-\\alpha_j')\\), the product term \\(\\prod_{j<i}(1-\\alpha_j')\\) represents:",
+      "options": [
+        { "id": "a", "text": "The opacity of Gaussian \\(i\\)", "correct": false },
+        { "id": "b", "text": "The accumulated transmittance — how much light from Gaussian \\(i\\) survives the occluders in front of it", "correct": true },
+        { "id": "c", "text": "The normalized weight assigned to Gaussian \\(i\\) so all weights sum to 1", "correct": false },
+        { "id": "d", "text": "The depth-sorting key used by the radix sort", "correct": false }
+      ],
+      "explanation": "\\(T_i = \\prod_{j<i}(1-\\alpha_j')\\) is the transmittance reaching Gaussian \\(i\\). Each factor \\((1-\\alpha_j')\\) is the fraction of light not absorbed by Gaussian \\(j\\). When all foreground Gaussians are nearly opaque, \\(T_i \\to 0\\) and the early-termination criterion triggers.",
+      "hint": "Think about what happens to a light ray as it passes through partially opaque Gaussians before reaching Gaussian \\(i\\)."
+    },
+    {
+      "id": "q1_2",
+      "type": "multiple-choice",
+      "prompt": "3DGS uses per-tile depth sorting rather than a global sort. What is the primary consequence of this approximation?",
+      "options": [
+        { "id": "a", "text": "Rendering is exact but slower than a global sort", "correct": false },
+        { "id": "b", "text": "Gaussians are sorted correctly within each tile but sorting order may be inconsistent at tile boundaries, causing minor popping artifacts", "correct": true },
+        { "id": "c", "text": "Alpha compositing cannot be applied because depth order is unknown", "correct": false },
+        { "id": "d", "text": "Only opaque Gaussians can be rendered correctly", "correct": false }
+      ],
+      "explanation": "Tile-based sorting is an approximation: within a tile, all Gaussians contributing to that tile are sorted correctly. At tile boundaries, a Gaussian that spans two tiles may be processed in slightly different depth orders for adjacent tiles, causing subtle inconsistencies. In practice this is rarely visible but is a known limitation of the approach.",
+      "hint": "Consider what 'per-tile' means: sorting happens independently inside each 16×16 block."
+    },
+    {
+      "id": "q1_3",
+      "type": "multiple-choice",
+      "prompt": "During adaptive densification, when should a Gaussian be *cloned* rather than *split*?",
+      "options": [
+        { "id": "a", "text": "When its scale is large and positional gradient is high — the blob is too coarse for the region", "correct": false },
+        { "id": "b", "text": "When its scale is small and positional gradient is high — the region is under-reconstructed but the Gaussian is already appropriately sized", "correct": true },
+        { "id": "c", "text": "When its opacity drops below the pruning threshold", "correct": false },
+        { "id": "d", "text": "When it projects onto a tile with more than 256 other Gaussians", "correct": false }
+      ],
+      "explanation": "Cloning creates a duplicate at a nearby location when a small Gaussian needs to cover more area but isn't the wrong size. Splitting is for large Gaussians that are individually too coarse — they are replaced by two smaller ones placed along the principal gradient direction.",
+      "hint": "The key distinguishing factor is the *size* of the Gaussian at the time the gradient criterion is met."
+    },
+    {
+      "id": "q1_4",
+      "type": "code-completion",
+      "prompt": "Complete the tile-based rasterization inner loop. After accumulating color from Gaussian \\(i\\), the transmittance must be updated before moving to Gaussian \\(i+1\\):",
+      "codeTemplate": "T = 1.0\ncolor = [0.0, 0.0, 0.0]\nfor gaussian in depth_sorted_gaussians:\n    alpha = gaussian.opacity * gaussian.density_at(pixel)\n    color += gaussian.sh_color(ray_dir) * alpha * T\n    T *= ___BLANK___\n    if T < 1e-4:\n        break  # early termination",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": ["(1 - alpha)", "(1-alpha)", "1 - alpha", "1-alpha"],
+      "explanation": "After using the current transmittance \\(T\\) to weight Gaussian \\(i\\)'s contribution, we must update \\(T \\leftarrow T \\cdot (1-\\alpha_i)\\) to account for the additional occlusion introduced by this Gaussian for all subsequent ones.",
+      "hint": "Each Gaussian absorbs a fraction \\(\\alpha_i\\) of the remaining transmittance. What fraction passes through?"
+    },
+    {
+      "id": "q1_5",
+      "type": "multiple-choice",
+      "prompt": "A 3DGS scene trained with order-3 spherical harmonics has 5 million Gaussians. Stored as float32, what is the approximate uncompressed size?",
+      "options": [
+        { "id": "a", "text": "~60 MB", "correct": false },
+        { "id": "b", "text": "~300 MB", "correct": false },
+        { "id": "c", "text": "~1.1 GB", "correct": true },
+        { "id": "d", "text": "~4.5 GB", "correct": false }
+      ],
+      "explanation": "5,000,000 × 59 params × 4 bytes/param = 1,180,000,000 bytes ≈ 1.1 GB. This matches real-world observations for mid-size scenes (the Truck scene from Tanks & Temples has ~2.5M Gaussians → ~590 MB).",
+      "hint": "Recall the full parameter count per Gaussian: 3 pos + 3 scale + 4 rot + 1 opacity + 3 DC + 45 SH = 59."
+    }
+  ]
+}

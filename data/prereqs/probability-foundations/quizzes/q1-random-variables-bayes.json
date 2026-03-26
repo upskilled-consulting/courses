@@ -1,0 +1,118 @@
+{
+  "id": "q1",
+  "moduleId": "probability-foundations",
+  "title": "Random Variables, Expectation, and Bayes' Theorem",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "type": "reading", "id": "r3" },
+  "nextItem": { "type": "reading", "id": "r4" },
+  "questions": [
+    {
+      "id": "q1_1",
+      "type": "multiple-choice",
+      "prompt": "A function $f_X(x)$ satisfies $f_X(x) \\geq 0$ for all $x$ and $\\int_{-\\infty}^{\\infty} f_X(x)\\,dx = 1$. Which statement is correct?",
+      "options": [
+        { "id": "a", "text": "$f_X(x) = P(X = x)$ for all $x$", "correct": false },
+        { "id": "b", "text": "$f_X$ is a probability density function and $P(a \\leq X \\leq b) = \\int_a^b f_X(x)\\,dx$", "correct": true },
+        { "id": "c", "text": "$f_X(x) \\leq 1$ for all $x$", "correct": false },
+        { "id": "d", "text": "$f_X$ is defined only for discrete random variables", "correct": false }
+      ],
+      "explanation": "$f_X$ is a **probability density function (PDF)** for a continuous random variable. Probabilities are obtained by integrating: $P(a \\leq X \\leq b) = \\int_a^b f_X(x)\\,dx$. Crucially, $f_X(x)$ is **not** itself a probability — it can exceed 1 (e.g., Uniform$(0, 0.1)$ has density 10). The statement $f_X(x) = P(X=x)$ describes a PMF for discrete RVs, not a PDF.",
+      "hint": "For a continuous RV, $P(X = x) = 0$ for any single point. How do you extract probabilities from a PDF?"
+    },
+    {
+      "id": "q1_2",
+      "type": "multiple-choice",
+      "prompt": "A binary classifier predicts class $A$ 60% of the time and class $B$ 40% of the time. The error rate given class $A$ is 0.10; given class $B$ it is 0.30. Using the law of total probability, what is the overall error rate?",
+      "options": [
+        { "id": "a", "text": "0.20", "correct": false },
+        { "id": "b", "text": "0.18", "correct": true },
+        { "id": "c", "text": "0.40", "correct": false },
+        { "id": "d", "text": "0.15", "correct": false }
+      ],
+      "explanation": "By the law of total probability: $P(\\text{error}) = P(\\text{error}|A)\\,P(A) + P(\\text{error}|B)\\,P(B) = 0.10 \\times 0.60 + 0.30 \\times 0.40 = 0.06 + 0.12 = 0.18$. The law partitions the probability over the exhaustive, mutually exclusive conditioning events ($A$ and $B$) and weights each conditional error rate by the prior probability of that class.",
+      "hint": "Write $P(\\text{error}) = \\sum_c P(\\text{error}|\\text{class}=c)\\,P(\\text{class}=c)$ and plug in the given values."
+    },
+    {
+      "id": "q1_3",
+      "type": "multiple-choice",
+      "prompt": "A random variable $X$ has $E[X] = 4$. What is $E[3X - 7]$?",
+      "options": [
+        { "id": "a", "text": "$12$", "correct": false },
+        { "id": "b", "text": "$5$", "correct": true },
+        { "id": "c", "text": "$19$", "correct": false },
+        { "id": "d", "text": "$4$", "correct": false }
+      ],
+      "explanation": "By linearity of expectation: $E[aX + b] = a\\,E[X] + b$ for any constants $a$ and $b$. Therefore $E[3X - 7] = 3\\,E[X] - 7 = 3(4) - 7 = 12 - 7 = 5$. This property holds regardless of the distribution of $X$ — no knowledge of $\\text{Var}(X)$ or higher moments is needed.",
+      "hint": "Recall $E[aX + b] = a\\,E[X] + b$. Apply with $a = 3$, $b = -7$."
+    },
+    {
+      "id": "q1_4",
+      "type": "multiple-choice",
+      "prompt": "For a random variable $X$, you are told that $E[X] = 3$ and $E[X^2] = 13$. What is $\\text{Var}(X)$?",
+      "options": [
+        { "id": "a", "text": "$10$", "correct": false },
+        { "id": "b", "text": "$4$", "correct": true },
+        { "id": "c", "text": "$9$", "correct": false },
+        { "id": "d", "text": "$13$", "correct": false }
+      ],
+      "explanation": "The computational shortcut for variance is $\\text{Var}(X) = E[X^2] - (E[X])^2 = 13 - 3^2 = 13 - 9 = 4$. This avoids having to know the full distribution: you only need $E[X]$ and $E[X^2]$. This formula is also why variance can be estimated from data as $\\overline{x^2} - \\bar{x}^2$.",
+      "hint": "Use the shortcut formula: $\\text{Var}(X) = E[X^2] - (E[X])^2$."
+    },
+    {
+      "id": "q1_5",
+      "type": "multiple-choice",
+      "prompt": "Which statement about covariance and independence is correct?",
+      "options": [
+        { "id": "a", "text": "$\\text{Cov}(X, Y) = 0$ implies $X$ and $Y$ are independent", "correct": false },
+        { "id": "b", "text": "If $X$ and $Y$ are independent, then $\\text{Cov}(X, Y) = 0$", "correct": true },
+        { "id": "c", "text": "$\\text{Cov}(X, Y) > 0$ implies $Y$ is a function of $X$", "correct": false },
+        { "id": "d", "text": "$\\text{Var}(X + Y) = \\text{Var}(X) + \\text{Var}(Y)$ always holds", "correct": false }
+      ],
+      "explanation": "Independence implies zero covariance — but the converse is **false**. A classic counterexample: let $X \\sim \\text{Uniform}(-1, 1)$ and $Y = X^2$. Then $\\text{Cov}(X, Y) = E[X^3] - E[X]E[X^2] = 0$, yet $Y$ is completely determined by $X$ (maximally dependent). Covariance captures only **linear** association. For $\\text{Var}(X+Y)$: the correct formula is $\\text{Var}(X) + \\text{Var}(Y) + 2\\,\\text{Cov}(X,Y)$, which equals $\\text{Var}(X) + \\text{Var}(Y)$ only when $\\text{Cov}(X,Y)=0$.",
+      "hint": "Think about whether zero linear correlation (Cov = 0) rules out nonlinear relationships."
+    },
+    {
+      "id": "q1_6",
+      "type": "multiple-choice",
+      "prompt": "A disease affects 1% of a population. A diagnostic test has sensitivity $P(+ | \\text{disease}) = 0.95$ and false-positive rate $P(+ | \\text{no disease}) = 0.10$. A randomly selected person tests positive. What is the probability they actually have the disease?\n\nRound to the nearest percent.",
+      "options": [
+        { "id": "a", "text": "~9%", "correct": true },
+        { "id": "b", "text": "~50%", "correct": false },
+        { "id": "c", "text": "~95%", "correct": false },
+        { "id": "d", "text": "~1%", "correct": false }
+      ],
+      "explanation": "Apply Bayes' theorem: $P(D|+) = \\frac{P(+|D)\\,P(D)}{P(+)}$.\n\n$P(+) = P(+|D)P(D) + P(+|\\bar D)P(\\bar D) = 0.95 \\times 0.01 + 0.10 \\times 0.99 = 0.0095 + 0.099 = 0.1085$\n\n$P(D|+) = 0.0095 / 0.1085 \\approx 0.088 \\approx 9\\%$\n\nThis result surprises most people. Even with a sensitive test, a **low prior** ($P(D) = 1\\%$) means most positives are false alarms — the false-positive rate swamps the true positives. This is called the base rate fallacy.",
+      "hint": "Set up $P(+) = P(+|D)P(D) + P(+|\\bar{D})P(\\bar{D})$ first, then divide the numerator $P(+|D)P(D)$ by this total."
+    },
+    {
+      "id": "q1_7",
+      "type": "multiple-choice",
+      "prompt": "According to the chain rule of probability, which expression correctly factorizes $P(A, B, C)$?",
+      "options": [
+        { "id": "a", "text": "$P(A) + P(B) + P(C)$", "correct": false },
+        { "id": "b", "text": "$P(A) \\cdot P(B) \\cdot P(C)$", "correct": false },
+        { "id": "c", "text": "$P(A) \\cdot P(B \\mid A) \\cdot P(C \\mid A, B)$", "correct": true },
+        { "id": "d", "text": "$P(A \\mid B) \\cdot P(B \\mid C) \\cdot P(C \\mid A)$", "correct": false }
+      ],
+      "explanation": "The chain rule states $P(A, B, C) = P(A)\\,P(B|A)\\,P(C|A,B)$. This follows directly from the definition of conditional probability applied repeatedly: $P(A,B) = P(A)P(B|A)$, then $P(A,B,C) = P(A,B)\\,P(C|A,B) = P(A)\\,P(B|A)\\,P(C|A,B)$.\n\nOption (b) is only correct when $A$, $B$, $C$ are mutually independent. Option (d) is not a valid factorization — while $P(A|B)P(B|C)P(C|A)$ can sometimes be related to $P(A,B,C)$, it is not a general identity.",
+      "hint": "Start with the product rule $P(A,B) = P(A)P(B|A)$, then extend it to three variables by treating $(A,B)$ as a single event."
+    },
+    {
+      "id": "q1_8",
+      "type": "code-completion",
+      "prompt": "Complete the function that computes the Bayesian posterior using Bayes' theorem for a binary hypothesis. `bayes_posterior(0.01, 0.95, 0.10)` should return ≈ 0.0877.",
+      "codeTemplate": "def bayes_posterior(prior, likelihood, false_positive_rate):\n    \"\"\"\n    Compute P(H | E) given:\n      prior               = P(H)\n      likelihood          = P(E | H)\n      false_positive_rate = P(E | ~H)\n    \"\"\"\n    numerator   = ___BLANK___\n    denominator = numerator + false_positive_rate * (1 - prior)\n    return numerator / denominator",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "prior * likelihood",
+        "likelihood * prior",
+        "prior*likelihood",
+        "likelihood*prior"
+      ],
+      "explanation": "The numerator of Bayes' theorem is $P(E|H) \\cdot P(H)$ — the likelihood times the prior. The denominator is $P(E) = P(E|H)P(H) + P(E|\\neg H)P(\\neg H)$, which the code expresses as `numerator + false_positive_rate * (1 - prior)`. Plugging in the disease example: `0.01 * 0.95 = 0.0095` in the numerator, `0.0085 / (0.0095 + 0.0990) ≈ 0.0877`.",
+      "hint": "The numerator of Bayes' theorem is $P(E|H) \\times P(H)$. Which two arguments encode those quantities?"
+    }
+  ]
+}

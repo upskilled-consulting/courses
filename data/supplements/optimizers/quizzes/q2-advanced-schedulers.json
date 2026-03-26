@@ -1,0 +1,87 @@
+{
+  "id": "q2",
+  "moduleId": "optimizers",
+  "title": "Advanced Techniques & Schedulers",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "type": "reading", "id": "r6" },
+  "nextItem": { "type": "lab", "id": "lab1" },
+  "questions": [
+    {
+      "id": "q2_1",
+      "type": "multiple-choice",
+      "prompt": "LBFGS requires a 'closure' argument in optimizer.step(). Why?",
+      "options": [
+        { "id": "a", "text": "To support distributed training across multiple GPUs", "correct": false },
+        { "id": "b", "text": "To enable multiple loss evaluations per step for line search", "correct": true },
+        { "id": "c", "text": "To compute the Hessian matrix for second-order updates", "correct": false },
+        { "id": "d", "text": "To accumulate gradients across microbatches", "correct": false }
+      ],
+      "explanation": "L-BFGS performs a line search that may evaluate the loss and its gradient many times per optimizer step (up to max_eval = max_iter × 1.25 times). The closure is called repeatedly to compute these values without the user needing to redo the forward/backward manually each time.",
+      "hint": "L-BFGS is a second-order method that needs to evaluate the loss at multiple candidate points during each step."
+    },
+    {
+      "id": "q2_2",
+      "type": "multiple-choice",
+      "prompt": "What does torch.nn.utils.clip_grad_norm_ return, and why is it useful?",
+      "options": [
+        { "id": "a", "text": "The maximum gradient value — useful for detecting dying gradients", "correct": false },
+        { "id": "b", "text": "The total L2 norm of all gradients before clipping — useful for monitoring training stability", "correct": true },
+        { "id": "c", "text": "A boolean indicating whether clipping was applied", "correct": false },
+        { "id": "d", "text": "The per-layer gradient norms as a list", "correct": false }
+      ],
+      "explanation": "clip_grad_norm_ returns the pre-clipping total gradient norm as a scalar tensor. Logging this value lets you detect gradient explosions (sudden spike) or vanishing (near-zero across epochs) without adding extra backward passes.",
+      "hint": "The return value is a single scalar that describes the combined magnitude of all gradients before any rescaling."
+    },
+    {
+      "id": "q2_3",
+      "type": "multiple-choice",
+      "prompt": "CosineAnnealingWarmRestarts with T_mult=2 and T_0=10 will have cycle lengths of:",
+      "options": [
+        { "id": "a", "text": "10, 10, 10, 10 (constant)", "correct": false },
+        { "id": "b", "text": "10, 20, 40, 80 (doubling each restart)", "correct": true },
+        { "id": "c", "text": "10, 12, 14, 16 (linear increase)", "correct": false },
+        { "id": "d", "text": "10, 5, 2.5, 1.25 (halving each restart)", "correct": false }
+      ],
+      "explanation": "T_mult multiplies the current cycle length after each restart: T_i = T_0 × T_mult^i. With T_0=10 and T_mult=2: cycle 0 = 10, cycle 1 = 20, cycle 2 = 40, cycle 3 = 80.",
+      "hint": "T_mult is a *multiplier* applied to the previous cycle length after each restart — not an additive increment."
+    },
+    {
+      "id": "q2_4",
+      "type": "multiple-choice",
+      "prompt": "OneCycleLR's pct_start=0.3 means:",
+      "options": [
+        { "id": "a", "text": "The LR starts at 30% of max_lr", "correct": false },
+        { "id": "b", "text": "The learning rate increases for the first 30% of total training steps, then decreases", "correct": true },
+        { "id": "c", "text": "Training stops after 30% of total steps if loss plateaus", "correct": false },
+        { "id": "d", "text": "Weight decay is applied for only 30% of training steps", "correct": false }
+      ],
+      "explanation": "pct_start controls the fraction of the cycle spent in the increasing (warmup) phase. With pct_start=0.3 and total_steps=1000, the LR rises from base_lr to max_lr over steps 0–300, then anneals to near-zero over steps 300–1000.",
+      "hint": "pct_start is the percentage of total_steps used for the *warmup* (increasing) phase."
+    },
+    {
+      "id": "q2_5",
+      "type": "multiple-choice",
+      "prompt": "SequentialLR([warmup, cosine], milestones=[5]) will:",
+      "options": [
+        { "id": "a", "text": "Apply both schedulers simultaneously, multiplying their LR factors", "correct": false },
+        { "id": "b", "text": "Use warmup for epochs 0–4, then switch to cosine from epoch 5 onward", "correct": true },
+        { "id": "c", "text": "Use cosine for epochs 0–4, then switch to warmup from epoch 5 onward", "correct": false },
+        { "id": "d", "text": "Restart the cosine schedule every 5 epochs", "correct": false }
+      ],
+      "explanation": "SequentialLR activates schedulers in order at each milestone. milestones=[5] means: scheduler 0 (warmup) runs for epochs 0–4; scheduler 1 (cosine) runs from epoch 5 onward. ChainedScheduler (deprecated) multiplied factors — SequentialLR switches instead.",
+      "hint": "milestones=[5] is the epoch at which SequentialLR *switches* from the first scheduler to the second."
+    },
+    {
+      "id": "q2_6",
+      "type": "code-completion",
+      "prompt": "Complete the LBFGS training loop — fill in the argument passed to `optimizer.step()`:",
+      "codeTemplate": "optimizer = torch.optim.LBFGS(\n    model.parameters(), lr=1,\n    max_iter=20, line_search_fn='strong_wolfe'\n)\n\nfor x, y in dataloader:\n    def closure():\n        optimizer.zero_grad(set_to_none=True)\n        output = model(x)\n        loss = criterion(output, y)\n        loss.backward()\n        return loss\n    optimizer.step(___BLANK___)",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": ["closure"],
+      "hint": "LBFGS performs a line search that calls the loss function multiple times per step. The step() method needs a callable it can invoke repeatedly.",
+      "explanation": "LBFGS performs a line search (up to max_iter × 1.25 evaluations per step). You must pass the closure — a zero-argument callable that re-zeros gradients, runs the forward pass, calls .backward(), and returns the loss — so LBFGS can evaluate it as many times as needed."
+    }
+  ]
+}

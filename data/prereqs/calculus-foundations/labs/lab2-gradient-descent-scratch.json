@@ -1,0 +1,23 @@
+{
+  "id": "lab2",
+  "moduleId": "calculus-foundations",
+  "title": "Gradient Descent from Scratch",
+  "estimatedMinutes": 50,
+  "description": "## Lab 2: Gradient Descent from Scratch\n\nGradient descent is the algorithm that makes neural network training possible. In this lab you will implement it without any framework machinery — just the update rule $x \\leftarrow x - \\eta \\cdot f'(x)$ applied repeatedly — and build the intuition for why learning rate is the most important hyperparameter.\n\n### What You'll Build\n\n- A **1D gradient descent loop** on $f(x) = x^2 - 4x + 5$, logging $x$ and $f(x)$ at each step and plotting the convergence trajectory overlaid on the function\n- A **learning rate comparison**: three runs with $\\eta$ too small, just right, and too large — with annotated plots showing slow convergence, clean convergence, and divergence/oscillation\n- A **2D gradient descent** on the quadratic bowl $f(x,y) = x^2 + y^2$, with contour plots and gradient arrows showing the path to the origin\n- A **linear regression via GD**: fit a line $y = wx + b$ to noisy data by minimizing MSE, implementing the parameter updates $w \\leftarrow w - \\eta \\cdot \\partial\\mathcal{L}/\\partial w$ and $b \\leftarrow b - \\eta \\cdot \\partial\\mathcal{L}/\\partial b$ by hand\n- A **loss curve comparison** between the hand-rolled update and `torch.optim.SGD` confirming they converge identically\n\n### Key Concepts Practiced\n\nBy the end you will have built an intuition for the loss surface, understand why the negative gradient direction decreases the function (from the linear approximation argument), and see directly how the learning rate determines whether training converges, diverges, or oscillates.",
+  "objectives": [
+    "Implement a gradient descent loop from scratch and plot the convergence trajectory for f(x) = x² − 4x + 5.",
+    "Run three learning rate experiments (too small, optimal, too large) and describe the qualitative behavior of each.",
+    "Extend gradient descent to 2D and visualize the optimization path on a contour plot of f(x,y) = x² + y².",
+    "Derive and implement the MSE gradients ∂L/∂w and ∂L/∂b analytically, then use them to fit a line to noisy data.",
+    "Confirm that your hand-rolled gradient descent matches torch.optim.SGD step-for-step on the linear regression problem."
+  ],
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/calculus-foundations/lab2_gradient_descent_scratch.ipynb",
+  "prevItem": {
+    "type": "lab",
+    "id": "lab1"
+  },
+  "nextItem": {
+    "type": "lab",
+    "id": "lab3"
+  }
+}

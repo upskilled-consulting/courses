@@ -1,0 +1,79 @@
+{
+  "id": "d4",
+  "moduleId": "linear-algebra",
+  "title": "Linear Maps & Projection",
+  "description": "Flashcards for linear map conditions, matrix representations, orthogonal projection, Gram-Schmidt, and least squares.",
+  "estimatedMinutes": 8,
+  "cards": [
+    {
+      "id": "c01",
+      "front": "**Linearity condition** for a map $h: V \\to W$",
+      "back": "**$h$ is linear iff both hold:**\n\n1. $h(\\vec{u}+\\vec{v}) = h(\\vec{u})+h(\\vec{v})$ (additivity)\n2. $h(c\\vec{v}) = c\\,h(\\vec{v})$ (homogeneity)\n\nEquivalently: $h(c\\vec{u}+d\\vec{v}) = c\\,h(\\vec{u})+d\\,h(\\vec{v})$.\n\n*Usage: check linearity by verifying this one combined condition*"
+    },
+    {
+      "id": "c02",
+      "front": "**Matrix representation rule** — how is column $j$ of $\\mathrm{Rep}_{B,D}(h)$ computed?",
+      "back": "**Column $j$ = image of $j$-th basis vector, expressed in $D$-coordinates**\n\n$$\\text{col}_j(M) = \\mathrm{Rep}_D\\bigl(h(\\vec{\\beta}_j)\\bigr)$$\n\n*Usage: to build the matrix of a linear map, apply $h$ to each basis vector of the domain and convert to codomain coordinates*"
+    },
+    {
+      "id": "c03",
+      "front": "**Similarity transform** — when are two matrices similar?",
+      "back": "**$A \\sim B$ iff there exists invertible $P$ with $B = P^{-1}AP$**\n\nSimilar matrices represent the **same** linear map in different bases.\n\nSimilarity preserves: rank, determinant, trace, eigenvalues, characteristic polynomial.\n\n*Usage: diagonalisation $A = PDP^{-1}$ is a change to an eigenvector basis*"
+    },
+    {
+      "id": "c04",
+      "front": "**1-D projection** of $\\vec{v}$ onto direction $\\hat{\\vec{u}}$",
+      "back": "$$\\mathrm{proj}_{\\hat{\\vec{u}}}\\vec{v} = (\\hat{\\vec{u}}\\cdot\\vec{v})\\,\\hat{\\vec{u}} = \\hat{\\vec{u}}\\hat{\\vec{u}}^T\\vec{v}$$\n\nThe scalar coefficient $(\\hat{\\vec{u}}\\cdot\\vec{v})$ is the *component* of $\\vec{v}$ along $\\hat{\\vec{u}}$.\n\n*Usage: building Gram-Schmidt step; decomposing a vector into parallel and perpendicular parts*"
+    },
+    {
+      "id": "c05",
+      "front": "**Subspace projection** onto column space of $Q$ (orthonormal columns)",
+      "back": "**Orthogonal projection matrix $P = QQ^T$**\n\n$$\\mathrm{proj}_{\\mathcal{C}(Q)}\\vec{v} = QQ^T\\vec{v}$$\n\nProperties: $P^2 = P$ (idempotent), $P^T = P$ (symmetric), $\\|\\vec{v}-P\\vec{v}\\|$ is minimised.\n\n*Usage: least-squares solution; attention mechanism as projection*"
+    },
+    {
+      "id": "c06",
+      "front": "**Gram-Schmidt** orthogonalisation — one step",
+      "back": "Given vectors $\\vec{a}_1,\\ldots,\\vec{a}_k$, the orthogonal component at step $j$ is:\n\n$$\\vec{u}_j = \\vec{a}_j - \\sum_{i<j} \\frac{\\vec{a}_j\\cdot\\vec{q}_i}{\\vec{q}_i\\cdot\\vec{q}_i}\\vec{q}_i, \\qquad \\vec{q}_j = \\frac{\\vec{u}_j}{\\|\\vec{u}_j\\|}$$\n\n*Usage: produces orthonormal basis for column space; equivalent to $A=QR$ factorisation*"
+    },
+    {
+      "id": "c07",
+      "front": "**Normal equations** for least-squares",
+      "back": "$$A^TA\\hat{\\vec{x}} = A^T\\vec{b}$$\n\nSolution: $\\hat{\\vec{x}} = (A^TA)^{-1}A^T\\vec{b}$ (when $A$ has full column rank).\n\nThe residual $\\vec{b} - A\\hat{\\vec{x}}$ is orthogonal to every column of $A$.\n\n*Usage: linear regression; overdetermined systems*"
+    },
+    {
+      "id": "c08",
+      "front": "**Pseudoinverse** $A^+$ — definition",
+      "back": "$$A^+ = V\\Sigma^+U^T \\quad\\text{(from SVD } A = U\\Sigma V^T\\text{)}$$\n\n$\\Sigma^+$ replaces each non-zero diagonal $\\sigma_i$ with $1/\\sigma_i$, leaves zeros as zero.\n\n*Usage: minimum-norm least-squares solution $\\hat{\\vec{x}} = A^+\\vec{b}$; generalises inverse to non-square and rank-deficient matrices*"
+    },
+    {
+      "id": "c09",
+      "front": "**Hat matrix** $H = A(A^TA)^{-1}A^T$ — what does it do?",
+      "back": "**Orthogonal projection onto column space of $A$**\n\n$$\\hat{\\vec{y}} = H\\vec{y} = A\\hat{\\vec{x}}$$\n\nProperties: $H^2=H$, $H^T=H$, eigenvalues are 0 or 1.\n\n*Usage: $\\hat{\\vec{y}}$ is the fitted value in regression; residuals $\\vec{e} = (I-H)\\vec{y}$*"
+    },
+    {
+      "id": "c10",
+      "front": "**Orthogonal matrix** $Q$ — key properties",
+      "back": "$$Q^TQ = QQ^T = I \\implies Q^{-1} = Q^T$$\n\n- Columns are orthonormal: $\\vec{q}_i\\cdot\\vec{q}_j = \\delta_{ij}$\n- Preserves lengths: $\\|Q\\vec{v}\\|=\\|\\vec{v}\\|$\n- Preserves angles: $\\langle Q\\vec{u}, Q\\vec{v}\\rangle = \\langle\\vec{u},\\vec{v}\\rangle$\n\n*Usage: $Q$ in QR and SVD; rotation/reflection matrices*"
+    },
+    {
+      "id": "c11",
+      "front": "**Rank-Nullity for maps**: $\\mathrm{rank}(h) + \\mathrm{nullity}(h) = ?$",
+      "back": "$$\\mathrm{rank}(h) + \\mathrm{nullity}(h) = \\dim(\\text{domain})$$\n\nFor $A\\in\\mathbb{R}^{m\\times n}$:\n$$\\mathrm{rank}(A) + \\mathrm{nullity}(A) = n$$\n\n*Usage: if $A$ is $m\\times n$ with rank $r$, the null space has dimension $n-r$ — that many free parameters*"
+    },
+    {
+      "id": "c12",
+      "front": "**Similarity invariants** — what is preserved?",
+      "back": "If $A\\sim B$ (i.e. $B=P^{-1}AP$) then $A$ and $B$ have the same:\n\n- Rank\n- Determinant: $|B|=|A|$\n- Trace: $\\mathrm{tr}(B)=\\mathrm{tr}(A)$\n- Eigenvalues (including multiplicities)\n- Characteristic polynomial $\\det(\\lambda I - A)$\n\n*Usage: any of these can be computed in whichever basis is most convenient*"
+    },
+    {
+      "id": "c13",
+      "front": "**Idempotent projection**: $P^2 = P$ implies what?",
+      "back": "**Eigenvalues of a projection are 0 or 1**\n\n$P^2\\vec{v}=P\\vec{v}\\Rightarrow\\lambda^2=\\lambda\\Rightarrow\\lambda\\in\\{0,1\\}$\n\n$\\mathcal{R}^n$ decomposes as $\\mathcal{R}(P)\\oplus\\mathcal{N}(P)$.\n\n*Usage: orthogonal projections are symmetric AND idempotent; oblique projections are idempotent but not symmetric*"
+    },
+    {
+      "id": "c14",
+      "front": "**Isomorphism** — when is a linear map $h: V\\to W$ an isomorphism?",
+      "back": "**Bijective linear map** (one-to-one and onto)\n\nEquivalently: $h$ has a linear inverse $h^{-1}$.\n\nFor finite dimensions: $h$ is an isomorphism $\\iff$ $\\dim V = \\dim W$ and $\\mathcal{N}(h)=\\{\\vec{0}\\}$.\n\n*Usage: $V\\cong\\mathbb{R}^{\\dim V}$ for any finite-dimensional real space — all $n$-dim spaces are \"the same\"*"
+    }
+  ]
+}

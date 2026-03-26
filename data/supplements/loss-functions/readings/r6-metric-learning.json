@@ -1,0 +1,107 @@
+{
+  "id": "r6",
+  "moduleId": "loss-functions",
+  "title": "Metric Learning: Triplet Losses",
+  "estimatedMinutes": 10,
+  "learningObjectives": [
+    {
+      "id": "r6-lo1",
+      "verb": "State",
+      "description": "State the triplet constraint: the anchor-positive distance must be smaller than the anchor-negative distance by at least margin alpha",
+      "skillTags": [
+        "metric-learning"
+      ]
+    },
+    {
+      "id": "r6-lo2",
+      "verb": "Apply",
+      "description": "Apply TripletMarginLoss with a chosen p-norm and margin, and verify that a satisfied constraint contributes zero loss",
+      "skillTags": [
+        "metric-learning"
+      ]
+    },
+    {
+      "id": "r6-lo3",
+      "verb": "Use",
+      "description": "Use TripletMarginWithDistanceLoss to plug in a custom distance function such as cosine distance",
+      "skillTags": [
+        "metric-learning"
+      ]
+    },
+    {
+      "id": "r6-lo4",
+      "verb": "Explain",
+      "description": "Explain easy, hard, and semi-hard triplet mining and why random triplet selection leads to collapsed training signal",
+      "skillTags": [
+        "metric-learning",
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r6-lo5",
+      "verb": "Compare",
+      "description": "Compare triplet loss, contrastive loss, and NT-Xent in terms of the number of negatives used per update and training efficiency",
+      "skillTags": [
+        "metric-learning"
+      ]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r5"
+  },
+  "nextItem": {
+    "type": "quiz",
+    "id": "q2"
+  },
+  "content": "## What Is Metric Learning?\n\nThe goal of metric learning is to train an embedding function $f_\\theta: \\mathcal{X} \\to \\mathbb{R}^d$ such that semantically similar inputs map to nearby points in the embedding space, and dissimilar inputs map far apart.\n\nUnlike classification losses, metric learning losses operate on **triplets** or **pairs** of samples — they encode relative rather than absolute correctness.\n\n---\n\n## The Triplet Constraint\n\nA **triplet** consists of:\n- **Anchor** $a$: the reference sample\n- **Positive** $p$: a sample from the same class/cluster as $a$\n- **Negative** $n$: a sample from a different class/cluster\n\nThe embedding space should satisfy $d(a, p) < d(a, n)$ — anchor is closer to positive than to negative. The triplet loss enforces this with a margin $m$:\n\n$$\\ell(a, p, n) = \\max\\bigl(0, \\; d(a, p) - d(a, n) + m\\bigr)$$\n\nThe loss is zero when the anchor-negative distance exceeds the anchor-positive distance by at least $m$. Otherwise it penalises the shortfall linearly.\n\n---\n\n## nn.TripletMarginLoss\n\nDefault distance is $L^p$ norm: $d(u, v) = \\|u - v\\|_p$.\n\n```python\ntriplet_loss = nn.TripletMarginLoss(margin=1.0, p=2)  # Euclidean distance\n\nanchor   = torch.randn(32, 128, requires_grad=True)  # 32 samples, 128-dim\npositive = torch.randn(32, 128, requires_grad=True)\nnegative = torch.randn(32, 128, requires_grad=True)\n\nloss = triplet_loss(anchor, positive, negative)\n# loss > 0 when d(a,p) - d(a,n) + 1 > 0 for any triplet\n```\n\nThe `swap` parameter enables the **distance swap** heuristic: replace $d(a,n)$ with $\\max(d(a,n), d(p,n))$, which tightens the constraint when the positive and negative are very close.\n\n**When to use:** Face recognition (FaceNet); image retrieval (Pinterest, Google Images); few-shot learning (prototypical networks need similar training signal).\n\n---\n\n## nn.TripletMarginWithDistanceLoss\n\nSame triplet formulation but accepts any differentiable distance function:\n\n$$\\ell(a, p, n) = \\max\\bigl(0, \\; d_{\\text{custom}}(a, p) - d_{\\text{custom}}(a, n) + m\\bigr)$$\n\n```python\n# Cosine distance: 1 - cosine_similarity\ndef cosine_dist(u, v):\n    return 1.0 - F.cosine_similarity(u, v)\n\ntriplet_loss = nn.TripletMarginWithDistanceLoss(\n    distance_function=cosine_dist,\n    margin=0.2\n)\nloss = triplet_loss(anchor, positive, negative)\n```\n\nThe custom distance function must accept two tensors of shape $(N, d)$ and return a tensor of shape $(N,)$. It must be differentiable (autograd-compatible).\n\n**When to use:** Sentence embeddings (cosine distance more natural than Euclidean); normalised embeddings on a unit hypersphere; any domain where $L^2$ distance is inappropriate.\n\n---\n\n## Triplet Mining\n\nNaively sampling random triplets is inefficient — most will produce zero loss because random negatives are already far from the anchor. In practice, triplets are mined:\n\n| Strategy | Description | Convergence |\n|----------|-------------|-------------|\n| **Easy triplets** | $d(a,n) > d(a,p) + m$ — already satisfied | No gradient; skip |\n| **Semi-hard triplets** | $d(a,p) < d(a,n) < d(a,p) + m$ | Moderate; recommended |\n| **Hard triplets** | $d(a,n) < d(a,p)$ — negative is closer than positive | Large gradient; can destabilise early training |\n\nFaceNet found semi-hard mining the most effective for stable training.\n\n---\n\n## Comparison: Triplet vs. Contrastive vs. NT-Xent\n\n| Loss | Inputs per step | Key property |\n|------|----------------|-------------|\n| TripletMarginLoss | Anchor, Positive, Negative | Relative ordering; easy to interpret |\n| HingeEmbeddingLoss | Single distance + label | Simpler; only binary similar/dissimilar |\n| NT-Xent (SimCLR) | Full batch, all pairs | Uses all negatives in the batch; state-of-the-art for self-supervised |\n\nFor supervised metric learning with labelled data, `TripletMarginWithDistanceLoss` with cosine distance is a strong baseline.",
+  "equationBreakdowns": [
+    {
+      "label": "TripletMarginLoss",
+      "terms": [
+        {
+          "symbol": "d(a, p)",
+          "name": "Anchor-positive distance",
+          "desc": "How far the anchor embedding is from a positive (same-class) example. Minimising the loss pushes this closer."
+        },
+        {
+          "symbol": "d(a, n)",
+          "name": "Anchor-negative distance",
+          "desc": "How far the anchor is from a negative (different-class) example. Minimising the loss pushes this farther."
+        },
+        {
+          "symbol": "m",
+          "name": "Margin",
+          "desc": "The required gap: d(a,n) must exceed d(a,p) by at least m. Without a margin the trivial solution (all embeddings identical, d=0 everywhere) satisfies d(a,p)=d(a,n)."
+        },
+        {
+          "symbol": "\\max(0, \\cdot)",
+          "name": "Hinge",
+          "desc": "Loss is zero when the margin constraint is satisfied. Only violated triplets contribute gradient — this is why hard/semi-hard mining is important."
+        },
+        {
+          "symbol": "d(u, v) = \\|u - v\\|_p",
+          "name": "Lᵖ distance (default)",
+          "desc": "With p=2, this is Euclidean distance. With p=1, Manhattan distance. Controlled by the p= argument."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "[1]",
+      "title": "nn.TripletMarginLoss — PyTorch docs",
+      "url": "https://pytorch.org/docs/stable/generated/torch.nn.TripletMarginLoss.html"
+    },
+    {
+      "label": "[2]",
+      "title": "nn.TripletMarginWithDistanceLoss — PyTorch docs",
+      "url": "https://pytorch.org/docs/stable/generated/torch.nn.TripletMarginWithDistanceLoss.html"
+    },
+    {
+      "label": "[3]",
+      "title": "Schroff et al. (2015) — FaceNet: A Unified Embedding for Face Recognition and Clustering",
+      "url": "https://arxiv.org/abs/1503.03832"
+    }
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "id": "q1",
+  "moduleId": "activation-functions",
+  "title": "ReLU & Saturating Activations",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "type": "reading", "id": "r3" },
+  "nextItem": { "type": "reading", "id": "r4" },
+  "questions": [
+    {
+      "id": "q1_1",
+      "type": "multiple-choice",
+      "prompt": "A neuron using ReLU has pre-activation values that are always negative after a weight update. What will happen to this neuron during subsequent training?",
+      "options": [
+        { "id": "a", "text": "It will recover as soon as the learning rate adjusts", "correct": false },
+        { "id": "b", "text": "It will output 0 and receive zero gradient — it is permanently dead", "correct": true },
+        { "id": "c", "text": "It will output negative values proportional to the input", "correct": false },
+        { "id": "d", "text": "It will output values in $(-\\infty, 0)$ with gradient $-1$", "correct": false }
+      ],
+      "explanation": "The dying ReLU problem: once a ReLU neuron's pre-activation is always negative, $f(x) = 0$ and $f'(x) = 0$, so the weight update $\\Delta W = -\\eta \\cdot \\partial\\mathcal{L}/\\partial W$ is zero. The weights never change. The neuron is dead.",
+      "hint": "ReLU's gradient is 0 for $x < 0$. If the gradient is always 0, how can weights update?"
+    },
+    {
+      "id": "q1_2",
+      "type": "multiple-choice",
+      "prompt": "Which activation function has a learnable negative slope that is updated via backpropagation?",
+      "options": [
+        { "id": "a", "text": "LeakyReLU", "correct": false },
+        { "id": "b", "text": "RReLU", "correct": false },
+        { "id": "c", "text": "PReLU", "correct": true },
+        { "id": "d", "text": "CELU", "correct": false }
+      ],
+      "explanation": "PReLU (Parametric ReLU) treats the negative slope $\\alpha$ as a trainable parameter with its own gradient: $\\partial\\mathcal{L}/\\partial\\alpha = \\sum_{x<0} x \\cdot \\delta$. LeakyReLU uses a fixed $\\alpha$ (default 0.01). RReLU samples $\\alpha$ randomly from a uniform distribution — it is stochastic but not learned. CELU has a fixed alpha parameter.",
+      "hint": "Which activation's slope for negative inputs is updated during training via gradient descent?"
+    },
+    {
+      "id": "q1_3",
+      "type": "multiple-choice",
+      "prompt": "Why is ReLU6 preferred over ReLU for mobile and quantized models?",
+      "options": [
+        { "id": "a", "text": "It has a non-zero gradient for all inputs, preventing dead neurons", "correct": false },
+        { "id": "b", "text": "It is smooth (differentiable) at $x=0$", "correct": false },
+        { "id": "c", "text": "Its bounded output $[0,6]$ is friendly to fixed-point quantization", "correct": true },
+        { "id": "d", "text": "It avoids the vanishing gradient problem by removing the sigmoid gate", "correct": false }
+      ],
+      "explanation": "Quantization maps float32 activations to low-bit integers (e.g., 8-bit). A bounded activation range $[0,6]$ means only 7 values need to be represented; an unbounded ReLU output $[0,\\infty)$ requires a wider range and wastes precision on rare large values. ReLU6's clip at 6 was originally justified empirically by Howard et al. (2017).",
+      "hint": "Quantization maps a floating-point range to a fixed number of integers. What makes a range easier to quantize?"
+    },
+    {
+      "id": "q1_4",
+      "type": "multiple-choice",
+      "prompt": "The maximum derivative of Sigmoid is 0.25 (at $x=0$). In a 20-layer network where every layer uses sigmoid, what is the upper bound on the magnitude of a gradient flowing from the last layer to the first?",
+      "options": [
+        { "id": "a", "text": "$0.25^{20} \\approx 9 \\times 10^{-13}$", "correct": true },
+        { "id": "b", "text": "$0.25 \\times 20 = 5.0$", "correct": false },
+        { "id": "c", "text": "$0.25^2 \\approx 0.06$ (only deepest two layers matter)", "correct": false },
+        { "id": "d", "text": "Exactly 0, because sigmoid saturates to 1", "correct": false }
+      ],
+      "explanation": "Backpropagation multiplies the gradient by $\\sigma'(x)$ at each layer. In the worst case (maximum derivative at every layer), the gradient is multiplied by $0.25$ twenty times: $0.25^{20} \\approx 9 \\times 10^{-13}$. In practice, most activations are not at $x=0$, so derivatives are even smaller and gradients vanish even faster.",
+      "hint": "Gradients multiply through each layer. With 20 sigmoid layers, how many times does 0.25 get multiplied?"
+    },
+    {
+      "id": "q1_5",
+      "type": "multiple-choice",
+      "prompt": "Tanh is preferred over Sigmoid for hidden layers because:",
+      "options": [
+        { "id": "a", "text": "Tanh does not saturate, so it avoids vanishing gradients entirely", "correct": false },
+        { "id": "b", "text": "Tanh outputs are zero-centered, reducing zig-zag gradient updates in weight space", "correct": true },
+        { "id": "c", "text": "Tanh's maximum derivative is 1.0 vs sigmoid's 0.25", "correct": false },
+        { "id": "d", "text": "Tanh avoids the dying neuron problem", "correct": false }
+      ],
+      "explanation": "Tanh's output range $(-1,1)$ is zero-centered: the mean output is near 0. Sigmoid outputs are in $(0,1)$ — always positive, so all gradients w.r.t. weights at a layer have the same sign. This forces weight updates to zig-zag in weight space. Tanh avoids this. Note: Tanh's max derivative IS higher (1.0 vs 0.25) but neither eliminates vanishing gradients.",
+      "hint": "The key advantage of Tanh over Sigmoid is about the sign of its outputs and what that means for gradient directions."
+    },
+    {
+      "id": "q1_6",
+      "type": "code-completion",
+      "prompt": "Complete the manual implementation of Softsign using PyTorch tensor operations:",
+      "codeTemplate": "import torch\n\ndef softsign(x):\n    \"\"\"f(x) = x / (1 + |x|)\"\"\"\n    return ___BLANK___",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "x / (1 + torch.abs(x))",
+        "x / (1 + x.abs())",
+        "torch.div(x, 1 + torch.abs(x))"
+      ],
+      "explanation": "Softsign is defined as $f(x) = x / (1 + |x|)$. The absolute value ensures the denominator is always $\\geq 1$, bounding the output to $(-1, 1)$. PyTorch provides `torch.abs()` or the `.abs()` method.",
+      "hint": "The denominator is $1 + |x|$ — you need the absolute value of $x$. In PyTorch that's `torch.abs(x)` or `x.abs()`."
+    }
+  ]
+}

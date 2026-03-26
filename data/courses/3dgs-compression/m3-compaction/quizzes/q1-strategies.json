@@ -1,0 +1,79 @@
+{
+  "id": "q1",
+  "moduleId": "m3",
+  "title": "Compaction Strategies",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "type": "reading", "id": "r4" },
+  "nextItem": { "type": "quiz", "id": "q2" },
+  "questions": [
+    {
+      "id": "q3_1",
+      "type": "multiple-choice",
+      "prompt": "A compaction method reduces SH degree from 3 to 1 and reports a 2.6× reduction in total parameters. Assuming 5M Gaussians at float32, what is the approximate compressed size?",
+      "options": [
+        { "id": "a", "text": "~455 MB", "correct": false },
+        { "id": "b", "text": "~180 MB", "correct": false },
+        { "id": "c", "text": "~450 MB", "correct": true },
+        { "id": "d", "text": "~1.1 GB", "correct": false }
+      ],
+      "explanation": "Full 3DGS: 5M × 59 × 4 = 1180 MB. SH degree 1 has 3+9+4+1+3 = 20 params (or: 59 - 36 = 23 if you drop from 45 SH AC to 9). With 23 params: 5M × 23 × 4 ≈ 460 MB. The exact value depends on which params are kept, but ~450 MB is the correct order of magnitude.",
+      "hint": "Start from total params at degree 3 (59), subtract SH AC difference (45-9=36 fewer params), compute new total."
+    },
+    {
+      "id": "q3_2",
+      "type": "multiple-choice",
+      "prompt": "PixelGS improves densification by weighting positional gradients by the inverse of the view count. What specific artifact does this primarily address?",
+      "options": [
+        { "id": "a", "text": "Large Gaussians that span regions of high color variation", "correct": false },
+        { "id": "b", "text": "Floaters — spurious near-camera Gaussians that appear because perspective makes close Gaussians have large screen-space gradients", "correct": true },
+        { "id": "c", "text": "Gaussians in textureless regions that have zero gradient and never get densified", "correct": false },
+        { "id": "d", "text": "Gaussians that are too transparent to contribute meaningfully to rendered images", "correct": false }
+      ],
+      "explanation": "A Gaussian close to the camera projects to a large image-space region, producing large pixel-error gradients even if it reconstructs that region correctly. Dividing by view count normalizes for this perspective bias, correctly attributing high gradients to under-reconstruction rather than proximity.",
+      "hint": "Think about how perspective projection scales an object's image-space gradient as a function of distance."
+    },
+    {
+      "id": "q3_3",
+      "type": "multiple-choice",
+      "prompt": "Why must compaction and compression be optimized *jointly* rather than sequentially (first compact, then compress)?",
+      "options": [
+        { "id": "a", "text": "Sequential optimization is computationally intractable for large scenes", "correct": false },
+        { "id": "b", "text": "Compaction changes the value distributions that compression exploits; coding-aware compaction can guide the representation toward distributions that compress better", "correct": true },
+        { "id": "c", "text": "Most compaction methods require entropy-coded outputs as input", "correct": false },
+        { "id": "d", "text": "Compression methods do not function on the output of compaction algorithms", "correct": false }
+      ],
+      "explanation": "For example, SH coefficients after sorting-based compaction (SOG) are distributed in smooth 2D grids rather than random order. An image codec applied to this sorted grid achieves far better compression than applying it to unsorted coefficients. The sorting (compaction) is done specifically to enable better image coding (compression). Joint optimization is needed because the best compaction strategy depends on the downstream codec.",
+      "hint": "Consider how the value distribution of quantized attributes differs before and after grid sorting."
+    },
+    {
+      "id": "q3_4",
+      "type": "code-completion",
+      "prompt": "Implement opacity-threshold pruning. Complete the mask that selects Gaussians to keep (those above the threshold after applying sigmoid to raw logits):",
+      "codeTemplate": "import numpy as np\n\ndef prune_by_opacity(opacity_logits, threshold=0.05):\n    \"\"\"\n    opacity_logits: raw pre-sigmoid values, shape (N,)\n    threshold: minimum opacity to keep\n    Returns: boolean mask of shape (N,), True = keep\n    \"\"\"\n    opacities = ___BLANK___\n    return opacities >= threshold",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "1 / (1 + np.exp(-opacity_logits))",
+        "np.sigmoid(opacity_logits)",
+        "1/(1+np.exp(-opacity_logits))",
+        "np.exp(opacity_logits)/(1+np.exp(opacity_logits))"
+      ],
+      "explanation": "3DGS stores opacity as a raw logit and applies sigmoid during rendering. Before comparing to a threshold, the logit must be converted: sigmoid(x) = 1/(1+exp(-x)). Using raw logits directly would give wrong pruning thresholds.",
+      "hint": "3DGS stores opacity as a pre-sigmoid value (logit). The actual opacity is sigmoid(logit)."
+    },
+    {
+      "id": "q3_5",
+      "type": "multiple-choice",
+      "prompt": "SUNDAE uses graph-based spectral pruning to remove high-frequency Gaussians. What makes 'high-frequency in the spectral sense' a good proxy for 'hard to compress'?",
+      "options": [
+        { "id": "a", "text": "High-frequency Gaussians have larger scales, consuming more memory individually", "correct": false },
+        { "id": "b", "text": "High-frequency Gaussians correspond to fine-scale spatial variation that breaks the local correlation structure that image codecs exploit", "correct": true },
+        { "id": "c", "text": "The spectral decomposition sorts Gaussians by opacity, and low-opacity Gaussians are always incompressible", "correct": false },
+        { "id": "d", "text": "Spectral methods can only analyze 1D signals, so they target only the x-coordinate of Gaussian positions", "correct": false }
+      ],
+      "explanation": "Image and video codecs (DCT, predictive coding) work by exploiting spatial smoothness — neighboring values that are similar can be predicted from each other, leaving small residuals. Gaussians that are high-frequency in the graph-spectral sense differ significantly from their neighbors in attribute space, producing large residuals when coded predictively. Removing them before coding improves the smoothness of the remaining data.",
+      "hint": "Think about what property of data makes image codecs like JPEG efficient. What breaks that property?"
+    }
+  ]
+}

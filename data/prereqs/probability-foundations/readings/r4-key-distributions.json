@@ -1,0 +1,97 @@
+{
+  "id": "r4",
+  "moduleId": "probability-foundations",
+  "title": "Key Distributions for Machine Learning",
+  "estimatedMinutes": 18,
+  "learningObjectives": [
+    {
+      "id": "r4-lo1",
+      "verb": "State",
+      "description": "State the PMF or PDF, mean, and variance for the Bernoulli, Binomial, Categorical, and Multinomial distributions and identify the ML context where each appears",
+      "skillTags": ["probability-foundations", "distributions"]
+    },
+    {
+      "id": "r4-lo2",
+      "verb": "Explain",
+      "description": "Explain the Gaussian distribution's central role via the Central Limit Theorem and extend it to the multivariate case, identifying what the covariance matrix encodes",
+      "skillTags": ["probability-foundations", "distributions"]
+    },
+    {
+      "id": "r4-lo3",
+      "verb": "Distinguish",
+      "description": "Distinguish the Beta distribution (distribution over a single probability) from the Dirichlet distribution (distribution over a probability vector) and explain their role as conjugate priors",
+      "skillTags": ["probability-foundations", "distributions", "bayesian-reasoning"]
+    },
+    {
+      "id": "r4-lo4",
+      "verb": "Identify",
+      "description": "Identify the appropriate distribution family for a given ML modeling assumption: binary outcomes, class probabilities, continuous observations, count data, or categorical mixing weights",
+      "skillTags": ["probability-foundations", "distributions"]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r3"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r5"
+  },
+  "content": "## Why Distributions Matter\n\nEvery probabilistic ML model is built from named distributions. Understanding which distribution captures which kind of uncertainty — and what its parameters control — is essential for reading papers, designing models, and debugging training.\n\n---\n\n## Discrete Distributions\n\n### Bernoulli($\\theta$)\n\nThe simplest random variable: a single binary outcome.\n\n$$p(x) = \\theta^x (1-\\theta)^{1-x}, \\quad x \\in \\{0, 1\\}$$\n\n- **Parameters:** $\\theta \\in [0,1]$ — the probability of $x=1$\n- **Mean:** $\\theta$\n- **Variance:** $\\theta(1-\\theta)$ — maximized at $\\theta = 0.5$\n- **ML uses:** binary classification output, individual pixel in a binary image model, gate activation\n\n### Binomial($n$, $\\theta$)\n\nSum of $n$ independent Bernoulli($\\theta$) trials: the number of successes.\n\n$$p(k) = \\binom{n}{k} \\theta^k (1-\\theta)^{n-k}, \\quad k \\in \\{0,1,\\ldots,n\\}$$\n\n- **Parameters:** $n$ (number of trials), $\\theta$ (success probability)\n- **Mean:** $n\\theta$\n- **Variance:** $n\\theta(1-\\theta)$\n- **Bernoulli is the special case** $n=1$\n\n### Categorical($\\boldsymbol{\\pi}$)\n\nGeneralization of Bernoulli to $K$ outcomes. The probability of outcome $k$ is $\\pi_k$.\n\n$$p(x = k) = \\pi_k, \\quad k \\in \\{1,\\ldots,K\\}, \\quad \\sum_{k=1}^K \\pi_k = 1$$\n\n- **Parameters:** probability vector $\\boldsymbol{\\pi} = (\\pi_1, \\ldots, \\pi_K)$ with $\\pi_k \\geq 0$, $\\sum_k \\pi_k = 1$\n- **ML uses:** multi-class classification (the softmax output defines $\\boldsymbol{\\pi}$), sampling tokens from a language model, action selection in RL\n\n### Multinomial($n$, $\\boldsymbol{\\pi}$)\n\nGeneralization of Binomial: $n$ independent draws from a Categorical($\\boldsymbol{\\pi}$). Records the count vector $(c_1, \\ldots, c_K)$ where $c_k$ is the number of times outcome $k$ occurred.\n\n$$p(c_1, \\ldots, c_K) = \\frac{n!}{c_1! \\cdots c_K!} \\pi_1^{c_1} \\cdots \\pi_K^{c_K}$$\n\n- **ML uses:** word count models (bag-of-words), topic models (Latent Dirichlet Allocation)\n\n---\n\n## Continuous Distributions\n\n### Gaussian (Normal) — $\\mathcal{N}(\\mu, \\sigma^2)$\n\nThe most important distribution in ML and statistics.\n\n$$f(x) = \\frac{1}{\\sigma\\sqrt{2\\pi}} \\exp\\!\\left(-\\frac{(x-\\mu)^2}{2\\sigma^2}\\right)$$\n\n- **Parameters:** mean $\\mu$ (location), variance $\\sigma^2$ (spread)\n- **Mean:** $\\mu$ — **Variance:** $\\sigma^2$\n\n**Why it appears everywhere:** The **Central Limit Theorem** states that the sum of many independent, finite-variance random variables converges to a Gaussian as the number grows. This explains why measurement errors, additive noise, and empirical averages are well-modeled by Gaussians.\n\n**Properties useful for ML:**\n- Closed under linear transformations: $aX + b \\sim \\mathcal{N}(a\\mu + b, a^2\\sigma^2)$\n- Sum of independent Gaussians is Gaussian: $X + Y \\sim \\mathcal{N}(\\mu_X + \\mu_Y, \\sigma_X^2 + \\sigma_Y^2)$\n- Maximally uncertain for a given mean and variance (maximum entropy property)\n\n### Multivariate Gaussian — $\\mathcal{N}(\\boldsymbol{\\mu}, \\boldsymbol{\\Sigma})$\n\nExtension to a vector $\\mathbf{x} \\in \\mathbb{R}^d$:\n\n$$f(\\mathbf{x}) = \\frac{1}{(2\\pi)^{d/2}|\\boldsymbol{\\Sigma}|^{1/2}} \\exp\\!\\left(-\\frac{1}{2}(\\mathbf{x}-\\boldsymbol{\\mu})^\\top \\boldsymbol{\\Sigma}^{-1}(\\mathbf{x}-\\boldsymbol{\\mu})\\right)$$\n\n- **Parameters:** mean vector $\\boldsymbol{\\mu} \\in \\mathbb{R}^d$, covariance matrix $\\boldsymbol{\\Sigma} \\in \\mathbb{R}^{d \\times d}$ (symmetric, positive definite)\n- The covariance matrix encodes the **shape and orientation** of the distribution's ellipsoidal contours\n\n**ML uses:** Gaussian noise models, VAE latent prior $p(z) = \\mathcal{N}(0, I)$, Gaussian process priors, 3D Gaussian Splatting (Gaussians are MVN with learnable covariance)\n\n---\n\n## Beta and Dirichlet: Priors Over Probabilities\n\n### Beta($\\alpha$, $\\beta$)\n\nThe Beta distribution is a distribution over the interval $[0,1]$ — making it the natural prior over a probability parameter.\n\n$$f(\\theta) = \\frac{\\theta^{\\alpha-1}(1-\\theta)^{\\beta-1}}{B(\\alpha,\\beta)}, \\quad \\theta \\in [0,1]$$\n\nwhere $B(\\alpha,\\beta) = \\int_0^1 \\theta^{\\alpha-1}(1-\\theta)^{\\beta-1} d\\theta$ is the normalizing constant.\n\n- **Parameters:** $\\alpha, \\beta > 0$ — can be thought of as pseudo-counts of successes and failures\n- **Mean:** $\\alpha/(\\alpha+\\beta)$\n- **Shape:** $\\alpha = \\beta = 1$ is Uniform; $\\alpha, \\beta > 1$ is unimodal; $\\alpha, \\beta < 1$ is U-shaped\n\n**Conjugate prior for Bernoulli:** If $\\theta \\sim \\text{Beta}(\\alpha,\\beta)$ and you observe $n_1$ successes and $n_0$ failures, the posterior is $\\text{Beta}(\\alpha + n_1,\\, \\beta + n_0)$ — same family, just updated counts. This is the definition of a **conjugate prior**: the posterior has the same distributional form as the prior.\n\n### Dirichlet($\\boldsymbol{\\alpha}$)\n\nThe Dirichlet is the multivariate generalization of the Beta: a distribution over the $K$-dimensional probability simplex $\\{\\boldsymbol{\\pi}: \\pi_k \\geq 0, \\sum_k \\pi_k = 1\\}$.\n\n$$f(\\boldsymbol{\\pi}) \\propto \\prod_{k=1}^K \\pi_k^{\\alpha_k - 1}$$\n\n- **Parameters:** concentration vector $\\boldsymbol{\\alpha} = (\\alpha_1, \\ldots, \\alpha_K)$ with $\\alpha_k > 0$\n- **Mean:** $\\mathbb{E}[\\pi_k] = \\alpha_k / \\sum_j \\alpha_j$\n- **Symmetric case:** $\\alpha_k = \\alpha$ for all $k$; small $\\alpha$ → sparse (corners of simplex); large $\\alpha$ → concentrated at center\n\n**Conjugate prior for Categorical/Multinomial:** Observe counts $(c_1, \\ldots, c_K)$; posterior is $\\text{Dirichlet}(\\alpha_1 + c_1, \\ldots, \\alpha_K + c_K)$.\n\n**ML uses:** LDA (Latent Dirichlet Allocation) uses Dirichlet priors over topic distributions; Think Bayes Ch. 18 covers the Dirichlet-multinomial model in detail.\n\n---\n\n## Quick Reference Table\n\n| Distribution | Type | Parameters | Mean | Variance | ML use |\n|---|---|---|---|---|---|\n| Bernoulli($\\theta$) | Discrete | $\\theta \\in [0,1]$ | $\\theta$ | $\\theta(1-\\theta)$ | Binary classification |\n| Categorical($\\boldsymbol{\\pi}$) | Discrete | $\\boldsymbol{\\pi}$ on simplex | $\\pi_k$ | — | Multi-class output |\n| Gaussian($\\mu,\\sigma^2$) | Continuous | $\\mu \\in \\mathbb{R},\\, \\sigma^2 > 0$ | $\\mu$ | $\\sigma^2$ | Regression, noise, VAE latent |\n| MVN($\\boldsymbol{\\mu},\\boldsymbol{\\Sigma}$) | Continuous | mean + covariance | $\\boldsymbol{\\mu}$ | $\\boldsymbol{\\Sigma}$ | Gaussian processes, 3DGS |\n| Beta($\\alpha,\\beta$) | Continuous | $\\alpha,\\beta > 0$ | $\\frac{\\alpha}{\\alpha+\\beta}$ | — | Prior over $\\theta$ |\n| Dirichlet($\\boldsymbol{\\alpha}$) | Continuous | $\\boldsymbol{\\alpha} > 0$ | $\\alpha_k / \\sum \\alpha_j$ | — | Prior over $\\boldsymbol{\\pi}$, LDA |",
+  "equationBreakdowns": [
+    {
+      "label": "Gaussian PDF",
+      "heading": "Gaussian Distribution",
+      "terms": [
+        {
+          "symbol": "\\mu",
+          "name": "Mean",
+          "desc": "Location parameter — the center of the bell curve. The distribution is symmetric around μ."
+        },
+        {
+          "symbol": "\\sigma^2",
+          "name": "Variance",
+          "desc": "Spread parameter — controls how wide the bell is. Larger σ² means more probability mass in the tails."
+        },
+        {
+          "symbol": "\\sigma\\sqrt{2\\pi}",
+          "name": "Normalizing constant",
+          "desc": "Ensures the PDF integrates to 1. The 2π comes from the Gaussian integral ∫e^{-x²} dx = √π."
+        },
+        {
+          "symbol": "\\exp\\!\\left(-\\frac{(x-\\mu)^2}{2\\sigma^2}\\right)",
+          "name": "Gaussian kernel",
+          "desc": "The bell-shaped core. The exponent is −(Mahalanobis distance)²/2. Probability falls off exponentially with squared distance from the mean."
+        }
+      ]
+    },
+    {
+      "label": "Multivariate Gaussian PDF",
+      "heading": "Multivariate Gaussian",
+      "terms": [
+        {
+          "symbol": "\\boldsymbol{\\Sigma}",
+          "name": "Covariance matrix",
+          "desc": "d×d matrix encoding the variance of each dimension (diagonal) and the linear dependencies between dimensions (off-diagonal). Must be symmetric and positive definite."
+        },
+        {
+          "symbol": "(\\mathbf{x}-\\boldsymbol{\\mu})^\\top \\boldsymbol{\\Sigma}^{-1}(\\mathbf{x}-\\boldsymbol{\\mu})",
+          "name": "Mahalanobis distance squared",
+          "desc": "Generalizes (x−μ)²/σ² to d dimensions. Accounts for the shape and orientation of the distribution — points along the principal axes of Σ are treated as 'closer' to the mean."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Downey — Think Bayes 2e, Ch. 4, 8, 12, 18",
+      "title": "Estimating Proportions, Poisson Processes, Classification, Conjugate Priors",
+      "url": "https://allendowney.github.io/ThinkBayes2/"
+    },
+    {
+      "label": "Downey — Think Stats 2e, Ch. 5",
+      "title": "Modeling Distributions",
+      "url": "https://greenteapress.com/thinkstats2/html/index.html"
+    }
+  ]
+}

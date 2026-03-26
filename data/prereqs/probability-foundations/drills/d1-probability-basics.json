@@ -1,0 +1,84 @@
+{
+  "id": "d1",
+  "moduleId": "probability-foundations",
+  "title": "Probability Basics and Bayes",
+  "description": "Flashcards covering random variables, expectation, variance, conditional probability, and Bayes' theorem.",
+  "estimatedMinutes": 12,
+  "cards": [
+    {
+      "id": "c01",
+      "front": "**Random variable** — definition",
+      "back": "A function $X: \\Omega \\to \\mathbb{R}$ mapping outcomes in the sample space to real numbers.\n\n*Lets us work with numbers (die face, temperature, class label) instead of abstract outcomes.*"
+    },
+    {
+      "id": "c02",
+      "front": "**PMF** vs **PDF** — key distinction",
+      "back": "**PMF** $p(x) = P(X=x)$ — probability at a point; valid for discrete RVs; sums to 1.\n\n**PDF** $f(x)$ — density at a point; for continuous RVs; integrates to 1. A single point has probability 0."
+    },
+    {
+      "id": "c03",
+      "front": "**CDF** $F(x)$ — definition and use",
+      "back": "$$F(x) = P(X \\leq x)$$\nWorks for discrete and continuous RVs.\n\n$P(a < X \\leq b) = F(b) - F(a)$\n\nFor continuous RVs: $f(x) = F'(x)$ (derivative of CDF = PDF)"
+    },
+    {
+      "id": "c04",
+      "front": "**Independence** of two RVs — formal condition",
+      "back": "$$X \\perp Y \\iff p(x,y) = p(x)\\,p(y) \\text{ for all } x,y$$\nEquivalently: $p(x \\mid y) = p(x)$ — knowing $Y$ gives no information about $X$."
+    },
+    {
+      "id": "c05",
+      "front": "**Marginalization** — how to compute $p(x)$ from $p(x,y)$",
+      "back": "$$p(x) = \\sum_y p(x, y) \\quad \\text{(discrete)}$$\n$$p(x) = \\int p(x, y)\\, dy \\quad \\text{(continuous)}$$\nSumming/integrating out the unwanted variable."
+    },
+    {
+      "id": "c06",
+      "front": "**Expected value** — discrete and continuous formulas",
+      "back": "$$\\mathbb{E}[X] = \\sum_x x \\cdot p(x) \\quad \\text{(discrete)}$$\n$$\\mathbb{E}[X] = \\int x \\cdot f(x)\\, dx \\quad \\text{(continuous)}$$\nProbability-weighted average of all possible values."
+    },
+    {
+      "id": "c07",
+      "front": "**Linearity of expectation** — what is it and when does it hold?",
+      "back": "$$\\mathbb{E}[aX + bY + c] = a\\,\\mathbb{E}[X] + b\\,\\mathbb{E}[Y] + c$$\n**Holds for ANY $X$ and $Y$ — even dependent ones.** No independence required.\n\n*Why it matters: mini-batch gradient is an unbiased estimator of the true gradient.*"
+    },
+    {
+      "id": "c08",
+      "front": "**Variance** — definition and shortcut formula",
+      "back": "$$\\text{Var}(X) = \\mathbb{E}[(X - \\mu)^2]$$\n\n**Shortcut:** $\\text{Var}(X) = \\mathbb{E}[X^2] - (\\mathbb{E}[X])^2$\n\nUnits: squared units of $X$. Always $\\geq 0$."
+    },
+    {
+      "id": "c09",
+      "front": "**Variance of a sum** — when does Var(X+Y) = Var(X) + Var(Y)?",
+      "back": "$$\\text{Var}(X+Y) = \\text{Var}(X) + \\text{Var}(Y) + 2\\,\\text{Cov}(X,Y)$$\nVariances add **only when $X$ and $Y$ are independent** (Cov = 0).\n\nScaling rule: $\\text{Var}(aX) = a^2 \\text{Var}(X)$"
+    },
+    {
+      "id": "c10",
+      "front": "**Conditional probability** $P(A \\mid B)$ — definition",
+      "back": "$$P(A \\mid B) = \\frac{P(A \\cap B)}{P(B)}$$\nThe probability of $A$ restricted to the world where $B$ has occurred.\n\n*Rearranged: $P(A \\cap B) = P(A \\mid B)\\,P(B)$ — the product rule.*"
+    },
+    {
+      "id": "c11",
+      "front": "**Chain rule of probability** — general form",
+      "back": "$$p(x_1,\\ldots,x_n) = p(x_1)\\,p(x_2 \\mid x_1)\\,p(x_3 \\mid x_1,x_2) \\cdots p(x_n \\mid x_1,\\ldots,x_{n-1})$$\nFactorizes any joint distribution as a product of conditionals.\n\n*Language model token probability = chain rule applied to a token sequence.*"
+    },
+    {
+      "id": "c12",
+      "front": "**Bayes' theorem** — formula and 4 terms",
+      "back": "$$P(H \\mid E) = \\frac{P(E \\mid H)\\,P(H)}{P(E)}$$\n\n| Term | Name |\n|------|------|\n| $P(H \\mid E)$ | **Posterior** |\n| $P(E \\mid H)$ | **Likelihood** |\n| $P(H)$ | **Prior** |\n| $P(E)$ | **Evidence** |"
+    },
+    {
+      "id": "c13",
+      "front": "**Law of total probability** — use in computing $P(E)$",
+      "back": "$$P(E) = \\sum_H P(E \\mid H)\\,P(H)$$\nSums the likelihood of $E$ over all mutually exclusive, exhaustive hypotheses $H$.\n\n*The denominator in Bayes' theorem — ensures the posterior sums to 1.*"
+    },
+    {
+      "id": "c14",
+      "front": "**Covariance** $\\text{Cov}(X,Y)$ — definition and sign interpretation",
+      "back": "$$\\text{Cov}(X,Y) = \\mathbb{E}[(X-\\mu_X)(Y-\\mu_Y)] = \\mathbb{E}[XY] - \\mathbb{E}[X]\\mathbb{E}[Y]$$\n\n- Positive: $X$ and $Y$ tend to be large together\n- Negative: when $X$ large, $Y$ tends to be small\n- Zero: no linear relationship (but may still be dependent)"
+    },
+    {
+      "id": "c15",
+      "front": "**Standard deviation** vs **variance** — units and formula",
+      "back": "$$\\sigma_X = \\sqrt{\\text{Var}(X)}$$\nVariance is in **squared units**; std dev is in the **original units** of $X$.\n\nExample: if $X$ is in meters, $\\text{Var}(X)$ is m², $\\sigma_X$ is m."
+    }
+  ]
+}

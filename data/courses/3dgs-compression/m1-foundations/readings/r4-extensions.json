@@ -1,0 +1,109 @@
+{
+  "id": "r4",
+  "moduleId": "m1",
+  "title": "Extensions: 2DGS, 4DGS, Hierarchical, Relighting, and Editing",
+  "estimatedMinutes": 10,
+  "learningObjectives": [
+    {
+      "id": "m1r4-lo1",
+      "verb": "Distinguish",
+      "description": "Distinguish 2DGS from 3DGS in terms of Gaussian primitive geometry and explain why flat disk primitives improve surface reconstruction and mesh extraction",
+      "skillTags": [
+        "3dgs-fundamentals"
+      ]
+    },
+    {
+      "id": "m1r4-lo2",
+      "verb": "Explain",
+      "description": "Explain how 4DGS extends static Gaussian attributes to dynamic scenes, identifying which parameters are time-varied and how temporal continuity is enforced",
+      "skillTags": [
+        "3dgs-fundamentals"
+      ]
+    },
+    {
+      "id": "m1r4-lo3",
+      "verb": "Identify",
+      "description": "Identify the motivation for hierarchical 3DGS (HierarchicalGS, OctreeGS) and explain how level-of-detail via octree partitioning enables city-scale rendering",
+      "skillTags": [
+        "3dgs-fundamentals",
+        "compression"
+      ]
+    },
+    {
+      "id": "m1r4-lo4",
+      "verb": "Explain",
+      "description": "Explain how the discrete, explicit structure of 3DGS enables editing operations (moving, removing, and inserting Gaussians; GAN inversion; text-driven editing) that are impractical with implicit NeRF representations",
+      "skillTags": [
+        "3dgs-fundamentals"
+      ]
+    }
+  ],
+  "content": "## Why Extend 3DGS?\n\nBase 3DGS excels at novel-view synthesis for static, bounded scenes. Several important real-world tasks require extensions: dynamic scenes, large-scale environments, physically accurate lighting, and semantic editing. This reading surveys the key extension directions.\n\n## 2D Gaussians (2DGS, SuGaR)\n\n**Problem**: 3D Gaussians are volumetric blobs. Object surfaces — flat walls, skin, leaves — are better modeled as flat structures. A 3D Gaussian can approximate a planar surface, but it wastes degrees of freedom on the thin axis.\n\n**2DGS**: Collapses the smallest scale dimension toward zero, yielding a flat disk. This improves surface accuracy and enables better mesh extraction and depth estimation.\n\n**SuGaR**: Attaches Gaussians to a reconstructed mesh surface. Each Gaussian lives on the mesh, inheriting its motion when the mesh deforms. This is the key enabler for **animatable human avatars**: deform the underlying body mesh via a skinning model, and all attached Gaussians move with it.\n\n## 4D Gaussians (4DGS)\n\nFor dynamic scenes (people walking, fire burning), each Gaussian can have a time-varying mean and covariance:\n\n\\[\\mu_i(t), \\quad \\Sigma_i(t)\\]\n\nThe temporal dimension is typically handled with:\n- **Explicit keyframes**: store Gaussian states at \\(T\\) keyframes, interpolate between them.\n- **Deformation fields**: a small MLP takes \\((i, t)\\) and outputs a position offset \\(\\delta\\mu_i(t)\\).\n\nTopology changes (a hand appearing from behind an object) are handled via keyframe restarts.\n\n## Hierarchical 3DGS (HierarchicalGS)\n\n**Problem**: city-scale or campus-scale scenes cannot fit in GPU memory.\n\n**Solution**: partition the scene into tiles; each tile holds its own Gaussian set. At render time, only tiles visible from the current camera are loaded and rendered. **Level-of-detail (LOD)** rendering additionally uses coarser Gaussian representations for distant tiles, avoiding aliasing from undersampled fine-grained structure.\n\nThis extends 3DGS from room-scale to city-scale while maintaining real-time performance on high-end hardware.\n\n## Relighting (R3GW)\n\nBase 3DGS bakes illumination into the learned colors. This means the scene looks wrong under novel lighting conditions.\n\n**Relighting methods** decompose appearance into:\n- A reflectance/material component (BRDF)\n- An illumination component (environment map)\n\nThe BRDF and environment map are optimized jointly with the Gaussian geometry. At inference, you can swap in a new environment map and re-render with physically accurate new lighting. This enables **reconstruction from in-the-wild images** (outdoor scenes with varying sun positions across capture sessions).\n\n## GAN-Based Synthesis (CGSGAN)\n\nRather than reconstructing from multi-view images, generative models can **synthesize** Gaussian point clouds from a latent vector \\(z\\). A GAN is trained to produce plausible 3DGS representations of human faces.\n\n**GAN inversion**: fit a real person's face by finding the latent \\(z^*\\) whose generated Gaussian cloud best matches input images. Once inverted, edit the face by moving \\(z^*\\) in latent space (change expression, age, identity).\n\n## Prompt-Based GS Editing\n\nGiven an existing 3DGS scene, a user specifies a text edit: *\"Turn the teddy bear into a golden bear.\"* The editing pipeline:\n\n1. Render images from multiple views.\n2. Apply a text-driven image editing model (e.g., InstructPix2Pix) to produce edited images.\n3. Fine-tune the 3DGS representation to match the edited images.\n\nThe explicit nature of 3DGS (individual movable Gaussians) also allows direct geometric edits: duplicating, deleting, or translating groups of Gaussians with 3D selection tools.",
+  "references": [
+    {
+      "label": "Huang et al. 2024",
+      "title": "2D Gaussian Splatting for Geometrically Accurate Radiance Fields",
+      "url": "https://arxiv.org/abs/2403.17888"
+    },
+    {
+      "label": "Guedon & Lepetit 2024",
+      "title": "SuGaR: Surface-Aligned Gaussian Splatting for Efficient 3D Mesh Reconstruction",
+      "url": "https://arxiv.org/abs/2311.12775"
+    },
+    {
+      "label": "Wu et al. 2024",
+      "title": "4D Gaussian Splatting for Real-Time Dynamic Scene Rendering",
+      "url": "https://arxiv.org/abs/2310.08528"
+    },
+    {
+      "label": "Kerbl et al. 2024",
+      "title": "A Hierarchical 3D Gaussian Representation for Real-Time Rendering of Very Large Datasets",
+      "url": "https://arxiv.org/abs/2406.12080"
+    },
+    {
+      "label": "Corona et al. 2026",
+      "title": "R3GW: Relightable 3D Gaussians for Outdoor Scenes in the Wild",
+      "url": "https://arxiv.org/abs/2603.02801"
+    },
+    {
+      "label": "Barthel et al. 2025",
+      "title": "CGS-GAN: 3D Consistent Gaussian Splatting GANs for High Resolution Human Head Synthesis",
+      "url": "https://arxiv.org/abs/2505.17590"
+    },
+    {
+      "label": "Wang et al. 2024",
+      "title": "GaussianEditor: Editing 3D Gaussians Delicately with Text Instructions",
+      "url": "https://arxiv.org/abs/2311.16037"
+    }
+  ],
+  "equationBreakdowns": [
+    {
+      "label": "4DGS Time-Varying State",
+      "terms": [
+        {
+          "symbol": "\\mu_i(t)",
+          "name": "Mean (position) at time t",
+          "desc": "The 3D centre of Gaussian i at time t. As t changes, the Gaussian physically moves through space — modelling a walking person, a waving flag, etc."
+        },
+        {
+          "symbol": "\\Sigma_i(t)",
+          "name": "Covariance (shape) at time t",
+          "desc": "The 3×3 covariance matrix that controls the size, orientation, and anisotropy of Gaussian i at time t. Allowing Σ to vary lets Gaussians stretch or rotate as a surface deforms."
+        },
+        {
+          "symbol": "t",
+          "name": "Time",
+          "desc": "A continuous or discrete temporal index. In practice the temporal domain is typically sampled at keyframe timestamps; values in between are found by linear or spline interpolation of Gaussian states."
+        }
+      ]
+    }
+  ],
+  "nextItem": {
+    "type": "quiz",
+    "id": "q1"
+  },
+  "prevItem": {
+    "type": "reading",
+    "id": "r3"
+  }
+}

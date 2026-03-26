@@ -1,0 +1,192 @@
+{
+  "id": "r2",
+  "moduleId": "m6",
+  "title": "Depth Priors, Exposure Compensation & Accelerated 3DGS Training",
+  "estimatedMinutes": 16,
+  "learningObjectives": [
+    {
+      "id": "m6r2-lo1",
+      "verb": "Explain",
+      "description": "Explain how scale-shift alignment converts relative Depth-Anything-V2 monocular depth to metric depth using sparse COLMAP points, and identify what fails when this alignment is omitted",
+      "skillTags": [
+        "sfm-pipeline",
+        "training"
+      ]
+    },
+    {
+      "id": "m6r2-lo2",
+      "verb": "Explain",
+      "description": "Explain why standard Adam accumulates incorrect second-moment estimates for inactive Gaussians at scale, and how Sparse Adam corrects this by skipping updates for zero-gradient parameters",
+      "skillTags": [
+        "training",
+        "3dgs-fundamentals"
+      ]
+    },
+    {
+      "id": "m6r2-lo3",
+      "verb": "Implement",
+      "description": "Implement per-image affine exposure compensation to handle auto-exposure variation across training images and identify when exposure variation causes visible reconstruction artifacts",
+      "skillTags": [
+        "training",
+        "sfm-pipeline"
+      ]
+    },
+    {
+      "id": "m6r2-lo4",
+      "verb": "Identify",
+      "description": "Identify the contribution of each acceleration technique (depth priors, Sparse Adam, 3dgs_accel tile precomputation) to training speed and final reconstruction quality",
+      "skillTags": [
+        "training",
+        "3dgs-fundamentals"
+      ]
+    }
+  ],
+  "content": "## The Initialization Problem\n\nStandard 3DGS initializes Gaussians at the sparse SfM point cloud — in the Bamburgh Castle scene, 14,452 points derived from 585 camera views. For a 640×272 video frame, this amounts to roughly **1 Gaussian per 8.5 pixel column** in a scene with complex architecture. The adaptive densification mechanism will grow this to \\(\\sim\\)200k–600k Gaussians by 30k iterations, but early in training:\n\n1. Regions with no nearby Gaussians have **zero gradient contribution** — the splat rasterizer only backpropagates through Gaussians that tile-intersect the current view.\n2. The gradient magnitude determines which Gaussians densify (clone or split). A Gaussian with no gradient neither grows nor divides.\n3. Consequently, poorly initialized regions remain empty for many thousands of iterations, wasting compute on gradient updates to Gaussians that cannot improve those pixels.\n\nDepth priors solve this by providing a **dense initialization signal** — one potential Gaussian per pixel — at the cost of scale ambiguity inherent in monocular depth estimation.\n\n## Depth-Anything-V2: Architecture and Output\n\nDepth-Anything-V2 (Yang et al., 2024) is a monocular depth foundation model trained on synthetic labeled data and unlabeled real data via distillation. The ViT-L variant used here has:\n\n- **Encoder**: Vision Transformer Large (ViT-L/14), 307M parameters, patch size 14×14\n- **Decoder**: DPT (Dense Prediction Transformer) head converting patch tokens to dense depth maps\n- **Output**: \\(D \\in \\mathbb{R}^{H \\times W}\\), values are **relative depth** — metric scale is not preserved\n\nThe prediction \\(D(u,v)\\) is a monotone function of true depth but with arbitrary global scale \\(s\\) and shift \\(b\\):\n\n$$D(u,v) \\approx s \\cdot d_{\\text{true}}(u,v) + b$$\n\nThese affine parameters are scene-specific and must be aligned to a metric reference before the depths can be used to seed 3D Gaussians in world coordinates.\n\n## Scale-Shift Alignment via Sparse COLMAP Depths\n\nThe script `gaussian-splatting/utils/make_depth_scale.py` performs the alignment. For each registered image \\(i\\):\n\n1. Project each visible 3D point \\(\\mathbf{X}_j\\) into image \\(i\\) to get pixel coordinates \\((u_j, v_j)\\) and metric depth \\(d_j = (R_i \\mathbf{X}_j + \\mathbf{t}_i)_z\\).\n2. Sample the predicted depth map: \\(\\hat{d}_j = D_i(u_j, v_j)\\).\n3. Solve the affine regression:\n\n$$\\min_{s_i, b_i} \\sum_j (s_i \\hat{d}_j + b_i - d_j)^2$$\n\nThis has the closed-form solution:\n\n$$s_i = \\frac{\\text{Cov}(\\hat{\\mathbf{d}}, \\mathbf{d})}{\\text{Var}(\\hat{\\mathbf{d}})}, \\quad b_i = \\bar{d} - s_i \\bar{\\hat{d}}$$\n\nThe aligned depth \\(\\tilde{D}_i = s_i D_i + b_i\\) is then used to unproject each pixel into a 3D point, providing a dense initialization prior for Gaussian seeding. The file `make_depth_scale.py` writes a JSON of `{image_id: scale_factor}` consumed by the training script.\n\n## Exposure Compensation\n\nUnconstrained video captures such as the Bamburgh Castle footage have frame-to-frame brightness variation from auto-exposure, white balance shifts, and motion blur. Without compensation, the photometric loss would force Gaussians to represent these camera-state artifacts rather than scene geometry.\n\n3DGS exposure compensation (Kerbl et al., extended) learns a per-image **affine color transform**:\n\n$$\\tilde{\\mathbf{c}}_i = A_i \\mathbf{c} + \\mathbf{b}_i$$\n\nwhere \\(A_i \\in \\mathbb{R}^{3 \\times 3}\\) and \\(\\mathbf{b}_i \\in \\mathbb{R}^3\\) are learned parameters. In the Bamburgh pipeline these are activated with the flag `--train_test_exp` and scheduled with:\n\n- `--exposure_lr_init 0.001` — initial LR for exposure parameters\n- `--exposure_lr_final 0.0001` — final LR after decay\n- `--exposure_lr_delay_steps 5000` — warm-up period during which exposure LR is very small\n- `--exposure_lr_delay_mult 0.001` — multiplier applied during the warm-up period\n\nThe warm-up prevents early exposure parameter updates from contaminating the initial Gaussian placement. Mathematically, the LR schedule is:\n\n$$\\eta(t) = \\begin{cases} \\eta_0 \\cdot \\mu^{1 - t/t_{\\text{delay}}} & t < t_{\\text{delay}} \\\\ \\eta_0 \\cdot \\left(\\frac{\\eta_f}{\\eta_0}\\right)^{t/T} & t \\geq t_{\\text{delay}} \\end{cases}$$\n\nwhere \\(\\mu = 0.001\\), \\(t_{\\text{delay}} = 5000\\), \\(\\eta_0 = 0.001\\), \\(\\eta_f = 0.0001\\), \\(T = 30000\\).\n\n## Sparse Adam: Why Standard Adam Breaks at Scale\n\nIn 3DGS training, each Gaussian \\(g_k\\) receives a gradient only when it overlaps a rendered tile in the current view. For a scene with 500k Gaussians and a rasterizer processing 1024×768 at 16×16 tiles, roughly 4,000 tiles exist per frame. A single Gaussian typically covers a small number of tiles — often just 1–4. So in each iteration:\n\n- **Active Gaussians** (gradient received): \\(\\sim 10{,}000\\) (rough estimate)\n- **Inactive Gaussians** (zero gradient): \\(\\sim 490{,}000\\)\n\nStandard Adam updates *all* 500k Gaussians every step, even when \\(g = 0\\). The Adam moment update for inactive parameters accumulates \\(m_1 \\leftarrow \\beta_1 m_1\\) and \\(m_2 \\leftarrow \\beta_2 m_2\\) — **decaying the running moments without any gradient signal**. This biases the effective step size for those parameters when they eventually receive gradients, slowing convergence.\n\n**Sparse Adam** only updates parameters that received a non-zero gradient in the current step. Inactive parameters retain their moments exactly — no decay occurs. This preserves the adaptive step-size history and eliminates \\(O(N)\\) wasted tensor operations per step.\n\nAt \\(N = 500{,}000\\) Gaussians × 59 parameters × 2 moments (\\(m_1, m_2\\)):  \n- Standard Adam: 59M floating point updates per step, regardless of scene activity  \n- Sparse Adam: \\(\\sim 590{,}000\\) updates per step (active only) → **100× fewer updates**\n\n## The 3dgs_accel Branch: Accelerated Tile Assignment\n\nThe `diff-gaussian-rasterization` submodule includes a `3dgs_accel` branch that precomputes 2D **bounding rectangles** for each Gaussian in screen space before the tiling loop.\n\nIn the baseline implementation, the CUDA kernel computes tile intersections per-Gaussian by iterating over candidate tiles and testing against the 2D Gaussian covariance. For a Gaussian with screen-space covariance \\(\\Sigma_{2D}\\), the bounding rectangle is:\n\n$$\\text{rect} = [\\mu_u \\pm 3\\sigma_u, \\mu_v \\pm 3\\sigma_v]$$\n\nwhere \\(\\sigma_u = \\sqrt{(\\Sigma_{2D})_{00}}\\), \\(\\sigma_v = \\sqrt{(\\Sigma_{2D})_{11}}\\). Rather than re-deriving this per tile, `3dgs_accel` precomputes the rectangle in a single vectorized pass and uses it in a direct tile-range lookup — eliminating the inner loop over candidate tiles.\n\nFor a Gaussian covering \\(k\\) tiles, the complexity changes from \\(O(k_{\\max})\\) candidate evaluations to \\(O(1)\\) direct range computation, where \\(k_{\\max}\\) is the maximum tile count considered by the naive implementation. This matters for large Gaussians (high-\\(\\sigma\\) ellipsoids) that could span dozens of tiles.\n\n## Training Convergence: Bamburgh Castle\n\nWith all optimizations enabled (`sparse_adam`, depth priors, `3dgs_accel`, exposure compensation), the Bamburgh Castle scene trains in **8 minutes 25 seconds** on a Colab T4/A100 GPU:\n\n| Checkpoint | Iterations | L1 Loss | PSNR |\n|---|---|---|---|\n| Early | 7,000 | 0.02350 | 26.96 dB |\n| Final | 30,000 | 0.01682 | 29.02 dB |\n\nThe 2.06 dB improvement from 7k to 30k iterations reflects continued Gaussian densification and opacity pruning settling the scene into a stable high-quality representation. In comparison, the same scene without depth priors typically requires 50k+ iterations to reach equivalent quality.",
+  "equationBreakdowns": [
+    {
+      "label": "Monocular Depth Prediction (Affine Ambiguity)",
+      "terms": [
+        {
+          "symbol": "D(u,v)",
+          "name": "Predicted depth at pixel (u,v)",
+          "desc": "The raw output of Depth-Anything-V2 at pixel (u,v). It is a relative depth value — it correctly orders near and far surfaces but does not have metric units (metres)."
+        },
+        {
+          "symbol": "s",
+          "name": "Unknown scale factor",
+          "desc": "A scene-specific positive scalar that maps relative depth to metric depth. It varies per image due to auto-exposure and focal-length differences. Must be estimated from the sparse COLMAP point cloud."
+        },
+        {
+          "symbol": "d_{\\text{true}}(u,v)",
+          "name": "True metric depth",
+          "desc": "The actual distance from the camera centre to the scene surface at pixel (u,v), in world units. This is what 3DGS needs to place Gaussians correctly in 3D space."
+        },
+        {
+          "symbol": "b",
+          "name": "Unknown shift (bias)",
+          "desc": "A scene-specific additive offset. Arises because monocular depth models are trained with scale-normalised targets. Together with s, it defines an affine transformation that must be solved before the depths can be used."
+        }
+      ]
+    },
+    {
+      "label": "Scale-Shift Alignment — Least Squares",
+      "terms": [
+        {
+          "symbol": "\\min_{s_i, b_i}",
+          "name": "Optimise over scale and shift",
+          "desc": "Finds the affine parameters (s_i, b_i) that best map the predicted depths to the metric COLMAP depths for image i. Closed-form solution exists because the objective is quadratic in the unknowns."
+        },
+        {
+          "symbol": "\\hat{d}_j = D_i(u_j, v_j)",
+          "name": "Predicted depth at COLMAP point",
+          "desc": "The Depth-Anything output sampled at the pixel location where COLMAP 3D point X_j projects into image i. This is the 'input' for the regression."
+        },
+        {
+          "symbol": "d_j",
+          "name": "COLMAP metric depth",
+          "desc": "The z-coordinate of point X_j in camera i's frame — a true metric measurement. Used as the regression target. Only a sparse set of pixels has this ground truth, but that is sufficient for a robust two-parameter fit."
+        }
+      ]
+    },
+    {
+      "label": "Closed-Form Scale and Shift Solution",
+      "terms": [
+        {
+          "symbol": "s_i = \\frac{\\text{Cov}(\\hat{\\mathbf{d}}, \\mathbf{d})}{\\text{Var}(\\hat{\\mathbf{d}})}",
+          "name": "Scale estimate",
+          "desc": "The ordinary least-squares slope — how much the predicted depths must be stretched to match the metric depths. Analogous to the slope in simple linear regression: Cov(x,y)/Var(x)."
+        },
+        {
+          "symbol": "b_i = \\bar{d} - s_i \\bar{\\hat{d}}",
+          "name": "Shift estimate",
+          "desc": "The intercept — ensures the means align after scaling. Together, s_i and b_i define the affine map that converts all relative Depth-Anything predictions for image i into metric depths consistent with the COLMAP reconstruction."
+        }
+      ]
+    },
+    {
+      "label": "Per-Image Exposure Compensation",
+      "terms": [
+        {
+          "symbol": "\\tilde{\\mathbf{c}}_i",
+          "name": "Exposure-corrected colour",
+          "desc": "The rendered colour after applying the learned affine colour transform for image i. This is what gets compared to the ground-truth pixel during training — not the raw rendered colour c."
+        },
+        {
+          "symbol": "A_i \\in \\mathbb{R}^{3 \\times 3}",
+          "name": "Colour correction matrix",
+          "desc": "A learned 3×3 matrix per image that accounts for white balance shifts, auto-exposure gain changes, and colour casts between frames. Off-diagonal entries handle cross-channel mixing (e.g. blue cast from overcast sky)."
+        },
+        {
+          "symbol": "\\mathbf{b}_i \\in \\mathbb{R}^3",
+          "name": "Colour offset vector",
+          "desc": "A per-image additive RGB bias, handling global brightness shifts. Together with A_i, it gives the model enough freedom to correct all common camera state variations without needing to bake them into the Gaussian colours."
+        }
+      ]
+    },
+    {
+      "label": "Exposure LR Warm-Up Schedule",
+      "terms": [
+        {
+          "symbol": "\\eta(t)",
+          "name": "Exposure learning rate at step t",
+          "desc": "The learning rate applied to the affine colour parameters (A_i, b_i) at training step t. Kept very small during warm-up to prevent early exposure updates from distorting Gaussian initialisation."
+        },
+        {
+          "symbol": "\\mu^{1 - t/t_{\\text{delay}}}",
+          "name": "Warm-up multiplier (t < t_delay)",
+          "desc": "During the first t_delay=5000 steps, the LR is η₀·μ^(1−t/t_delay). At t=0 this equals η₀·μ (very small); it grows toward η₀ as t approaches t_delay. μ=0.001 means the LR starts 1000× smaller than its target."
+        },
+        {
+          "symbol": "\\left(\\eta_f/\\eta_0\\right)^{t/T}",
+          "name": "Exponential decay (t ≥ t_delay)",
+          "desc": "After warm-up, the LR decays exponentially from η₀=0.001 to η_f=0.0001 over T=30000 steps — a standard cosine/exponential annealing that stabilises training as Gaussians converge."
+        }
+      ]
+    },
+    {
+      "label": "Gaussian Screen-Space Bounding Rectangle",
+      "terms": [
+        {
+          "symbol": "\\mu_u,\\, \\mu_v",
+          "name": "Projected Gaussian centre",
+          "desc": "The 2D screen-space position of the Gaussian's mean after perspective projection. The bounding rectangle is centred here."
+        },
+        {
+          "symbol": "\\sigma_u = \\sqrt{(\\Sigma_{2D})_{00}},\\; \\sigma_v = \\sqrt{(\\Sigma_{2D})_{11}}",
+          "name": "Screen-space standard deviations",
+          "desc": "Square roots of the diagonal entries of the 2D projected covariance matrix. They give the Gaussian's extent along the u (horizontal) and v (vertical) screen axes."
+        },
+        {
+          "symbol": "\\pm 3\\sigma",
+          "name": "3-sigma cutoff",
+          "desc": "A Gaussian ellipse is truncated at 3 standard deviations — beyond this, its contribution is < 0.1% and safely ignored. The ±3σ rectangle is a tight axis-aligned bounding box for the splat's visible footprint on screen."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Yang et al. 2024",
+      "title": "Depth Anything V2",
+      "url": "https://arxiv.org/abs/2406.09414"
+    },
+    {
+      "label": "Kerbl et al. 2023",
+      "title": "3D Gaussian Splatting for Real-Time Radiance Field Rendering",
+      "url": "https://arxiv.org/abs/2308.04079"
+    },
+    {
+      "label": "Kingma & Ba 2015",
+      "title": "Adam: A Method for Stochastic Optimization",
+      "url": "https://arxiv.org/abs/1412.6980"
+    }
+  ],
+  "nextItem": {
+    "type": "reading",
+    "id": "r3"
+  },
+  "prevItem": {
+    "type": "reading",
+    "id": "r1"
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "id": "q1",
+  "moduleId": "m4",
+  "title": "Sorting Theory and Quality Metrics",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "questions": [
+    {
+      "id": "q4_1",
+      "type": "multiple-choice",
+      "prompt": "JPEG achieves 9.03× compression on sorted pixels vs. shuffled pixels. What property of sorted data makes lossy codecs like JPEG dramatically more effective?",
+      "options": [
+        { "id": "a", "text": "Sorted data has lower entropy in the statistical sense, reducing Huffman code lengths", "correct": false },
+        { "id": "b", "text": "Sorted data has strong local correlation (neighbors are similar), so DCT coefficients concentrate energy in low frequencies, making high-frequency quantization errors imperceptible", "correct": true },
+        { "id": "c", "text": "Sorted data allows JPEG to skip the chroma subsampling step", "correct": false },
+        { "id": "d", "text": "Sorted pixels have smaller file headers, reducing metadata overhead", "correct": false }
+      ],
+      "explanation": "JPEG's core mechanism is the 2D DCT applied to 8×8 blocks. For smooth (locally correlated) data, most DCT energy is in the DC and low-frequency coefficients. Quantizing high-frequency coefficients to zero causes only small errors (they were near-zero anyway). For shuffled data, all DCT coefficients have similar energy, so quantizing any of them causes large errors — lossy compression fails.",
+      "hint": "Think about what the DCT does and what happens when you apply it to a smooth patch vs. a noisy patch."
+    },
+    {
+      "id": "q4_2",
+      "type": "multiple-choice",
+      "prompt": "The D_p sorting quality score \\(1 - D_{sort}/D_{opt}\\) requires computing \\(D_{opt}\\). For high-dimensional data (e.g., 59D Gaussian attributes), why is \\(D_{opt}\\) hard to compute?",
+      "options": [
+        { "id": "a", "text": "The distance function in 59D is undefined", "correct": false },
+        { "id": "b", "text": "Computing \\(D_{opt}\\) for high-dimensional data requires finding the shortest Hamiltonian path through all N points in 59D space, which is NP-hard (equivalent to TSP)", "correct": true },
+        { "id": "c", "text": "High-dimensional distances violate the triangle inequality, making sorting impossible", "correct": false },
+        { "id": "d", "text": "D_opt can always be approximated using PCA to reduce to 1D first", "correct": false }
+      ],
+      "explanation": "For 1D scalars, \\(D_{opt}\\) is computed trivially by sorting. For multi-dimensional data projected to 1D, finding the optimal ordering is equivalent to the Traveling Salesman Problem (shortest path visiting all points), which is NP-hard. For 2D grid layouts, even formulating \\(D_{opt}\\) is unclear since the optimal 2D arrangement is not known. This is why relative measures (GAF, GDF, DPQ) that don't require knowing the optimum are preferred.",
+      "hint": "Finding the shortest path through all N points in any metric space is a well-known hard combinatorial problem."
+    },
+    {
+      "id": "q4_3",
+      "type": "code-completion",
+      "prompt": "Implement Grid Adjacency Fidelity (GAF) — the mean distance to 4-neighbors in a 2D sorted grid. Complete the neighbor distance accumulation:",
+      "codeTemplate": "import numpy as np\n\ndef grid_adjacency_fidelity(grid):\n    \"\"\"\n    grid: shape (H, W, D) — H*W points, each D-dimensional\n    Returns: mean distance to 4 neighbors (N, E, S, W)\n    \"\"\"\n    H, W, D = grid.shape\n    total = 0.0\n    count = 0\n    for i in range(H):\n        for j in range(W):\n            for di, dj in [(-1,0),(1,0),(0,-1),(0,1)]:  # N,S,W,E\n                ni, nj = i+di, j+dj\n                if 0 <= ni < H and 0 <= nj < W:\n                    total += ___BLANK___\n                    count += 1\n    return total / count if count > 0 else 0",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "np.linalg.norm(grid[i,j] - grid[ni,nj])",
+        "np.linalg.norm(grid[i, j] - grid[ni, nj])",
+        "float(np.linalg.norm(grid[i,j] - grid[ni,nj]))"
+      ],
+      "explanation": "GAF averages the Euclidean distance between each grid cell and its valid neighbors. Lower GAF means neighboring cells are more similar in attribute space, indicating better sorting quality.",
+      "hint": "Use np.linalg.norm to compute the Euclidean distance between two D-dimensional attribute vectors."
+    },
+    {
+      "id": "q4_4",
+      "type": "multiple-choice",
+      "prompt": "Global Distance Fidelity (GDF) measures correlation between grid-space distances and attribute-space distances. What pathological sorting would score high on GAF (low neighbor distance) but low on GDF?",
+      "options": [
+        { "id": "a", "text": "A random permutation of all Gaussians", "correct": false },
+        { "id": "b", "text": "A sorting where all similar Gaussians are clustered in a small region of the grid, leaving most of the grid with abrupt transitions at cluster boundaries", "correct": true },
+        { "id": "c", "text": "A perfectly sorted gradient where all attributes vary smoothly across the grid", "correct": false },
+        { "id": "d", "text": "A sorting where the Morton curve orders Gaussians by spatial position", "correct": false }
+      ],
+      "explanation": "Clustering similar Gaussians in one corner of the grid minimizes local neighbor distances (GAF is good) but compresses the global structure into a small region — two dissimilar Gaussians from different clusters end up close in grid space at the cluster boundary, breaking the correlation between grid distance and attribute distance that GDF measures. A good sorting preserves both local smoothness AND global structure.",
+      "hint": "Think about a grid where all similar items are packed into one corner. Local neighbors are similar, but what about the distances between distant points?"
+    },
+    {
+      "id": "q4_5",
+      "type": "multiple-choice",
+      "prompt": "A scene with N=1,048,576 Gaussians (1M) is to be sorted onto a 1024×1024 grid. How many permutations are there, and which approach is feasible?",
+      "options": [
+        { "id": "a", "text": "1M! permutations; LAS with O(N³) global assignment is feasible in seconds on a modern GPU", "correct": false },
+        { "id": "b", "text": "1M! permutations; only FLAS (local assignments) or SOM (sequential updates) are feasible for this scale", "correct": true },
+        { "id": "c", "text": "1024 permutations (only row orderings matter); brute-force search is feasible", "correct": false },
+        { "id": "d", "text": "2^1M permutations; all methods are infeasible above 100K points", "correct": false }
+      ],
+      "explanation": "1M! is incomprehensibly large. Global assignment (LAS) requires O(N³) ≈ 10^18 operations for N=1M — completely infeasible. FLAS replaces this with many parallel local O(k³) assignments (k=4 to 16 cells) which scale to millions of points. SOM also scales well (O(N) per iteration) but converges to lower quality.",
+      "hint": "Calculate O(N³) for N=10^6 and compare to what's computationally feasible on a modern machine."
+    }
+  ]
+}

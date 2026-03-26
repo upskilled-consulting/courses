@@ -1,0 +1,130 @@
+{
+  "id": "r2",
+  "moduleId": "loss-functions",
+  "title": "Probabilistic Regression: Poisson & Gaussian NLL",
+  "estimatedMinutes": 12,
+  "learningObjectives": [
+    {
+      "id": "r2-lo1",
+      "verb": "Derive",
+      "description": "Derive any regression loss from the negative log-likelihood of an assumed output distribution",
+      "skillTags": [
+        "probabilistic-ml"
+      ]
+    },
+    {
+      "id": "r2-lo2",
+      "verb": "Apply",
+      "description": "Apply PoissonNLLLoss to count-valued targets and explain when the log_input flag must be set",
+      "skillTags": [
+        "probabilistic-ml",
+        "regression"
+      ]
+    },
+    {
+      "id": "r2-lo3",
+      "verb": "Use",
+      "description": "Use GaussianNLLLoss to train a model that predicts both mean and variance and interpret the heteroscedastic output",
+      "skillTags": [
+        "probabilistic-ml",
+        "regression"
+      ]
+    },
+    {
+      "id": "r2-lo4",
+      "verb": "Explain",
+      "description": "Explain why predicting variance alongside mean improves model calibration and enables uncertainty quantification",
+      "skillTags": [
+        "probabilistic-ml"
+      ]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r1"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r3"
+  },
+  "content": "## From Point Estimates to Distributions\n\nL1 and MSE assume the model outputs a single number — a point estimate of the target. Probabilistic losses go further: the model outputs the **parameters of a probability distribution** over the target, and the loss is the **negative log-likelihood (NLL)** of the observed target under that distribution.\n\nThis lets the model express **uncertainty**: when the target is ambiguous, the predicted variance should be large.\n\n---\n\n## Deriving a Loss from Maximum Likelihood\n\nSuppose the target $y_i$ is drawn from a distribution $p(y_i \\mid \\theta_i)$ parameterised by the model output $\\theta_i$. Maximum likelihood estimation (MLE) maximises\n\n$$\\prod_{i=1}^N p(y_i \\mid \\theta_i)$$\n\nTaking the logarithm (which is monotone, so maximising log-likelihood is equivalent) and negating to turn maximisation into minimisation:\n\n$$\\mathcal{L}_{\\text{NLL}} = -\\frac{1}{N} \\sum_{i=1}^N \\log p(y_i \\mid \\theta_i)$$\n\nThis is the **negative log-likelihood** objective. Every probabilistic loss in PyTorch is a special case.\n\n---\n\n## nn.PoissonNLLLoss — Count Data\n\nWhen targets are non-negative integer counts (word frequencies, photon arrivals, events per interval), the natural model is a Poisson distribution:\n\n$$p(y \\mid \\lambda) = \\frac{\\lambda^y e^{-\\lambda}}{y!}, \\quad \\lambda > 0$$\n\nThe network predicts $x = \\log \\lambda$ (to ensure $\\lambda = e^x > 0$). The NLL is:\n\n$$-\\log p(y \\mid e^x) = e^x - y \\cdot x + \\log(y!)$$\n\nDropping the constant $\\log(y!)$ (it does not depend on the model) gives the default loss:\n\n$$\\ell_i = e^{x_i} - y_i \\cdot x_i$$\n\nWith `full=True`, PyTorch adds Stirling's approximation for the factorial term: $\\log(y!) \\approx y \\log y - y + 0.5 \\log(2\\pi y)$.\n\n```python\nloss = nn.PoissonNLLLoss(log_input=True)   # input is log(λ)\nx = torch.tensor([0.5, 1.2])               # log(λ)\ny = torch.tensor([1.0, 3.0])               # count targets\noutput = loss(x, y)\n# ℓ₁ = exp(0.5) − 1·0.5 = 1.649 − 0.5 = 1.149\n# ℓ₂ = exp(1.2) − 3·1.2 = 3.320 − 3.6 = −0.280\n```\n\n**When to use:** NLP word counts; medical event rates; any target that is a non-negative integer following a Poisson process.\n\n---\n\n## nn.GaussianNLLLoss — Heteroscedastic Regression\n\nWhen the target is real-valued but the observation noise varies across samples, model the target as\n\n$$y_i \\sim \\mathcal{N}(\\mu_i, \\sigma_i^2)$$\n\nThe network predicts **both** $\\mu_i$ (the mean, called `input`) and $\\sigma_i^2$ (the variance, called `var`). The NLL is:\n\n$$-\\log p(y_i \\mid \\mu_i, \\sigma_i^2) = \\frac{1}{2}\\left[\\log(2\\pi\\sigma_i^2) + \\frac{(\\mu_i - y_i)^2}{\\sigma_i^2}\\right]$$\n\nDropping the constant $\\frac{1}{2}\\log(2\\pi)$:\n\n$$\\ell_i = \\frac{1}{2}\\left[\\log(\\sigma_i^2) + \\frac{(\\mu_i - y_i)^2}{\\sigma_i^2}\\right]$$\n\nThe model learns a **trade-off**: if it is very uncertain ($\\sigma_i^2$ large), the squared-error term is down-weighted but the log-variance term increases. If it is very confident ($\\sigma_i^2$ small), the log-variance is small but squared error is amplified.\n\n```python\nloss = nn.GaussianNLLLoss()\nmean = torch.tensor([1.0, 2.0])   # predicted μ\nvar  = torch.tensor([0.5, 2.0])   # predicted σ²  (must be > 0)\ntarget = torch.tensor([1.2, 1.0])\noutput = loss(mean, target, var)\n```\n\nPyTorch adds a small `eps` to `var` for numerical stability.\n\n**When to use:** Uncertainty-aware regression; weather forecasting; any setting where prediction confidence should be data-driven.\n\n---\n\n## Why Predict Variance?\n\nIn standard MSE, the model always acts as though it is equally confident about every prediction. In GaussianNLL, a well-trained model learns:\n\n- For easy, predictable samples → small $\\sigma^2$ → tight distribution\n- For ambiguous, noisy samples → large $\\sigma^2$ → wide distribution\n\nThe calibrated uncertainty can then be used for downstream decisions (e.g., active learning, safety-critical rejection).",
+  "equationBreakdowns": [
+    {
+      "label": "Negative Log-Likelihood (general)",
+      "terms": [
+        {
+          "symbol": "\\mathcal{L}_{\\text{NLL}}",
+          "name": "NLL loss",
+          "desc": "The general form: minimising this is equivalent to maximising the likelihood of the observed targets under the model's predicted distribution."
+        },
+        {
+          "symbol": "p(y_i \\mid \\theta_i)",
+          "name": "Predicted probability of target",
+          "desc": "How much probability mass the model's distribution places on the observed target yᵢ. A good model makes this large — equivalently, makes −log p small."
+        },
+        {
+          "symbol": "-\\log",
+          "name": "Negative logarithm",
+          "desc": "Converts maximising probability into minimising a loss. The log turns a product of probabilities (over the dataset) into a sum — numerically stable and easy to differentiate."
+        }
+      ]
+    },
+    {
+      "label": "PoissonNLLLoss",
+      "terms": [
+        {
+          "symbol": "e^{x_i}",
+          "name": "Predicted rate λ (via log-link)",
+          "desc": "The model predicts x = log(λ), so λ = exp(x) > 0 is guaranteed. This parameterisation is called the log-link function of the Poisson GLM."
+        },
+        {
+          "symbol": "y_i \\cdot x_i",
+          "name": "Reward for correct log-rate",
+          "desc": "When the log-rate x is large AND the count y is large, this term is large (negative of loss). The loss balances penalising over-prediction (exp(x)) against rewarding accurate prediction (y·x)."
+        },
+        {
+          "symbol": "\\log(y!)",
+          "name": "Stirling constant (full=True)",
+          "desc": "The factorial normalisation of the Poisson PMF. It is constant w.r.t. the model parameters and irrelevant for optimisation, but included when full=True for a proper NLL value."
+        }
+      ]
+    },
+    {
+      "label": "GaussianNLLLoss",
+      "terms": [
+        {
+          "symbol": "\\frac{1}{2}\\log(\\sigma_i^2)",
+          "name": "Entropy term",
+          "desc": "Penalises predicting high variance. A model that always outputs large σ² would minimise the squared-error term at the cost of this penalty."
+        },
+        {
+          "symbol": "\\frac{(\\mu_i - y_i)^2}{\\sigma_i^2}",
+          "name": "Precision-weighted squared error",
+          "desc": "The usual squared error, divided by the predicted variance. High confidence (small σ²) amplifies the penalty for being wrong. Low confidence (large σ²) down-weights the error."
+        },
+        {
+          "symbol": "\\sigma_i^2",
+          "name": "Predicted variance (var)",
+          "desc": "Output by the model's variance head. Must be > 0; PyTorch adds eps for stability. The model learns to predict how uncertain it is about each sample."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "[1]",
+      "title": "nn.PoissonNLLLoss — PyTorch docs",
+      "url": "https://pytorch.org/docs/stable/generated/torch.nn.PoissonNLLLoss.html"
+    },
+    {
+      "label": "[2]",
+      "title": "nn.GaussianNLLLoss — PyTorch docs",
+      "url": "https://pytorch.org/docs/stable/generated/torch.nn.GaussianNLLLoss.html"
+    },
+    {
+      "label": "[3]",
+      "title": "Nix & Weigend (1994) — Estimating the mean and variance of the target probability distribution",
+      "url": "https://ieeexplore.ieee.org/document/374138"
+    }
+  ]
+}

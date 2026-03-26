@@ -1,0 +1,91 @@
+{
+  "id": "q2",
+  "moduleId": "activation-functions",
+  "title": "Smooth, Gating & Specialized Activations",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "type": "reading", "id": "r6" },
+  "nextItem": { "type": "lab", "id": "lab1" },
+  "questions": [
+    {
+      "id": "q2_1",
+      "type": "multiple-choice",
+      "prompt": "GELU and SiLU are both 'self-gating' activations. What does this mean, and how do they differ?",
+      "options": [
+        { "id": "a", "text": "Both are identical; GELU and SiLU are different names for the same function", "correct": false },
+        { "id": "b", "text": "Both gate the input by a function of the input itself; GELU uses the normal CDF $\\Phi(x)$ while SiLU uses $\\sigma(x)$", "correct": true },
+        { "id": "c", "text": "Both use a separate learnable gate weight; GELU uses Gaussian noise while SiLU uses sigmoid noise", "correct": false },
+        { "id": "d", "text": "Both use the same sigmoid gate; they differ only in how the gate is initialized", "correct": false }
+      ],
+      "explanation": "Both compute $f(x) = x \\cdot g(x)$ where $g(x)$ is a gate derived from $x$ itself — hence 'self-gating'. GELU uses $g(x) = \\Phi(x)$ (standard normal CDF), the probability that a Gaussian random variable is less than $x$. SiLU uses $g(x) = \\sigma(x)$ (sigmoid). Both approximate each other closely; the main practical difference is that GELU (via the tanh approximation) is slightly more expensive to compute.",
+      "hint": "Both functions multiply $x$ by a gate that is itself a function of $x$. What function serves as the gate in each?"
+    },
+    {
+      "id": "q2_2",
+      "type": "multiple-choice",
+      "prompt": "SELU achieves self-normalization with $\\lambda \\approx 1.0507$ and $\\alpha \\approx 1.6733$. This self-normalization means:",
+      "options": [
+        { "id": "a", "text": "SELU outputs are always in $[-1,1]$", "correct": false },
+        { "id": "b", "text": "If inputs have mean 0 and variance 1, outputs also have mean ≈ 0 and variance ≈ 1", "correct": true },
+        { "id": "c", "text": "SELU normalizes the weight matrices, not the activations", "correct": false },
+        { "id": "d", "text": "SELU provides the same regularization as BatchNorm", "correct": false }
+      ],
+      "explanation": "Klambauer et al. (2017) proved that the specific constants $\\lambda \\approx 1.0507$ and $\\alpha \\approx 1.6733$ are the unique fixed point of the mean and variance map: if you feed standard normal inputs through SELU, the outputs have mean approaching 0 and variance approaching 1. This property propagates through all layers. It requires LeCun/He initialization and `AlphaDropout` to maintain.",
+      "hint": "Self-normalization is a fixed-point property. What distribution is preserved through a SELU layer?"
+    },
+    {
+      "id": "q2_3",
+      "type": "multiple-choice",
+      "prompt": "You have a 4D feature map of shape $(N, C, H, W)$ and you want a probability distribution over classes at each spatial location. Which activation should you use and how?",
+      "options": [
+        { "id": "a", "text": "`nn.Softmax(dim=0)` — normalize over the batch dimension", "correct": false },
+        { "id": "b", "text": "`nn.Softmax2d()` — applies softmax over the channel dimension $C$ at each $(h,w)$", "correct": true },
+        { "id": "c", "text": "`nn.LogSoftmax(dim=-1)` — normalize over the last dimension", "correct": false },
+        { "id": "d", "text": "`nn.Softmax(dim=-1)` — equivalent to Softmax2d for 4D tensors", "correct": false }
+      ],
+      "explanation": "For spatial classification (semantic segmentation), you want a probability distribution over $C$ classes at each pixel $(h,w)$. `nn.Softmax2d()` applies softmax over `dim=1` (the channel dimension) which is exactly this operation. Alternatively, `F.softmax(x, dim=1)` is equivalent. `dim=-1` would normalize over $W$ (spatial width), not classes.",
+      "hint": "In an $(N, C, H, W)$ tensor, the class dimension is dimension 1 ($C$). Which activation normalizes along that dimension at each spatial location?"
+    },
+    {
+      "id": "q2_4",
+      "type": "multiple-choice",
+      "prompt": "The $1/\\sqrt{d_k}$ scaling factor in dot-product attention serves what purpose?",
+      "options": [
+        { "id": "a", "text": "It normalizes the attention weights so they sum to 1", "correct": false },
+        { "id": "b", "text": "It prevents the dot products from growing large in magnitude, which would push softmax into a saturated low-gradient region", "correct": true },
+        { "id": "c", "text": "It controls the temperature of the softmax distribution for generation", "correct": false },
+        { "id": "d", "text": "It is equivalent to layer normalization applied to the attention scores", "correct": false }
+      ],
+      "explanation": "If $Q$ and $K$ have components drawn from $\\mathcal{N}(0,1)$, then $QK^\\top$ has variance $d_k$ (variance sums for dot products of $d_k$-dimensional vectors). Dividing by $\\sqrt{d_k}$ restores variance to 1, keeping the softmax input in its sensitive (non-saturated) region. Without this scaling, large $d_k$ pushes softmax into near-one-hot outputs with nearly zero gradients — exactly vanishing gradients again.",
+      "hint": "If each element of $q$ and $k$ has variance 1, what is the variance of $q \\cdot k$ when both have dimension $d_k$?"
+    },
+    {
+      "id": "q2_5",
+      "type": "multiple-choice",
+      "prompt": "Softshrink and Hardshrink both zero out values near the origin. A key difference is that Softshrink is the proximal operator of which regularizer?",
+      "options": [
+        { "id": "a", "text": "$L_2$ (Ridge)", "correct": false },
+        { "id": "b", "text": "$L_0$ (sparsity count)", "correct": false },
+        { "id": "c", "text": "$L_1$ (LASSO)", "correct": true },
+        { "id": "d", "text": "Elastic net ($L_1 + L_2$)", "correct": false }
+      ],
+      "explanation": "The proximal operator of $\\lambda\\|u\\|_1$ applied to $x$ is exactly Softshrink: $\\text{prox}_{\\lambda\\|\\cdot\\|_1}(x) = \\text{sign}(x)\\max(0,|x|-\\lambda)$. This means Softshrink is the solution to $\\min_u \\frac{1}{2}\\|u-x\\|^2 + \\lambda\\|u\\|_1$. The connection to ISTA/FISTA (iterative shrinkage-thresholding algorithms) for LASSO is direct. Hardshrink corresponds to subset selection ($L_0$ penalization).",
+      "hint": "Which regularizer's proximal operator gives you the closed-form solution: pass large values, zero out small values, but shift the surviving values toward zero?"
+    },
+    {
+      "id": "q2_6",
+      "type": "code-completion",
+      "prompt": "Complete the SwiGLU feedforward layer, the standard FFN used in LLaMA/Mistral. The input $x$ has shape $(B, d)$; the layer projects to $2 \\times \\text{hidden\\_dim}$ then splits and applies the SiLU gate:",
+      "codeTemplate": "import torch\nimport torch.nn as nn\n\nclass SwiGLUFFN(nn.Module):\n    def __init__(self, d_model, hidden_dim):\n        super().__init__()\n        self.proj = nn.Linear(d_model, hidden_dim * 2, bias=False)\n        self.silu = nn.SiLU()\n        self.out = nn.Linear(hidden_dim, d_model, bias=False)\n    \n    def forward(self, x):\n        h = self.proj(x)                     # (B, hidden_dim * 2)\n        gate, signal = h.chunk(2, dim=-1)    # each: (B, hidden_dim)\n        return self.out(___BLANK___)",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "self.silu(gate) * signal",
+        "signal * self.silu(gate)",
+        "self.silu(gate) * signal  # SwiGLU: SiLU(gate) * signal"
+      ],
+      "explanation": "SwiGLU is $f(x) = \\text{SiLU}(xW_1) \\otimes (xW_2)$. After splitting the projected tensor into `gate` and `signal`, the gate gets SiLU applied to it and the result is element-wise multiplied with the signal. The output is then projected back to $d_{\\text{model}}$.",
+      "hint": "SwiGLU = SiLU(gate) ⊗ signal. Apply SiLU to the gate half, multiply element-wise with the signal half."
+    }
+  ]
+}

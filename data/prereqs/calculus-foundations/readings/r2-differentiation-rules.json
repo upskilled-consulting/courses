@@ -1,0 +1,70 @@
+{
+  "id": "r2",
+  "moduleId": "calculus-foundations",
+  "title": "Differentiation Rules",
+  "estimatedMinutes": 14,
+  "learningObjectives": [
+    {
+      "id": "r2-lo1",
+      "verb": "Apply",
+      "description": "Apply the constant, sum, product, and quotient rules to differentiate combinations of functions",
+      "skillTags": ["calculus-foundations", "derivatives"]
+    },
+    {
+      "id": "r2-lo2",
+      "verb": "Recall",
+      "description": "Recall the derivatives of sin x and cos x and apply them with the product and quotient rules",
+      "skillTags": ["calculus-foundations", "derivatives"]
+    },
+    {
+      "id": "r2-lo3",
+      "verb": "Compute",
+      "description": "Compute second derivatives and interpret their sign in terms of concavity",
+      "skillTags": ["calculus-foundations", "derivatives", "optimization"]
+    }
+  ],
+  "prevItem": { "type": "reading", "id": "r1" },
+  "nextItem": { "type": "reading", "id": "r3" },
+  "content": "## From Single Terms to Combinations\n\nThe power rule handles $x^n$ in isolation. Real functions — loss functions, activations, weight penalty terms — are built by combining simpler pieces: sums, products, quotients. This reading gives the rules for differentiating those combinations.\n\n---\n\n## Constant and Sum Rules\n\n**Constant multiple:** Scaling a function scales its derivative:\n$$\\frac{d}{dx}[c \\cdot f(x)] = c \\cdot f'(x)$$\n\n**Sum/difference:** The derivative distributes over addition:\n$$\\frac{d}{dx}[f(x) \\pm g(x)] = f'(x) \\pm g'(x)$$\n\nTogether, these let us differentiate any polynomial term by term:\n\n**Example:** $f(x) = 5x^3 - 2x + 7$\n$$f'(x) = 5 \\cdot 3x^2 - 2 \\cdot 1 + 0 = 15x^2 - 2$$\n\nEach term is differentiated independently. The constant $7$ vanishes because a flat term contributes zero slope.\n\n---\n\n## The Product Rule\n\nDifferentiating a product $f(x) \\cdot g(x)$ is **not** simply $f'(x) \\cdot g'(x)$. The correct rule:\n\n$$\\frac{d}{dx}[f(x)\\,g(x)] = f'(x)\\,g(x) + f(x)\\,g'(x)$$\n\n**Intuition.** Think of $f$ and $g$ as the side lengths of a rectangle with area $A = f \\cdot g$. If both sides grow by small increments $df$ and $dg$, the new area gains two strips — $f\\,dg$ and $g\\,df$ — plus a tiny corner $df \\cdot dg$ that is negligible as the increments shrink. So $dA/dx \\approx f\\,g' + g\\,f'$.\n\n**Example:** $h(x) = x^2 \\sin x$\n$$h'(x) = 2x \\cdot \\sin x + x^2 \\cdot \\cos x$$\n\nNeither factor alone is enough — both must contribute.\n\n---\n\n## The Quotient Rule\n\nFor $h(x) = f(x)/g(x)$:\n\n$$h'(x) = \\frac{f'(x)\\,g(x) - f(x)\\,g'(x)}{[g(x)]^2}$$\n\nA useful mnemonic: *\"low d-high minus high d-low, over low squared\"* — where \"high\" is the numerator $f$ and \"low\" is the denominator $g$.\n\n**Example:** $h(x) = \\frac{x^2}{x + 1}$\n\n$$h'(x) = \\frac{2x(x+1) - x^2 \\cdot 1}{(x+1)^2} = \\frac{x^2 + 2x}{(x+1)^2}$$\n\nNote the minus sign: the numerator factor involving $f$ is subtracted, not added. Getting this sign wrong is a common error.\n\n---\n\n## Derivatives of Trigonometric Functions\n\nSince you know trigonometry, these belong in your toolkit:\n\n$$\\frac{d}{dx}[\\sin x] = \\cos x \\qquad \\frac{d}{dx}[\\cos x] = -\\sin x$$\n\n$$\\frac{d}{dx}[\\tan x] = \\sec^2 x$$\n\nThese follow from the limit definition using the angle-addition identities for $\\sin(x+h)$ and $\\cos(x+h)$. The results are what we need in practice.\n\n**Pattern:** Differentiating repeatedly cycles $\\sin$ and $\\cos$ with alternating signs:\n$$\\sin x \\xrightarrow{d/dx} \\cos x \\xrightarrow{d/dx} -\\sin x \\xrightarrow{d/dx} -\\cos x \\xrightarrow{d/dx} \\sin x$$\n\n---\n\n## Higher Derivatives\n\nBecause $f'(x)$ is itself a function, we can differentiate it again:\n\n- $f''(x)$ — the **second derivative**: how rapidly the slope is changing\n- $f^{(n)}(x)$ — the $n$th derivative, applying differentiation $n$ times\n\nAlternate notation: $d^2y/dx^2$ for the second derivative.\n\n**Geometric meaning of $f''$:** If $f''(x) > 0$, the slope is increasing — the graph curves upward (**concave up**). If $f''(x) < 0$, the slope is decreasing — the graph curves downward (**concave down**). This will be central to detecting minima in r5.\n\n**Example:** For $f(x) = x^3 - 3x$:\n$$f'(x) = 3x^2 - 3 \\qquad f''(x) = 6x$$\n\nAt $x = 1$: $f'' = 6 > 0$ (concave up). At $x = -1$: $f'' = -6 < 0$ (concave down).\n\n---\n\n## Why This Matters for ML\n\n**L2 weight penalty.** The regularization term $\\frac{\\lambda}{2}w^2$ added to the loss has gradient:\n$$\\frac{d}{dw}\\!\\left[\\frac{\\lambda}{2}w^2\\right] = \\lambda w$$\n\nThis is the \"weight decay\" effect: the regularization gradient pulls every weight toward zero with force proportional to its magnitude. The $\\frac{1}{2}$ in the penalty is purely for notational convenience — it cancels the 2 from the power rule.\n\n**Mean squared error.** For a prediction $\\hat{y}$ against target $y$, the loss $(\\hat{y} - y)^2$ has gradient:\n$$\\frac{d}{d\\hat{y}}[(\\hat{y} - y)^2] = 2(\\hat{y} - y)$$\n\nThe derivative is proportional to the error. Large errors produce large gradients; small errors produce small updates. This is why MSE naturally self-scales with the size of the mistake.\n\n---\n\n## PyTorch and TensorFlow\n\nAutograd applies these rules internally. You can verify any of them:\n\n```python\nimport torch\n\n# Product rule: d/dx[x² sin(x)] at x = 1\nx = torch.tensor(1.0, requires_grad=True)\nh = x**2 * torch.sin(x)\nh.backward()\nprint(x.grad.item())\n# = 2·sin(1) + 1²·cos(1) ≈ 2(0.841) + 0.540 ≈ 2.222\n\n# L2 regularization gradient\nw = torch.tensor(0.5, requires_grad=True)\nlam = 0.01\nloss = (lam / 2) * w**2\nloss.backward()\nprint(w.grad.item())  # lam * w = 0.01 * 0.5 = 0.005\n```\n\n```python\nimport tensorflow as tf\n\nx = tf.Variable(1.0)\nwith tf.GradientTape() as tape:\n    h = x**2 * tf.sin(x)\nprint(tape.gradient(h, x).numpy())  # ≈ 2.222\n\nw = tf.Variable(0.5)\nlam = 0.01\nwith tf.GradientTape() as tape:\n    loss = (lam / 2) * w**2\nprint(tape.gradient(loss, w).numpy())  # 0.005\n```",
+  "equationBreakdowns": [
+    {
+      "label": "Product Rule",
+      "heading": "Differentiating f(x)·g(x)",
+      "terms": [
+        {
+          "symbol": "f'(x)\\,g(x)",
+          "name": "First factor differentiated",
+          "desc": "The derivative of the first factor, multiplied by the second factor unchanged. Captures how much the product changes due to f changing."
+        },
+        {
+          "symbol": "f(x)\\,g'(x)",
+          "name": "Second factor differentiated",
+          "desc": "The first factor unchanged, multiplied by the derivative of the second. Captures how much the product changes due to g changing. Both terms are needed."
+        }
+      ]
+    },
+    {
+      "label": "Quotient Rule",
+      "heading": "Differentiating f(x)/g(x)",
+      "terms": [
+        {
+          "symbol": "f'g - fg'",
+          "name": "Numerator (mnemonic: low d-high minus high d-low)",
+          "desc": "Order matters: f' times g (the denominator) minus f times g'. Reversed order gives the wrong sign."
+        },
+        {
+          "symbol": "[g(x)]^2",
+          "name": "Denominator squared",
+          "desc": "The denominator of the original fraction, squared. This ensures the quotient rule is consistent with the product rule applied to f · (1/g)."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "MIT 18.01SC — Sessions 6, 9–11",
+      "title": "Calculating Derivatives; Product, Quotient, and Chain Rules",
+      "url": "https://ocw.mit.edu/courses/18-01sc-single-variable-calculus-fall-2010/"
+    }
+  ]
+}

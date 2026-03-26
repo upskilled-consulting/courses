@@ -1,0 +1,84 @@
+{
+  "id": "d2",
+  "moduleId": "probability-foundations",
+  "title": "Distributions, Sampling, and Information Theory",
+  "description": "Flashcards covering key distributions, importance sampling, entropy, cross-entropy, and KL divergence.",
+  "estimatedMinutes": 12,
+  "cards": [
+    {
+      "id": "c01",
+      "front": "**Bernoulli($\\theta$)** — PMF and where it appears in ML",
+      "back": "$$p(x) = \\theta^x(1-\\theta)^{1-x}, \\quad x \\in \\{0,1\\}$$\n**Mean:** $\\theta$ — **Variance:** $\\theta(1-\\theta)$\n\n*ML uses: binary classification output, individual pixel in a binary image generator*"
+    },
+    {
+      "id": "c02",
+      "front": "**Categorical($\\boldsymbol{\\pi}$)** — what does it model and how does it relate to Bernoulli?",
+      "back": "$$p(x = k) = \\pi_k, \\quad \\sum_{k=1}^K \\pi_k = 1$$\n**Bernoulli is the special case $K=2$.**\n\n*ML uses: multi-class classification (softmax output defines $\\boldsymbol{\\pi}$), token sampling in LMs, action selection in RL*"
+    },
+    {
+      "id": "c03",
+      "front": "**Gaussian $\\mathcal{N}(\\mu, \\sigma^2)$** — PDF and why it appears everywhere",
+      "back": "$$f(x) = \\frac{1}{\\sigma\\sqrt{2\\pi}} \\exp\\!\\left(-\\frac{(x-\\mu)^2}{2\\sigma^2}\\right)$$\n**Central Limit Theorem:** sums of many independent, finite-variance RVs converge to Gaussian.\n\n*ML uses: noise model, VAE latent prior $p(z)=\\mathcal{N}(0,I)$, weight initialization*"
+    },
+    {
+      "id": "c04",
+      "front": "**Multivariate Gaussian** — what does the covariance matrix $\\boldsymbol{\\Sigma}$ encode?",
+      "back": "$\\boldsymbol{\\Sigma}$ is a $d \\times d$ symmetric positive definite matrix.\n- **Diagonal entries:** variance of each dimension\n- **Off-diagonal entries:** covariance (linear dependency) between dimensions\n- **Shape of contours:** ellipses aligned with eigenvectors, with axis lengths proportional to $\\sqrt{\\lambda_i}$\n\n*3DGS: each Gaussian has a learnable $\\boldsymbol{\\Sigma}$ encoding its 3D shape and orientation*"
+    },
+    {
+      "id": "c05",
+      "front": "**Beta($\\alpha, \\beta$)** — what is it a distribution over, and what makes it a conjugate prior?",
+      "back": "Beta is a distribution over $[0,1]$ — the natural prior over a **probability parameter** $\\theta$.\n\n**Conjugate prior for Bernoulli:** if $\\theta \\sim \\text{Beta}(\\alpha,\\beta)$ and you observe $n_1$ successes, $n_0$ failures:\n$$\\theta \\mid \\text{data} \\sim \\text{Beta}(\\alpha + n_1, \\beta + n_0)$$\nSame family after update — just add pseudo-counts."
+    },
+    {
+      "id": "c06",
+      "front": "**Dirichlet($\\boldsymbol{\\alpha}$)** — what is it a distribution over, and how does $\\alpha$ control shape?",
+      "back": "Dirichlet is a distribution over the **probability simplex** $\\{\\boldsymbol{\\pi}: \\pi_k \\geq 0, \\sum_k \\pi_k = 1\\}$.\n\n- **Small $\\alpha_k$ (< 1):** sparse — mass near corners of simplex\n- **Large $\\alpha_k$ (> 1):** concentrated near center (uniform)\n- **Conjugate prior for Categorical/Multinomial**\n\n*LDA topic models use Dirichlet priors over topic distributions*"
+    },
+    {
+      "id": "c07",
+      "front": "**Importance sampling** — the core identity",
+      "back": "$$\\mathbb{E}_{x \\sim p}[f(x)] = \\mathbb{E}_{x \\sim q}\\!\\left[f(x)\\cdot\\frac{p(x)}{q(x)}\\right]$$\nSample from proposal $q$ instead of target $p$. Multiply by importance weight $w(x) = p(x)/q(x)$ to correct for the mismatch.\n\n*Exact (no approximation) when $q(x) > 0$ wherever $p(x) > 0$.*"
+    },
+    {
+      "id": "c08",
+      "front": "**Importance weight variance** — what causes failure?",
+      "back": "If $q$ and $p$ are very different, some weights $w(x) = p(x)/q(x)$ become huge while most become tiny.\n\nThe IS estimator remains unbiased but has **extremely high variance** — so you need enormous $N$ to get a reliable estimate.\n\n*Monitor effective sample size (ESS) to detect this.*"
+    },
+    {
+      "id": "c09",
+      "front": "**Effective sample size (ESS)** — formula and interpretation",
+      "back": "$$\\text{ESS} = \\frac{\\left(\\sum_i w_i\\right)^2}{\\sum_i w_i^2}$$\n\n- $\\text{ESS} = N$: perfect — proposal equals target, all weights are equal\n- $\\text{ESS} \\approx 1$: one weight dominates — effectively only one sample\n- $\\text{ESS}/N$ = efficiency vs. direct Monte Carlo"
+    },
+    {
+      "id": "c10",
+      "front": "**Off-policy RL** — how does importance sampling appear?",
+      "back": "Data collected under **behavior policy** $q$; we want to evaluate **target policy** $p$:\n$$\\mathbb{E}_{\\tau \\sim p}[R(\\tau)] = \\mathbb{E}_{\\tau \\sim q}\\!\\left[R(\\tau)\\cdot\\prod_t \\frac{\\pi(a_t|s_t)}{q(a_t|s_t)}\\right]$$\nPPO clips the ratio $r_t = \\pi(a_t|s_t)/\\pi_{\\text{old}}(a_t|s_t)$ to prevent high-variance updates."
+    },
+    {
+      "id": "c11",
+      "front": "**Entropy** $H(P)$ — formula, max, and min",
+      "back": "$$H(P) = -\\mathbb{E}_{x \\sim P}[\\log P(x)] = -\\sum_x P(x)\\log P(x)$$\n\n- **Maximum:** uniform distribution (maximum uncertainty)\n- **Minimum = 0:** point mass / deterministic (no uncertainty)\n\n*Units: nats (natural log) or bits (log base 2)*"
+    },
+    {
+      "id": "c12",
+      "front": "**Cross-entropy** $H(P,Q)$ — formula and relationship to loss",
+      "back": "$$H(P,Q) = -\\mathbb{E}_{x \\sim P}[\\log Q(x)] = -\\sum_x P(x)\\log Q(x)$$\n\nAlways $\\geq H(P)$. When $P$ is one-hot (class $k$) and $Q = \\hat{\\pi}$ is the model:\n$$H(P,Q) = -\\log \\hat{\\pi}_k$$\nMinimizing cross-entropy = **maximum likelihood estimation**."
+    },
+    {
+      "id": "c13",
+      "front": "**KL divergence** $D_{\\text{KL}}(P \\| Q)$ — formula and non-negativity",
+      "back": "$$D_{\\text{KL}}(P \\| Q) = \\mathbb{E}_{x \\sim P}\\!\\left[\\log\\frac{P(x)}{Q(x)}\\right] = H(P,Q) - H(P)$$\n\n- Always $\\geq 0$\n- Zero iff $P = Q$\n- **Not symmetric:** $D_{\\text{KL}}(P\\|Q) \\neq D_{\\text{KL}}(Q\\|P)$ in general"
+    },
+    {
+      "id": "c14",
+      "front": "**Forward KL** vs **reverse KL** — behavior when approximating a multimodal distribution",
+      "back": "**Forward KL** $D_{\\text{KL}}(P \\| Q)$: $Q$ must cover all of $P$ → **mean-seeking / mass-covering**. $Q$ spreads to cover all modes.\n\n**Reverse KL** $D_{\\text{KL}}(Q \\| P)$: $Q$ must not assign mass where $P=0$ → **mode-seeking / zero-forcing**. $Q$ collapses onto one mode.\n\n*Variational inference typically uses reverse KL.*"
+    },
+    {
+      "id": "c15",
+      "front": "**VAE KL term** — what does it do and what is its closed form for Gaussians?",
+      "back": "In the VAE ELBO: $-D_{\\text{KL}}(q_\\phi(z|x) \\| p(z))$ regularizes the encoder.\n\nFor $q_\\phi = \\mathcal{N}(\\mu, \\sigma^2)$ and $p(z) = \\mathcal{N}(0,1)$:\n$$D_{\\text{KL}} = \\frac{1}{2}(\\mu^2 + \\sigma^2 - \\log\\sigma^2 - 1)$$\nPenalizes encoders that map far from the origin or collapse to a point."
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "id": "d2",
+  "moduleId": "optimizers",
+  "title": "Learning Rate Schedulers",
+  "description": "Flashcards covering StepLR, cosine annealing, warmup, ReduceLROnPlateau, CyclicLR, OneCycleLR, and scheduler composition patterns.",
+  "estimatedMinutes": 10,
+  "cards": [
+    {
+      "id": "c01",
+      "front": "**Why schedule the learning rate?**",
+      "back": "A fixed learning rate is a compromise between two conflicting goals:\n- **Early training:** large LR → fast progress through flat regions\n- **Late training:** small LR → precise convergence near the minimum\n\nScheduling solves both by decaying the LR over time. A **warmup** phase (LR increases from near-zero to peak) additionally stabilizes adaptive optimizers during early high-variance steps.\n\n*Rule of thumb: cosine decay with linear warmup for transformers; cosine decay without warmup for standard CNNs.*"
+    },
+    {
+      "id": "c02",
+      "front": "**StepLR vs ExponentialLR** — formulas and shapes",
+      "back": "**StepLR:** decays by $\\gamma$ every `step_size` epochs:\n$$\\eta_t = \\eta_0 \\cdot \\gamma^{\\lfloor t/\\text{step\\_size}\\rfloor}$$\nProduces a **staircase** — flat between milestones, then drops.\n\n**ExponentialLR:** decays by $\\gamma$ *every* epoch:\n$$\\eta_t = \\eta_0 \\cdot \\gamma^t$$\nProduces a **smooth exponential** decay from step 0.\n\n*PyTorch: `StepLR(optimizer, step_size=30, gamma=0.1)` · `ExponentialLR(optimizer, gamma=0.95)`*"
+    },
+    {
+      "id": "c03",
+      "front": "**CosineAnnealingLR** — formula and why the cosine shape is preferred",
+      "back": "$$\\eta_t = \\eta_{\\min} + \\frac{1}{2}(\\eta_{\\max} - \\eta_{\\min})\\left(1 + \\cos\\frac{\\pi t}{T_{\\max}}\\right)$$\n\nThe cosine shape gives:\n- **Slow start** — gentle decay from peak, large steps early\n- **Fast middle** — rapid decay through the bulk of training\n- **Slow finish** — fine-grained refinement near the minimum\n\nThis matches the natural curvature of loss landscapes better than a staircase or pure exponential.\n\n*PyTorch: `CosineAnnealingLR(optimizer, T_max=100, eta_min=1e-6)` · TF: `CosineDecay(0.1, 100, alpha=1e-5)`*"
+    },
+    {
+      "id": "c04",
+      "front": "**LinearLR warmup** — what it does and why it helps",
+      "back": "LinearLR linearly interpolates from `start_factor × base_lr` to `end_factor × base_lr` over `total_iters` steps:\n\n```python\nLinearLR(optimizer, start_factor=0.1, end_factor=1.0, total_iters=10)\n```\n\n**Why warmup helps:**\n- Adaptive optimizers (Adam) have high second-moment variance at $t=0$ — a large initial LR causes wild updates\n- Large-batch training has low gradient noise early; warmup prevents the optimizer from locking into a bad local direction\n\n*Standard recipe: 500–2000 warmup steps before cosine decay for transformer training.*"
+    },
+    {
+      "id": "c05",
+      "front": "**ReduceLROnPlateau** — key parameters",
+      "back": "```python\nReduceLROnPlateau(\n    optimizer,\n    mode='min',      # 'min' for loss, 'max' for accuracy\n    factor=0.1,      # new_lr = lr × factor\n    patience=10,     # epochs with no improvement before reduction\n    threshold=1e-4,  # minimum change that counts as improvement\n    cooldown=0,      # epochs to wait after reduction before resuming\n    min_lr=1e-7,\n)\nscheduler.step(val_loss)  # pass metric, not just epoch\n```\n\nUnlike other schedulers, ReduceLROnPlateau is **metric-driven** — it adapts to the actual training dynamics rather than a fixed schedule.\n\n*TF: `tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=10)`*"
+    },
+    {
+      "id": "c06",
+      "front": "**CosineAnnealingWarmRestarts (SGDR)** — restart schedule",
+      "back": "$$\\eta_t = \\eta_{\\min} + \\frac{1}{2}(\\eta_{\\max}-\\eta_{\\min})\\left(1+\\cos\\frac{\\pi T_{\\text{cur}}}{T_i}\\right)$$\n\nwhere $T_i = T_0 \\cdot T_{\\text{mult}}^i$ grows with each restart.\n\n**Why restart?** After annealing to a sharp minimum, the LR spikes back to $\\eta_{\\max}$, allowing the model to **escape to a flatter basin** (better generalization). With `T_mult=2`: cycles of length 10 → 20 → 40 → ...\n\n*Snapshot ensembling: save model at each restart minimum and average predictions.*\n\n*PyTorch: `CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2)` · TF: `CosineDecayRestarts(...)`*"
+    },
+    {
+      "id": "c07",
+      "front": "**CyclicLR** — three modes and cycle momentum",
+      "back": "CyclicLR oscillates between `base_lr` and `max_lr` in a triangular wave, stepped **per batch**:\n\n| Mode | Amplitude behavior |\n|---|---|\n| `triangular` | Fixed amplitude every cycle |\n| `triangular2` | Amplitude halves after each cycle |\n| `exp_range` | Amplitude × $\\gamma^{\\text{iteration}}$ each step |\n\n**Cycle momentum** (`cycle_momentum=True`, SGD only): momentum **decreases** as LR increases and vice versa. This counterbalances the destabilizing effect of high LR with lower accumulation.\n\n*PyTorch: `CyclicLR(optimizer, base_lr=1e-4, max_lr=1e-2, step_size_up=2000, mode='triangular2')`*"
+    },
+    {
+      "id": "c08",
+      "front": "**OneCycleLR** — three phases and key parameters",
+      "back": "A single-cycle policy that enables **super-convergence** (10× fewer epochs):\n\n1. **Warmup** (first `pct_start` fraction): LR rises from `max_lr/div_factor` to `max_lr`\n2. **Anneal** (remaining steps): LR decays to `max_lr/div_factor/final_div_factor`\n3. Momentum inversely cycles if using SGD\n\n```python\nOneCycleLR(\n    optimizer, max_lr=0.1,\n    total_steps=steps_per_epoch * epochs,\n    pct_start=0.3,       # 30% warmup\n    div_factor=25.0,     # initial_lr = max_lr/25\n    final_div_factor=1e4 # final_lr = initial_lr/10000\n)\n```\n\n*Step **per batch**, not per epoch. Find `max_lr` via the LR range test.*"
+    },
+    {
+      "id": "c09",
+      "front": "**SequentialLR** — warmup then cosine pattern",
+      "back": "```python\nwarmup = LinearLR(\n    optimizer, start_factor=0.1, end_factor=1.0, total_iters=500\n)\ncosine = CosineAnnealingLR(\n    optimizer, T_max=9500, eta_min=1e-7\n)\nscheduler = SequentialLR(\n    optimizer, schedulers=[warmup, cosine], milestones=[500]\n)\n```\n\nMilestone `[500]` means: use `warmup` for steps 0–499, switch to `cosine` at step 500.\n\nThis is the **standard transformer recipe**: linear warmup for stability, then cosine decay for generalization.\n\n*TF: implement as a custom `LearningRateSchedule` with a `tf.where` branch.*"
+    },
+    {
+      "id": "c10",
+      "front": "**scheduler.step() placement** — correct vs wrong",
+      "back": "```python\n# CORRECT\noptimizer.step()   # update weights first\nscheduler.step()   # then advance LR\n\n# WRONG — causes off-by-one: first epoch uses the updated LR\nscheduler.step()\noptimizer.step()\n```\n\n**Per-batch schedulers** (CyclicLR, OneCycleLR, CosineAnnealingWarmRestarts): call `scheduler.step()` after **each batch**.\n\n**Per-epoch schedulers** (StepLR, CosineAnnealingLR, etc.): call once after the full training loop.\n\nFor ReduceLROnPlateau: call with the metric — `scheduler.step(val_loss)`."
+    },
+    {
+      "id": "c11",
+      "front": "**L2 regularization vs weight decay** — when are they equivalent?",
+      "back": "For **SGD**, they are equivalent. Adding $\\lambda\\theta$ to the gradient:\n$$\\theta_{t+1} = \\theta_t - \\eta(g_t + \\lambda\\theta_t) = (1-\\eta\\lambda)\\theta_t - \\eta g_t$$\n\nFor **Adam**, they diverge. L2 in Adam adds $\\lambda\\theta$ to $g_t$ before the adaptive step — the decay is scaled by $1/\\sqrt{\\hat{v}}$, giving **less regularization** to high-variance parameters. Weight decay in AdamW decays uniformly: every parameter shrinks by $\\eta\\lambda$ regardless of gradient history.\n\n*Use AdamW (not Adam + weight_decay) whenever you want proper L2 regularization.*"
+    },
+    {
+      "id": "c12",
+      "front": "Scheduler comparison: which to use when?",
+      "back": "| Goal | Scheduler |\n|---|---|\n| Fastest single training run | **OneCycleLR** |\n| Best generalization + ensembling | **CosineAnnealingWarmRestarts** |\n| Transformer / LLM training | **LinearLR + CosineAnnealingLR** (SequentialLR) |\n| Plateau detection (unknown schedule) | **ReduceLROnPlateau** |\n| Exploration during training | **CyclicLR** (triangular2) |\n| Simple baseline | **StepLR** or **CosineAnnealingLR** |\n| Custom formula | **LambdaLR** |\n\n*All schedulers in PyTorch: call `scheduler.step()` **after** `optimizer.step()`, every step or epoch as appropriate.*"
+    }
+  ]
+}

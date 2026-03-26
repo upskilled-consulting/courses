@@ -1,0 +1,84 @@
+{
+  "id": "d2",
+  "moduleId": "regularization",
+  "title": "Augmentation, Output Regularizers, and Implicit Regularization",
+  "description": "Flashcards covering early stopping, data augmentation (Mixup, CutMix), label smoothing, initialization, SGD noise, and spectral normalization.",
+  "estimatedMinutes": 12,
+  "cards": [
+    {
+      "id": "c01",
+      "front": "**Early stopping** — algorithm and key hyperparameter",
+      "back": "1. Evaluate validation loss every $k$ steps\n2. Save checkpoint when validation loss improves\n3. Stop after `patience` evaluations without improvement\n4. Restore best checkpoint\n\n**Key hyperparameter:** `patience` — how many non-improving evaluations to tolerate before stopping. Typical: 5–20 epochs."
+    },
+    {
+      "id": "c02",
+      "front": "**Early stopping as L2 regularization** — the connection",
+      "back": "For gradient descent on a quadratic loss, stopping at step $T$ ≈ applying L2 regularization with $\\lambda \\approx 1/T$.\n\nEarly stopping constrains the effective complexity — the model stays in the low-complexity region it reaches first, before the optimizer drifts into high-variance solutions."
+    },
+    {
+      "id": "c03",
+      "front": "**Data augmentation** — why is it regularization?",
+      "back": "Augmented examples are randomly generated each epoch — the model rarely sees the exact same pixel values twice. This prevents memorization of specific training examples.\n\nAlso forces the model to learn **invariances** encoded by the transforms: flipped cats, cropped cats, rotated cats all map to the same label."
+    },
+    {
+      "id": "c04",
+      "front": "**Mixup** — formula for inputs and labels",
+      "back": "$$\\tilde{x} = \\lambda x_i + (1-\\lambda)x_j, \\quad \\tilde{y} = \\lambda y_i + (1-\\lambda)y_j$$\n$$\\lambda \\sim \\text{Beta}(\\alpha, \\alpha), \\quad \\alpha \\in [0.2, 0.4]$$\n\nBlends two training pairs. Soft labels prevent overconfidence. Forces linear behavior between training points. Improves calibration."
+    },
+    {
+      "id": "c05",
+      "front": "**CutOut vs. CutMix** — what is cut, what fills it, and how are labels handled?",
+      "back": "**CutOut:** zero out a random square region. Labels unchanged (hard one-hot).\n\n**CutMix:** replace the cut region with a patch from a *different* image. Labels are blended proportionally to the area of each image:\n$$\\lambda = |\\mathbf{M}|/HW \\quad \\tilde{y} = \\lambda y_i + (1-\\lambda)y_j$$\n\nCutMix ≈ CutOut + Mixup: fills the hole with real image content + blends labels."
+    },
+    {
+      "id": "c06",
+      "front": "**RandAugment** — how many hyperparameters and what do they control?",
+      "back": "**Two hyperparameters:**\n- $N$: number of augmentation operations to apply (typically 2)\n- $M$: magnitude of each operation (1–10)\n\nFrom a fixed library of ~14 transforms (shear, rotate, solarize, equalize, etc.). No policy search needed.\n\n*De facto standard for image classification when no domain-specific policy exists.*"
+    },
+    {
+      "id": "c07",
+      "front": "**Label smoothing** — target distribution formula and effect on logits",
+      "back": "$$\\tilde{y}_k = (1-\\varepsilon)y_k + \\varepsilon/K$$\n\nCorrect class: $1-\\varepsilon+\\varepsilon/K\\approx 0.9$. Wrong classes: $\\varepsilon/K \\approx 0.01$ each (for $\\varepsilon=0.1$, $K=10$).\n\n**Effect:** imposes a finite maximum logit gap. Model cannot drive $z_{k^*}-z_k\\to\\infty$ — prevents saturation and overconfidence."
+    },
+    {
+      "id": "c08",
+      "front": "**Label smoothing vs. temperature scaling** — training time vs. inference time",
+      "back": "**Label smoothing:** training-time modification to the target distribution. Changes the loss landscape and the features learned by the penultimate layer.\n\n**Temperature scaling:** inference-time only. Divides logits by $T$ before softmax ($T>1$ softens, $T<1$ sharpens). Does not change predictions, only calibration. $T$ is fit on validation set."
+    },
+    {
+      "id": "c09",
+      "front": "**Confidence penalty** — formula and connection to maximum-entropy RL",
+      "back": "$$\\mathcal{L}_{\\text{conf}} = \\mathcal{L}_{\\text{CE}} - \\beta H(\\hat{\\mathbf{p}})$$\n\nPenalizes low-entropy (overconfident) outputs by adding entropy as a reward.\n\n**SAC (RL):** $J(\\pi) = \\sum_t\\mathbb{E}[r_t + \\alpha H(\\pi(\\cdot|s_t))]$ — entropy bonus encourages exploration and prevents premature convergence to suboptimal deterministic policies."
+    },
+    {
+      "id": "c10",
+      "front": "**Xavier vs. He initialization** — formula and when to use each",
+      "back": "**Xavier/Glorot:** $\\text{Var}(w) = 2/(n_{\\text{in}}+n_{\\text{out}})$\n→ For **tanh, sigmoid** (approximately linear near zero)\n\n**He/Kaiming:** $\\text{Var}(w) = 2/n_{\\text{in}}$\n→ For **ReLU, Leaky ReLU, GELU** (ReLU zeroes half the activations; factor of 2 compensates)"
+    },
+    {
+      "id": "c11",
+      "front": "**Why initialization is implicit regularization**",
+      "back": "Networks initialized near zero compute near-identity functions. SGD starting from this point implicitly prefers solutions that remain close to initialization.\n\nThis is analogous to L2 regularization toward zero — the implicit prior from starting at small weights. Without initialization, the effective prior would be random and uninformative."
+    },
+    {
+      "id": "c12",
+      "front": "**Flat vs. sharp minima** — why flat minima generalize better",
+      "back": "Both have near-zero training loss. But:\n- **Flat minimum:** small parameter perturbations → small loss change → generalizes under distribution shift\n- **Sharp minimum:** small perturbations → large loss change → brittle to distribution shift\n\nSmall-batch SGD (more noise) tends to escape sharp minima and settle in flat ones — the implicit regularization of gradient noise."
+    },
+    {
+      "id": "c13",
+      "front": "**Large-batch SGD** problem and the linear scaling rule",
+      "back": "Large batches have less gradient noise → converge to sharper minima → worse generalization.\n\n**Linear scaling rule (Goyal et al. 2017):** when multiplying batch size by $k$, multiply learning rate by $k$. This approximately preserves the noise temperature $\\eta/B$.\n\nBeyond batch 8k–16k, scaling rules break down; warmup schedules and further adjustments are needed."
+    },
+    {
+      "id": "c14",
+      "front": "**Spectral normalization** — what it constrains and where it is used",
+      "back": "Divides each weight matrix by its largest singular value: $\\hat{W} = W/\\sigma_1(W)$, ensuring $\\sigma_1(\\hat{W}) = 1$.\n\nConstrains the **Lipschitz constant** of each layer to ≤ 1 — the network cannot amplify perturbations more than a constant factor per layer.\n\n**Used in:** GAN discriminators (enforces Lipschitz-1 constraint required by WGAN). Also improves stability in general deep networks."
+    },
+    {
+      "id": "c15",
+      "front": "**Regularization taxonomy** — complete the table: what is explicit vs. implicit?",
+      "back": "**Explicit (add a term or modification):**\nL1/L2 penalty, dropout, early stopping, data augmentation, label smoothing, confidence penalty, spectral normalization\n\n**Implicit (arises from training dynamics/architecture):**\nSGD noise / small batch size, weight initialization, batch normalization, small learning rate, gradient clipping"
+    }
+  ]
+}

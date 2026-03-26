@@ -1,0 +1,131 @@
+{
+  "id": "r1",
+  "moduleId": "m1",
+  "title": "Implicit vs. Explicit: NeRF and 3DGS",
+  "estimatedMinutes": 12,
+  "learningObjectives": [
+    {
+      "id": "m1r1-lo1",
+      "verb": "Distinguish",
+      "description": "Distinguish implicit (NeRF) and explicit (3DGS) scene representations across storage size, training speed, and rendering speed, using concrete numbers from the reading",
+      "skillTags": [
+        "3dgs-fundamentals",
+        "nerf-comparison"
+      ]
+    },
+    {
+      "id": "m1r1-lo2",
+      "verb": "Trace",
+      "description": "Trace the NeRF volume rendering integral C(r) and identify the role of transmittance T(t), density σ, and emitted color c in computing a pixel value",
+      "skillTags": [
+        "nerf-comparison",
+        "3dgs-fundamentals"
+      ]
+    },
+    {
+      "id": "m1r1-lo3",
+      "verb": "Explain",
+      "description": "Explain why the discrete, explicit nature of 3DGS simultaneously creates the storage problem (millions of 59-parameter Gaussians) and enables classical image compression solutions",
+      "skillTags": [
+        "3dgs-fundamentals",
+        "compression"
+      ]
+    },
+    {
+      "id": "m1r1-lo4",
+      "verb": "Identify",
+      "description": "Identify the role of Structure-from-Motion in initializing both NeRF and 3DGS, and explain how SfM point-cloud density and pose accuracy affect downstream reconstruction quality",
+      "skillTags": [
+        "3dgs-fundamentals",
+        "sfm-pipeline"
+      ]
+    }
+  ],
+  "content": "## The Problem: Reconstructing the 3D World from Images\n\nThe core task is straightforward to state: given a collection of photographs of a scene taken from known (or estimated) viewpoints, produce a 3D representation that allows rendering novel views with photorealistic quality. The devil is in the representation.\n\nTwo dominant paradigms have emerged from the deep learning era: **Neural Radiance Fields (NeRF)** and **3D Gaussian Splatting (3DGS)**. They sit at opposite ends of the implicit–explicit spectrum, and understanding that contrast is essential for everything that follows in this course.\n\n## Implicit Representations: NeRF\n\nNeRF, introduced by Mildenhall et al. in 2020, encodes the entire scene inside the weights of a multi-layer perceptron (MLP). You query the network with a 5D input — spatial position \\((x,y,z)\\) plus viewing direction \\((\\theta, \\phi)\\) — and it outputs a color \\((r,g,b)\\) and a volume density \\(\\sigma\\).\n\nTo render a pixel, NeRF casts a ray through the scene and samples the MLP at dozens to hundreds of points along the ray. Colors and densities are integrated via volume rendering:\n\n\\[C(\\mathbf{r}) = \\int_{t_n}^{t_f} T(t)\\,\\sigma(\\mathbf{r}(t))\\,\\mathbf{c}(\\mathbf{r}(t),\\mathbf{d})\\,dt\\]\n\nwhere \\(T(t) = \\exp\\!\\left(-\\int_{t_n}^{t} \\sigma(\\mathbf{r}(s))\\,ds\\right)\\) is the accumulated transmittance.\n\n### NeRF Strengths and Weaknesses\n\n**Strengths:**\n- Compact: the scene is stored in MLP weights, typically a few MB.\n- Continuous representation: you can query any point at any resolution.\n- Handles view-dependent effects naturally via the direction input.\n\n**Weaknesses:**\n- **Slow training**: a single scene requires hours of gradient descent.\n- **Slow rendering**: every pixel requires dozens of MLP forward passes. Original NeRF renders at < 1 FPS.\n- Not easily editable: to move an object, you must retrain or apply complex latent-space surgery.\n\n## Explicit Representations: 3D Gaussian Splatting\n\n3DGS, introduced by Kerbl et al. (2023), takes a fundamentally different approach. The scene is represented as a **point cloud of oriented, anisotropic 3D Gaussians** — an explicit, discrete data structure.\n\nEach Gaussian \\(i\\) contributes to the scene density as:\n\n\\[f_i(\\mathbf{p}) = \\sigma_\\alpha \\exp\\!\\left(-\\frac{1}{2}(\\mathbf{p}-\\mu_i)^\\top \\Sigma_i^{-1}(\\mathbf{p}-\\mu_i)\\right)\\]\n\nwhere \\(\\mu_i\\) is the mean (position), \\(\\Sigma_i\\) is the covariance (shape), and \\(\\sigma_\\alpha\\) is the opacity.\n\n### 3DGS Strengths and Weaknesses\n\n**Strengths:**\n- **Real-time rendering**: tile-based rasterization enables 30–120+ FPS at 1080p on modern GPUs.\n- **Fast training**: typically 30–60 minutes per scene vs. hours for NeRF.\n- **Editable**: individual Gaussians are discrete objects that can be moved, added, or removed.\n- Supports 4D animation by allowing Gaussians to move over time.\n\n**Weaknesses:**\n- **Huge storage**: a typical scene has millions of Gaussians, each with 59 parameters, resulting in 0.5–1.5 GB per scene.\n- Discrete structure means some continuous-space interpolation artifacts.\n- Geometry extraction is non-trivial (surfaces are fuzzy volumes, not meshes).\n\n## The Explicit–Implicit Axis\n\nThink of this as a spectrum:\n\n| Property | Pure Implicit (NeRF) | Explicit (3DGS) |\n|---|---|---|\n| Storage | MLP weights (~5 MB) | Point cloud (~1 GB) |\n| Training | Hours | ~30 min |\n| Rendering | < 1 FPS | Real-time |\n| Editability | Hard | Easy |\n| Continuous | Yes | Continuous coords, discrete points |\n| Color model | MLP (view-dep.) | Spherical harmonics |\n\nThis course focuses on **closing the storage gap** for 3DGS — reducing that ~1 GB to tens of MB while preserving rendering quality. The subsequent modules will show that the explicit, discrete nature of 3DGS is both the problem (it's huge) and the solution (discreteness makes the data amenable to classical image/video compression tools).\n\n## Initialization: Structure-from-Motion\n\nNeither NeRF nor 3DGS operates from scratch. Both require known camera poses, which are computed via **Structure-from-Motion (SfM)** — typically using COLMAP. SfM also produces a sparse point cloud that 3DGS uses to initialize Gaussian positions before optimization begins.",
+  "references": [
+    {
+      "label": "Kerbl et al. 2023",
+      "title": "3D Gaussian Splatting for Real-Time Radiance Field Rendering",
+      "url": "https://arxiv.org/abs/2308.04079"
+    },
+    {
+      "label": "Mildenhall et al. 2020",
+      "title": "NeRF: Representing Scenes as Neural Radiance Fields for View Synthesis",
+      "url": "https://arxiv.org/abs/2003.08934"
+    }
+  ],
+  "equationBreakdowns": [
+    {
+      "label": "NeRF Volume Rendering Integral",
+      "heading": "Implicit Representations",
+      "terms": [
+        {
+          "symbol": "C(\\mathbf{r})",
+          "name": "Rendered pixel colour",
+          "desc": "The final RGB value assigned to this pixel — the result of accumulating all light contributions along ray r."
+        },
+        {
+          "symbol": "\\int_{t_n}^{t_f}",
+          "name": "Ray depth integral",
+          "desc": "Sums contributions from the near plane t_n to the far plane t_f. Every point along the ray potentially contributes colour."
+        },
+        {
+          "symbol": "T(t)",
+          "name": "Transmittance",
+          "desc": "Fraction of light that reaches depth t without being absorbed. Starts at 1 (fully clear) and falls toward 0 as the ray passes through dense regions."
+        },
+        {
+          "symbol": "\\sigma(\\mathbf{r}(t))",
+          "name": "Volume density",
+          "desc": "How opaque the scene is at point r(t). High σ means this point strongly blocks or emits light; σ = 0 is empty space."
+        },
+        {
+          "symbol": "\\mathbf{c}(\\mathbf{r}(t),\\mathbf{d})",
+          "name": "Emitted colour",
+          "desc": "The RGB colour the scene emits at this position when viewed from direction d. Predicted by the MLP — view-dependent to capture specular highlights."
+        },
+        {
+          "symbol": "dt",
+          "name": "Integration step",
+          "desc": "Infinitesimal depth increment. In practice approximated by sampling N discrete points along the ray and summing their weighted contributions."
+        }
+      ]
+    },
+    {
+      "label": "3DGS Gaussian Influence at a Pixel",
+      "heading": "Explicit Representations",
+      "terms": [
+        {
+          "symbol": "f_i(\\mathbf{p})",
+          "name": "Influence at pixel p",
+          "desc": "How much Gaussian i contributes to the colour of pixel p. Used as a weight in the front-to-back alpha-compositing sum."
+        },
+        {
+          "symbol": "\\sigma_\\alpha",
+          "name": "Opacity",
+          "desc": "A learned scalar in (0, 1) controlling how transparent this Gaussian is. Multiplies the spatial falloff to give the final alpha weight."
+        },
+        {
+          "symbol": "\\mathbf{p} - \\mu_i",
+          "name": "Displacement from centre",
+          "desc": "Vector from the Gaussian's 2D projected mean μ_i to pixel p. Larger displacement means smaller influence."
+        },
+        {
+          "symbol": "\\Sigma_i^{-1}",
+          "name": "Precision matrix",
+          "desc": "Inverse of the covariance — encodes the shape and orientation of the Gaussian ellipse. A large eigenvalue in one direction means the Gaussian falls off quickly in that direction."
+        },
+        {
+          "symbol": "(\\cdots)^\\top \\Sigma_i^{-1}(\\cdots)",
+          "name": "Mahalanobis distance",
+          "desc": "A shape-aware distance: pixels along the major axis of the ellipse are treated as 'closer' than geometrically equidistant pixels on the minor axis."
+        }
+      ]
+    }
+  ],
+  "nextItem": {
+    "type": "reading",
+    "id": "r2"
+  },
+  "prevItem": null
+}

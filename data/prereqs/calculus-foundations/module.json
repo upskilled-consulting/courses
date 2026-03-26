@@ -1,0 +1,109 @@
+{
+  "id": "calculus-foundations",
+  "type": "prereq",
+  "title": "Calculus Foundations",
+  "description": "Single-variable calculus for ML practitioners who know algebra and trigonometry. Covers the derivative as a limit, differentiation rules (power, product, quotient, chain), exponentials and logarithms, optimization and gradient descent, and integration with the Fundamental Theorem. Every concept is anchored to its role in training neural networks.",
+  "level": "Foundational",
+  "estimatedHours": 6,
+  "color": "#1776a4",
+  "accentLight": "#c8d9f0",
+  "readings": [
+    {
+      "id": "r1",
+      "title": "Derivatives: Rate of Change and the Limit",
+      "estimatedMinutes": 15,
+      "description": "The difference quotient, the limit definition of the derivative, the power rule, and an introduction to partial derivatives as gradients in ML.",
+      "dataPath": "data/prereqs/calculus-foundations/readings/r1-derivatives-limit.json"
+    },
+    {
+      "id": "r2",
+      "title": "Differentiation Rules",
+      "estimatedMinutes": 14,
+      "description": "Constant, sum, product, and quotient rules; derivatives of sin and cos; higher derivatives and concavity; L2 regularization and MSE gradients.",
+      "dataPath": "data/prereqs/calculus-foundations/readings/r2-differentiation-rules.json"
+    },
+    {
+      "id": "r3",
+      "title": "The Chain Rule",
+      "estimatedMinutes": 15,
+      "description": "Composed functions, the chain rule in prime and Leibniz notation, chains of three or more functions, and the direct connection to backpropagation.",
+      "dataPath": "data/prereqs/calculus-foundations/readings/r3-chain-rule.json"
+    },
+    {
+      "id": "r4",
+      "title": "Exponentials, Logarithms, and Their Derivatives",
+      "estimatedMinutes": 15,
+      "description": "The natural exponential e^x and its self-derivative, ln x, chain-rule combinations, derivation of the sigmoid derivative σ(x)(1−σ(x)), and cross-entropy loss.",
+      "dataPath": "data/prereqs/calculus-foundations/readings/r4-exponentials-logarithms.json"
+    },
+    {
+      "id": "r5",
+      "title": "Optimization and Linear Approximation",
+      "estimatedMinutes": 16,
+      "description": "Critical points, the second derivative test, local vs global minima, the first-order Taylor approximation, and gradient descent derived from the linear approximation.",
+      "dataPath": "data/prereqs/calculus-foundations/readings/r5-optimization-linear-approx.json"
+    },
+    {
+      "id": "r6",
+      "title": "Integration and the Fundamental Theorem",
+      "estimatedMinutes": 15,
+      "description": "Area under a curve, Riemann sums, antiderivatives, the Fundamental Theorem of Calculus, key antiderivative rules, and integration in ML: PDFs, expected values, entropy, KL divergence.",
+      "dataPath": "data/prereqs/calculus-foundations/readings/r6-integration.json"
+    }
+  ],
+  "drills": [
+    {
+      "id": "d1",
+      "title": "Derivatives and Differentiation Rules",
+      "cardCount": 15,
+      "estimatedMinutes": 12,
+      "dataPath": "data/prereqs/calculus-foundations/drills/d1-derivatives-rules.json"
+    },
+    {
+      "id": "d2",
+      "title": "Optimization, Linear Approximation, and Integration",
+      "cardCount": 15,
+      "estimatedMinutes": 12,
+      "dataPath": "data/prereqs/calculus-foundations/drills/d2-optimization-integration.json"
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "q1",
+      "title": "Derivatives and Differentiation Rules",
+      "estimatedMinutes": 15,
+      "description": "8 questions covering the limit definition, power rule, product rule, chain rule, sigmoid derivative, log derivative, and backpropagation as chain rule application.",
+      "dataPath": "data/prereqs/calculus-foundations/quizzes/q1-derivatives-rules.json"
+    },
+    {
+      "id": "q2",
+      "title": "Optimization, Linear Approximation, and Integration",
+      "estimatedMinutes": 15,
+      "description": "8 questions covering critical points, the second derivative test, linear approximation, gradient descent updates, the Fundamental Theorem, PDF normalization, expected value as integral, and a gradient step implementation.",
+      "dataPath": "data/prereqs/calculus-foundations/quizzes/q2-optimization-integration.json"
+    }
+  ],
+  "labs": [
+    {
+      "id": "lab1",
+      "title": "Derivatives in Practice",
+      "estimatedMinutes": 45,
+      "description": "Implement finite differences, verify differentiation rules numerically, visualize the secant-to-tangent convergence, and explore the sigmoid derivative with PyTorch autograd.",
+      "dataPath": "data/prereqs/calculus-foundations/labs/lab1-derivatives-in-practice.json"
+    },
+    {
+      "id": "lab2",
+      "title": "Gradient Descent from Scratch",
+      "estimatedMinutes": 50,
+      "description": "Implement gradient descent for 1D and 2D functions, run learning rate experiments, fit a linear regression by hand, and confirm the result matches torch.optim.SGD.",
+      "dataPath": "data/prereqs/calculus-foundations/labs/lab2-gradient-descent-scratch.json"
+    },
+    {
+      "id": "lab3",
+      "title": "Integration and Probability",
+      "estimatedMinutes": 40,
+      "description": "Build a trapezoidal integrator, verify the Fundamental Theorem, confirm Gaussian normalization and the 68–95–99.7 rule, estimate π via Monte Carlo, and compute KL divergence numerically.",
+      "dataPath": "data/prereqs/calculus-foundations/labs/lab3-integration-probability.json"
+    }
+  ]
+}

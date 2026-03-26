@@ -1,0 +1,130 @@
+{
+  "id": "r1",
+  "moduleId": "loss-functions",
+  "title": "Regression Losses: L1, MSE, Huber, SmoothL1",
+  "estimatedMinutes": 15,
+  "learningObjectives": [
+    {
+      "id": "r1-lo1",
+      "verb": "Derive",
+      "description": "Derive the gradient of L1Loss and MSELoss and explain why MSE penalises large errors more severely than MAE",
+      "skillTags": [
+        "regression",
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r1-lo2",
+      "verb": "Apply",
+      "description": "Apply HuberLoss with a given delta and describe the quadratic-to-linear transition at the boundary",
+      "skillTags": [
+        "regression"
+      ]
+    },
+    {
+      "id": "r1-lo3",
+      "verb": "Compare",
+      "description": "Compare L1, MSE, Huber, and SmoothL1 losses in terms of gradient magnitude as a function of error magnitude and identify which is robust to outliers",
+      "skillTags": [
+        "regression",
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r1-lo4",
+      "verb": "Select",
+      "description": "Select among the four regression losses given the noise distribution of the target variable",
+      "skillTags": [
+        "regression"
+      ]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r0"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r2"
+  },
+  "content": "## Overview\n\nRegression losses measure the discrepancy between a real-valued prediction $x_i$ and a real-valued target $y_i$. They differ in how they **penalize large errors** — a choice that determines robustness to outliers and gradient behaviour.\n\n---\n\n## nn.L1Loss — Mean Absolute Error\n\n$$\\mathcal{L}_{\\text{L1}} = \\frac{1}{N} \\sum_{i=1}^N |x_i - y_i|$$\n\nThe gradient of the absolute value is simply $\\pm 1$ (it is undefined exactly at zero, but PyTorch uses a subgradient of 0 there):\n\n$$\\frac{\\partial \\mathcal{L}_{\\text{L1}}}{\\partial x_i} = \\frac{1}{N} \\operatorname{sign}(x_i - y_i)$$\n\nBecause the gradient does **not grow** with error magnitude, L1 is **robust to outliers** — a single hugely wrong prediction contributes gradient ±1/N, same as a small error.\n\n```python\nloss = nn.L1Loss()\noutput = loss(torch.tensor([3.0, 1.0]), torch.tensor([1.0, 3.0]))\n# |3-1| + |1-3| = 2 + 2 = 4 → mean = 2.0\n```\n\n**When to use:** Robust regression; super-resolution; when outliers in the target set should not dominate training.\n\n---\n\n## nn.MSELoss — Mean Squared Error\n\n$$\\mathcal{L}_{\\text{MSE}} = \\frac{1}{N} \\sum_{i=1}^N (x_i - y_i)^2$$\n\nThe gradient grows linearly with the residual:\n\n$$\\frac{\\partial \\mathcal{L}_{\\text{MSE}}}{\\partial x_i} = \\frac{2}{N}(x_i - y_i)$$\n\nThis makes MSE sensitive to outliers: a prediction that is 10 units off contributes 100× more to the loss than one that is 1 unit off. It also means **large errors are corrected faster** — which is an advantage when the data is clean.\n\n```python\nloss = nn.MSELoss()\noutput = loss(torch.tensor([3.0, 1.0]), torch.tensor([1.0, 3.0]))\n# (3-1)² + (1-3)² = 4 + 4 = 8 → mean = 4.0\n```\n\n**When to use:** Standard regression; audio synthesis; when all targets are trusted (no outliers).\n\n---\n\n## nn.HuberLoss — Quadratic Near Zero, Linear Far Away\n\nHuber loss introduces a threshold $\\delta > 0$ that separates the quadratic region from the linear region:\n\n$$\\ell_i = \\begin{cases} \\frac{1}{2}(x_i - y_i)^2 & \\text{if } |x_i - y_i| \\le \\delta \\\\ \\delta \\left(|x_i - y_i| - \\frac{\\delta}{2}\\right) & \\text{otherwise} \\end{cases}$$\n\nFor small errors ($|x-y| \\le \\delta$) it behaves like MSE — smooth gradient, easy convergence. For large errors ($|x-y| > \\delta$) it behaves like L1 — gradient capped at $\\delta$, outlier-robust.\n\nThe transition is **continuous and differentiable** everywhere, making it compatible with all gradient-based optimizers.\n\n```python\nloss = nn.HuberLoss(delta=1.0)  # default delta=1\ninput  = torch.tensor([0.5, 2.0])\ntarget = torch.tensor([0.0, 0.0])\n# |0.5-0|=0.5 ≤ 1 → 0.5*(0.5)²=0.125\n# |2.0-0|=2.0 > 1 → 1*(2.0-0.5)=1.5\n# mean = (0.125 + 1.5)/2 = 0.8125\n```\n\n**When to use:** Reinforcement learning value functions; regression with occasional outliers; anywhere you want L2 smoothness but L1 tail behaviour.\n\n---\n\n## nn.SmoothL1Loss — Faster R-CNN Variant\n\nSmoothL1 uses a similar piecewise formula but with a different scaling via parameter $\\beta$:\n\n$$\\ell_i = \\begin{cases} \\frac{1}{2\\beta}(x_i - y_i)^2 & \\text{if } |x_i - y_i| < \\beta \\\\ |x_i - y_i| - \\frac{\\beta}{2} & \\text{otherwise} \\end{cases}$$\n\nWith $\\beta = 1$ this produces the same values as Huber with $\\delta = 1$, but the quadratic region is divided by $\\beta$, giving a different gradient scale. The default changed to $\\beta = 1$ in PyTorch 1.9; earlier versions used $\\beta = 1$ implicitly matching the original Faster R-CNN formulation.\n\n```python\nloss = nn.SmoothL1Loss(beta=1.0)\n```\n\n**When to use:** Object detection bounding box regression (Faster R-CNN, SSD); historically the standard loss for that domain.\n\n---\n\n## Comparison: Gradient Magnitude vs. Error\n\n| Error $|x - y|$ | L1 gradient | MSE gradient | Huber gradient ($\\delta=1$) |\n|-----------------|------------|-------------|-----------------------------|\n| 0.1 | 1/N | 0.2/N | 0.1/N |\n| 1.0 | 1/N | 2.0/N | 1.0/N |\n| 5.0 | 1/N | 10.0/N | 1.0/N (capped) |\n| 10.0 | 1/N | 20.0/N | 1.0/N (capped) |\n\nL1 always clips gradients to ±1/N. MSE scales gradient linearly with error. Huber is quadratic up to $\\delta$, then clips — the best of both.",
+  "equationBreakdowns": [
+    {
+      "label": "L1Loss",
+      "terms": [
+        {
+          "symbol": "\\mathcal{L}_{\\text{L1}}",
+          "name": "L1 loss (MAE)",
+          "desc": "Mean absolute error. Each term penalises the prediction by exactly |xᵢ - yᵢ|, regardless of magnitude."
+        },
+        {
+          "symbol": "|x_i - y_i|",
+          "name": "Absolute residual",
+          "desc": "The unsigned distance between prediction xᵢ and target yᵢ. Linear in error magnitude → constant gradient ±1/N → outlier robust."
+        },
+        {
+          "symbol": "\\operatorname{sign}(x_i - y_i)",
+          "name": "Subgradient",
+          "desc": "+1 if prediction > target, −1 if prediction < target, 0 at zero. The L1 gradient is always ±1/N, independent of how wrong the prediction is."
+        }
+      ]
+    },
+    {
+      "label": "MSELoss",
+      "terms": [
+        {
+          "symbol": "\\mathcal{L}_{\\text{MSE}}",
+          "name": "MSE loss",
+          "desc": "Mean squared error. Squaring makes large errors dominate — a prediction 10× off contributes 100× more than a prediction 1× off."
+        },
+        {
+          "symbol": "(x_i - y_i)^2",
+          "name": "Squared residual",
+          "desc": "Quadratic in error. The gradient 2(xᵢ − yᵢ)/N grows with the residual, so large errors receive proportionally stronger correction signals."
+        }
+      ]
+    },
+    {
+      "label": "HuberLoss",
+      "terms": [
+        {
+          "symbol": "\\delta",
+          "name": "Transition threshold",
+          "desc": "Controls where the loss switches from quadratic to linear. Default: 1.0. Smaller δ makes the loss more like L1 overall; larger δ makes it more like MSE."
+        },
+        {
+          "symbol": "\\frac{1}{2}(x_i - y_i)^2",
+          "name": "Quadratic region (|error| ≤ δ)",
+          "desc": "For small errors the loss is smooth and quadratic, giving well-behaved gradients near the optimum."
+        },
+        {
+          "symbol": "\\delta\\left(|x_i - y_i| - \\tfrac{\\delta}{2}\\right)",
+          "name": "Linear region (|error| > δ)",
+          "desc": "For large errors the loss grows linearly and the gradient is capped at δ, preventing outliers from dominating the update."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "[1]",
+      "title": "nn.L1Loss — PyTorch docs",
+      "url": "https://pytorch.org/docs/stable/generated/torch.nn.L1Loss.html"
+    },
+    {
+      "label": "[2]",
+      "title": "nn.MSELoss — PyTorch docs",
+      "url": "https://pytorch.org/docs/stable/generated/torch.nn.MSELoss.html"
+    },
+    {
+      "label": "[3]",
+      "title": "nn.HuberLoss — PyTorch docs",
+      "url": "https://pytorch.org/docs/stable/generated/torch.nn.HuberLoss.html"
+    },
+    {
+      "label": "[4]",
+      "title": "nn.SmoothL1Loss — PyTorch docs",
+      "url": "https://pytorch.org/docs/stable/generated/torch.nn.SmoothL1Loss.html"
+    }
+  ]
+}

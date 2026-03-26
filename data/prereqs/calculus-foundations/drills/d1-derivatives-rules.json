@@ -1,0 +1,84 @@
+{
+  "id": "d1",
+  "moduleId": "calculus-foundations",
+  "title": "Derivatives and Differentiation Rules",
+  "description": "Flashcards covering the limit definition, power rule, product rule, quotient rule, chain rule, and the derivatives of key functions.",
+  "estimatedMinutes": 12,
+  "cards": [
+    {
+      "id": "c01",
+      "front": "**Derivative** — formal definition",
+      "back": "$$f'(x) = \\lim_{h \\to 0} \\frac{f(x+h) - f(x)}{h}$$\n\nThe slope of the tangent line at $x$; the instantaneous rate of change. The $h \\to 0$ limit is taken *after* simplifying the ratio so the denominator cancels."
+    },
+    {
+      "id": "c02",
+      "front": "**Power rule** — state it and give two examples",
+      "back": "$$\\frac{d}{dx}[x^n] = nx^{n-1}$$\n\nExamples: $\\frac{d}{dx}[x^4] = 4x^3$ and $\\frac{d}{dx}[x^{1/2}] = \\frac{1}{2}x^{-1/2}$.\n\nHolds for any real $n$ — integers, fractions, negatives. A constant has derivative 0."
+    },
+    {
+      "id": "c03",
+      "front": "**Sum rule** and **constant multiple rule**",
+      "back": "$$\\frac{d}{dx}[c\\,f(x)] = c\\,f'(x)$$\n$$\\frac{d}{dx}[f(x) + g(x)] = f'(x) + g'(x)$$\n\nDifferentiation is **linear**: it distributes over sums and pulls out constants.\n\nExample: $\\frac{d}{dx}[5x^3 - 2x + 7] = 15x^2 - 2$"
+    },
+    {
+      "id": "c04",
+      "front": "**Product rule** — state it with the rectangle intuition",
+      "back": "$$\\frac{d}{dx}[f\\,g] = f'g + fg'$$\n\n*Intuition:* Area of rectangle $f \\times g$. When both sides grow, the gain is $f\\,dg + g\\,df$ — two strips, not a simple product of derivatives.\n\nExample: $\\frac{d}{dx}[x^2 \\sin x] = 2x \\sin x + x^2 \\cos x$"
+    },
+    {
+      "id": "c05",
+      "front": "**Quotient rule** — state it and give the mnemonic",
+      "back": "$$\\frac{d}{dx}\\!\\left[\\frac{f}{g}\\right] = \\frac{f'g - fg'}{g^2}$$\n\nMnemonic: **\"low d-high minus high d-low, over low squared\"**\n\nNote the minus sign in the numerator — it is not $f'g + fg'$."
+    },
+    {
+      "id": "c06",
+      "front": "**Chain rule** — two equivalent forms",
+      "back": "**Prime notation:** $\\frac{d}{dx}[f(g(x))] = f'(g(x)) \\cdot g'(x)$\n\n**Leibniz notation:** $\\frac{dy}{dx} = \\frac{dy}{du} \\cdot \\frac{du}{dx}$ where $u = g(x)$, $y = f(u)$\n\nVerbal: *differentiate the outside (leaving the inside alone), then multiply by the derivative of the inside.*"
+    },
+    {
+      "id": "c07",
+      "front": "Differentiate $h(x) = (3x^2 + 1)^5$",
+      "back": "$$h'(x) = 5(3x^2+1)^4 \\cdot 6x = 30x(3x^2+1)^4$$\n\nOuter: $f(u) = u^5 \\Rightarrow f'(u) = 5u^4$\nInner: $g(x) = 3x^2+1 \\Rightarrow g'(x) = 6x$\n\nChain rule: $5(3x^2+1)^4 \\times 6x$"
+    },
+    {
+      "id": "c08",
+      "front": "**Derivatives of sin and cos** — state all three standard trig derivatives",
+      "back": "$$\\frac{d}{dx}[\\sin x] = \\cos x$$\n$$\\frac{d}{dx}[\\cos x] = -\\sin x$$\n$$\\frac{d}{dx}[\\tan x] = \\sec^2 x$$\n\nRepeated differentiation of $\\sin x$ cycles: $\\sin \\to \\cos \\to -\\sin \\to -\\cos \\to \\sin$"
+    },
+    {
+      "id": "c09",
+      "front": "**Derivative of $e^x$** — and with chain rule",
+      "back": "$$\\frac{d}{dx}[e^x] = e^x$$\n\nWith chain rule: $\\frac{d}{dx}[e^{g(x)}] = g'(x)\\,e^{g(x)}$\n\nExamples: $\\frac{d}{dx}[e^{3x}] = 3e^{3x}$ and $\\frac{d}{dx}[e^{-x^2}] = -2x\\,e^{-x^2}$"
+    },
+    {
+      "id": "c10",
+      "front": "**Derivative of $\\ln x$** — and with chain rule",
+      "back": "$$\\frac{d}{dx}[\\ln x] = \\frac{1}{x} \\qquad (x > 0)$$\n\nWith chain rule: $\\frac{d}{dx}[\\ln g(x)] = \\frac{g'(x)}{g(x)}$\n\nExample: $\\frac{d}{dx}[\\ln(x^2+1)] = \\frac{2x}{x^2+1}$"
+    },
+    {
+      "id": "c11",
+      "front": "**Sigmoid derivative** — derive the compact form",
+      "back": "Starting from $\\sigma(x) = \\frac{1}{1+e^{-x}}$, applying the chain rule gives:\n\n$$\\sigma'(x) = \\sigma(x)\\,(1 - \\sigma(x))$$\n\nAt $\\sigma = 0.5$: $\\sigma' = 0.25$ (maximum slope). Near saturation ($\\sigma \\approx 0$ or $1$): $\\sigma' \\approx 0$ — the **vanishing gradient** regime."
+    },
+    {
+      "id": "c12",
+      "front": "**Second derivative** — geometric meaning",
+      "back": "$$f''(x) = (f')'(x) = \\frac{d^2y}{dx^2}$$\n\n$f''(x) > 0$: slope is increasing → graph **concave up** (cup shape)\n$f''(x) < 0$: slope is decreasing → graph **concave down** (cap shape)\n\nMeasures *acceleration* in physical terms; measures *curvature* of the loss surface in ML."
+    },
+    {
+      "id": "c13",
+      "front": "What is the gradient of **L2 regularization** $\\frac{\\lambda}{2}w^2$ with respect to $w$?",
+      "back": "$$\\frac{d}{dw}\\left[\\frac{\\lambda}{2}w^2\\right] = \\lambda w$$\n\nThe $\\frac{1}{2}$ is there to cancel the 2 from the power rule, giving a clean result.\n\n*Interpretation:* L2 regularization adds a gradient that pulls every weight toward zero, proportional to its magnitude — **weight decay**."
+    },
+    {
+      "id": "c14",
+      "front": "**Differentiability** — when does $f'(x)$ fail to exist?",
+      "back": "The derivative fails at:\n- **Discontinuities** (jumps, holes)\n- **Corners/cusps** (e.g., $|x|$ at $x=0$ — left slope $= -1$, right slope $= +1$)\n- **Vertical tangents** (infinite slope)\n\nEvery differentiable function is continuous. Continuous functions need not be differentiable.\n\n*In ML:* ReLU has $f'(0)$ undefined — frameworks set it to 0 or 1 by convention."
+    },
+    {
+      "id": "c15",
+      "front": "**Backpropagation** — what does it compute, and which calculus rule does it use?",
+      "back": "Backpropagation computes $\\partial \\mathcal{L}/\\partial \\theta$ for every parameter $\\theta$ by traversing the computation graph from output to input.\n\nThe rule it uses is the **chain rule**: the gradient of a composition is the product of local derivatives at each step.\n\n$$\\frac{\\partial \\mathcal{L}}{\\partial w_1} = \\frac{\\partial \\mathcal{L}}{\\partial a_2} \\cdot \\frac{\\partial a_2}{\\partial z_2} \\cdot \\frac{\\partial z_2}{\\partial a_1} \\cdot \\frac{\\partial a_1}{\\partial w_1}$$"
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "id": "q2",
+  "moduleId": "m3",
+  "title": "Coding-Aware Training and Structural Methods",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "questions": [
+    {
+      "id": "q3_q2_1",
+      "type": "multiple-choice",
+      "prompt": "ScaffoldGS uses a shared MLP to predict Gaussian attributes from anchor features. This introduces a trade-off: the MLP must be stored alongside the data. Under what condition does this trade-off favor ScaffoldGS over direct per-Gaussian storage?",
+      "options": [
+        { "id": "a", "text": "When the scene has fewer than 10,000 Gaussians — the MLP overhead is acceptable at small scale", "correct": false },
+        { "id": "b", "text": "When the scene has enough Gaussians that the fixed MLP cost is amortized, and anchor features are more compressible than raw Gaussian attributes", "correct": true },
+        { "id": "c", "text": "When the MLP uses more parameters than the raw Gaussian data it replaces", "correct": false },
+        { "id": "d", "text": "Only when the scene has flat surfaces that can be modeled exactly by a linear MLP", "correct": false }
+      ],
+      "explanation": "The MLP in ScaffoldGS has a fixed size (e.g., ~100KB) regardless of scene complexity. At low Gaussian counts, this overhead dominates. But for scenes with millions of Gaussians, the per-anchor cost (feature vector + offsets) is much lower than the per-Gaussian cost in raw 3DGS, and anchor features are spatially correlated (smooth scenes produce similar anchor features) and hence more compressible.",
+      "hint": "Think about how the MLP cost scales with scene complexity versus how the anchor storage cost scales."
+    },
+    {
+      "id": "q3_q2_2",
+      "type": "multiple-choice",
+      "prompt": "HAC adds a rate term \\(\\lambda R\\) to the training loss. What does the rate term \\(R\\) measure and what effect does minimizing it have on the representation?",
+      "options": [
+        { "id": "a", "text": "\\(R\\) measures rendered image entropy; minimizing it makes colors more uniform", "correct": false },
+        { "id": "b", "text": "\\(R\\) estimates the number of bits needed to entropy-code the quantized anchor features; minimizing it drives feature distributions toward more predictable (lower-entropy) values", "correct": true },
+        { "id": "c", "text": "\\(R\\) measures the number of Gaussians; minimizing it prunes the scene", "correct": false },
+        { "id": "d", "text": "\\(R\\) is a regularization term that enforces SH coefficient sparsity", "correct": false }
+      ],
+      "explanation": "In rate-distortion optimization (RDO), R is the estimated bitrate (e.g., from an entropy model). Adding λR to the loss penalizes representations that are expensive to code. The gradient of R w.r.t. anchor features pushes them toward values that the entropy model assigns low code lengths — i.e., common or predictable values. This jointly optimizes quality (via the distortion term) and compressibility.",
+      "hint": "In rate-distortion theory, what does the 'rate' term R represent in the objective λR + D?"
+    },
+    {
+      "id": "q3_q2_3",
+      "type": "code-completion",
+      "prompt": "Complete the CompactGS differentiable mask that allows gradient flow during training but produces a hard 0/1 mask at evaluation:",
+      "codeTemplate": "import torch\n\ndef differentiable_mask(scores, threshold=0.5):\n    \"\"\"\n    scores: continuous importance values in (0,1), shape (N,)\n    During training: differentiable soft mask\n    During eval: hard 0/1 mask\n    \"\"\"\n    if not torch.is_grad_enabled():\n        return (scores >= threshold).float()\n    # Straight-through estimator: forward uses hard mask,\n    # backward uses soft scores\n    hard = (scores >= threshold).float()\n    return ___BLANK___",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "hard - scores.detach() + scores",
+        "(hard - scores).detach() + scores",
+        "scores + (hard - scores).detach()"
+      ],
+      "explanation": "The straight-through estimator (Bengio et al. 2013) passes gradients through the hard thresholding operation by treating the forward pass as hard but making the backward pass identical to the soft function. The expression `hard - scores.detach() + scores` equals `hard` in the forward pass (detach stops gradient) but has gradient 1 everywhere w.r.t. `scores` in the backward pass.",
+      "hint": "The straight-through estimator uses .detach() to stop the gradient through the hard part while allowing the soft part's gradient to flow."
+    },
+    {
+      "id": "q3_q2_4",
+      "type": "multiple-choice",
+      "prompt": "OctreeGS enables level-of-detail (LOD) rendering. Compared to standard 3DGS, what is the primary compression benefit of the LOD structure?",
+      "options": [
+        { "id": "a", "text": "LOD allows using a lower-precision float format for distant Gaussians", "correct": false },
+        { "id": "b", "text": "Distant regions are rendered with coarser anchors (fewer, larger Gaussians), so the total Gaussian count is lower for equivalent visual quality from typical viewing distances", "correct": true },
+        { "id": "c", "text": "The octree data structure itself compresses Gaussian positions into fewer bits", "correct": false },
+        { "id": "d", "text": "LOD eliminates the need for SH since distant Gaussians do not exhibit view-dependent effects", "correct": false }
+      ],
+      "explanation": "In standard 3DGS, every surface element is represented at the same Gaussian density regardless of distance to the camera. OctreeGS assigns coarse-level anchors to distant regions and fine-level anchors to nearby regions. Since distant regions appear smaller in the image, their coarse representation contributes fewer pixels and the quality loss is visually insignificant — but the parameter savings are real.",
+      "hint": "Think about how much visual quality you lose by making a distant object's representation coarser."
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "id": "m4",
+  "title": "Grid-Based Sorting",
+  "order": 4,
+  "color": "#ec4899",
+  "prereq": "m3",
+  "learningObjectives": [
+    "Explain why reshaping 3DGS attributes into a sorted 2D grid improves compressibility, using the PNG/JPEG analogy.",
+    "Formalize sorting as a dimensionality-reduction problem and define the D<sub>p</sub> path metric and sorting quality score.",
+    "Compare Global Distance Fidelity, Grid Adjacency Fidelity, and DPQ as quality criteria for grid-based layouts.",
+    "Trace the algorithm family from SOM through SSM, LAS, and FLAS, identifying the bottleneck fixed at each step.",
+    "Describe FLAS's filter-based smoothing and local linear assignment approach and its scalability advantage."
+  ],
+  "readings": [
+    {
+      "id": "r1",
+      "title": "Why Sort Gaussians into a 2D Grid?",
+      "estimatedMinutes": 11,
+      "dataPath": "data/courses/3dgs-compression/m4-grid-sorting/readings/r1-2d-grid-concept.json"
+    },
+    {
+      "id": "r2",
+      "title": "Sorting Quality Metrics: D<sub>p</sub>, GAF, GDF, and DPQ",
+      "estimatedMinutes": 13,
+      "dataPath": "data/courses/3dgs-compression/m4-grid-sorting/readings/r2-quality-metrics.json"
+    },
+    {
+      "id": "r3",
+      "title": "Algorithm Family: SOM → SSM → LAS → FLAS",
+      "estimatedMinutes": 14,
+      "dataPath": "data/courses/3dgs-compression/m4-grid-sorting/readings/r3-som-to-flas.json"
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "q1",
+      "title": "Sorting Theory and Quality Metrics",
+      "questionCount": 5,
+      "passingScore": 0.7,
+      "dataPath": "data/courses/3dgs-compression/m4-grid-sorting/quizzes/q1-sorting-theory.json"
+    },
+    {
+      "id": "q2",
+      "title": "Algorithm Comparison and Spatial Constraints",
+      "questionCount": 4,
+      "passingScore": 0.7,
+      "dataPath": "data/courses/3dgs-compression/m4-grid-sorting/quizzes/q2-algorithm-comparison.json"
+    }
+  ],
+  "lab": {
+    "id": "lab4",
+    "title": "Implementing SOM and FLAS for Grid Sorting",
+    "estimatedMinutes": 55,
+    "dataPath": "data/courses/3dgs-compression/m4-grid-sorting/labs/lab4.json"
+  }
+}

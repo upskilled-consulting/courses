@@ -1,0 +1,65 @@
+{
+  "id": "r1",
+  "moduleId": "m7",
+  "title": "The CUDA Programming Model: Grids, Blocks, Warps & the SIMT Contract",
+  "estimatedMinutes": 18,
+  "learningObjectives": [
+    {
+      "id": "m7r1-lo1",
+      "verb": "Derive",
+      "description": "Derive the flattened 1D thread ID from blockIdx, blockDim, and threadIdx, and map the 3DGS tile rasterizer to the CUDA grid/block/warp hierarchy for a given output resolution",
+      "skillTags": [
+        "cuda-programming",
+        "rendering-pipeline"
+      ]
+    },
+    {
+      "id": "m7r1-lo2",
+      "verb": "Explain",
+      "description": "Explain the SIMT execution contract and identify when thread divergence occurs within a warp, describing the serialization penalty in terms of the divergence branching factor",
+      "skillTags": [
+        "cuda-programming"
+      ]
+    },
+    {
+      "id": "m7r1-lo3",
+      "verb": "Apply",
+      "description": "Apply __syncthreads() correctly to coordinate a block-level parallel reduction and explain why barriers must not appear inside divergent code paths",
+      "skillTags": [
+        "cuda-programming"
+      ]
+    },
+    {
+      "id": "m7r1-lo4",
+      "verb": "Map",
+      "description": "Map the 3DGS tile rasterizer's computational structure to CUDA grid/block/warp dimensions and estimate the number of concurrently active threads for a 1280×720 render",
+      "skillTags": [
+        "cuda-programming",
+        "rendering-pipeline"
+      ]
+    }
+  ],
+  "content": "## From Sequential to Massively Parallel\n\nEvery training iteration of the 3DGS model from Module 6 calls `rasterize_gaussians()` — a function that ultimately launches a CUDA kernel on the GPU. Inside that call, hundreds of thousands of threads execute simultaneously, each computing the alpha-blended contribution of a set of Gaussians to a small tile of the rendered image. To understand why the rasterizer is fast, why the `3dgs_accel` branch improves it, and how to optimize it further, we need a precise model of GPU execution from the ground up.\n\nThe GPU's fundamental performance advantage comes from **data parallelism**: when the same computation must be applied to many independent data elements, map each element to a separate thread. A 1920×1080 rendered frame has 2,073,600 independently computable pixels. A matrix multiplication of two 1024×1024 matrices has 1,048,576 independent dot products. The GPU exists to exploit this structure at scale — NVIDIA's H100 runs over 16,000 concurrent threads per SM, with 132 SMs, for a theoretical concurrency of over 2 million threads.\n\n## The Three-Level Thread Hierarchy\n\nCUDA organizes threads into three nested levels:\n\n**Thread** — the atomic unit of execution. Each thread has its own program counter, register file, and a unique position in the hierarchy exposed via built-in variables:\n- `threadIdx.x`, `threadIdx.y`, `threadIdx.z` — position within its block\n- `blockIdx.x`, `blockIdx.y`, `blockIdx.z` — position of its block within the grid\n- `blockDim.x/y/z` — dimensions of the block\n- `gridDim.x/y/z` — dimensions of the grid\n\n**Block** — a cooperative group of up to 1024 threads that executes on a single Streaming Multiprocessor (SM). Threads within a block share **shared memory** and can synchronize via `__syncthreads()`. Crucially, blocks are the unit of SM assignment — once a block is dispatched to an SM, all its threads execute there until completion.\n\n**Grid** — the set of all blocks launched by a single kernel call. All blocks execute the same kernel function. There is no synchronization primitive between blocks within a grid (doing so would deadlock: a blocked block waiting for another block could prevent the other block from ever being scheduled).\n\n### Deriving the Flattened Thread ID\n\nFor a 1D grid of 1D blocks, the unique global thread ID is:\n\n$$\\text{threadID} = \\texttt{blockIdx.x} \\times \\texttt{blockDim.x} + \\texttt{threadIdx.x}$$\n\nFor a 2D grid of 2D blocks (the common case for image processing and the 3DGS rasterizer):\n\n$$\\text{row} = \\texttt{blockIdx.y} \\times \\texttt{blockDim.y} + \\texttt{threadIdx.y}$$\n$$\\text{col} = \\texttt{blockIdx.x} \\times \\texttt{blockDim.x} + \\texttt{threadIdx.x}$$\n\nExample from *Programming Massively Parallel Processors* (Kirk & Hwu): for a block of 32×1 threads processing a vector of 4096 elements across 128 blocks:\n- Thread 3 of Block 0: `threadID = 0*32 + 3 = 3`\n- Thread 3 of Block 5: `threadID = 5*32 + 3 = 163`\n- Thread 15 of Block 102: `threadID = 102*32 + 15 = 3279`\n\n### Kernel Launch Syntax\n\nA kernel is declared with `__global__` and launched with the triple-chevron syntax:\n\n```cuda\n__global__ void myKernel(float* data, int N) {\n    int tid = blockIdx.x * blockDim.x + threadIdx.x;\n    if (tid < N) data[tid] = data[tid] * 2.0f;\n}\n\n// Host side:\ndim3 blockDim(256, 1, 1);          // 256 threads per block\ndim3 gridDim((N + 255) / 256, 1, 1); // ceil(N/256) blocks\nmyKernel<<<gridDim, blockDim>>>(d_data, N);\n```\n\nThe 3DGS tile rasterizer (simplified) uses a 2D launch matching the tile grid:\n\n```cuda\ndim3 block(BLOCK_X, BLOCK_Y, 1);   // 16×16 = 256 threads per tile\ndim3 grid(\n    (width  + BLOCK_X - 1) / BLOCK_X,  // tiles across\n    (height + BLOCK_Y - 1) / BLOCK_Y,  // tiles down\n    1\n);\nrenderCUDA<<<grid, block>>>(\n    ranges, point_list, W, H,\n    means2D, colors, conic_opacity,\n    accum_alpha, n_contrib, bg_color, out_color\n);\n```\n\nFor a 1280×720 frame with 16×16 tiles: 80×45 = 3,600 blocks × 256 threads = **921,600 simultaneous threads**.\n\n## The SIMT Execution Contract\n\nGPUs do not run 32 independent fetch-decode-execute pipelines per warp. They run **one** — shared across all 32 threads in a warp. This is the **Single Instruction, Multiple Thread (SIMT)** model:\n\n- All 32 threads in a warp execute the **same instruction** at the **same program counter** each cycle.\n- Each thread operates on its **own data** (its registers, its shared memory slot, its global memory address).\n- The hardware amortizes the cost of instruction fetch, decode, and issue across 32 threads → instruction throughput is 32× the single-thread rate.\n\nWarps are formed by partitioning a block's threads in order of increasing `threadIdx`, row-major for multi-dimensional blocks:\n- **1D blocks**: warp 0 = threads 0–31, warp 1 = threads 32–63, etc.\n- **2D blocks**: linearize by row first. For a 4×8 block, the linearization is T(0,0), T(1,0), ..., T(7,0), T(0,1), ..., T(7,3). Warp 0 = first 32 linearized threads.\n- **Partial warps**: if a block's total thread count is not a multiple of 32, the last warp is padded with **inactive threads** that consume SM resources but perform no useful work. A 48-thread block → 2 warps, but the second warp has only 16 active threads — 50% warp efficiency.\n\n## Thread Divergence: The SIMT Penalty\n\nThe single-instruction constraint breaks when threads in the same warp take different control flow paths. Consider:\n\n```cuda\nif (threadIdx.x < 16) {\n    // Branch A — threads 0-15\n} else {\n    // Branch B — threads 16-31\n}\n```\n\nCUDA handles this via **predicated execution**: the hardware runs Branch A with threads 16–31 masked off (inactive), then runs Branch B with threads 0–15 masked off. The total execution time is `time(A) + time(B)` instead of `max(time(A), time(B))`. This is called **thread divergence** and in the worst case (32 distinct paths) produces a 32× slowdown for the divergent section.\n\nAn important subtlety from Kirk & Hwu: divergence only matters **within a warp**. Different warps can take different paths with no penalty — they execute independently. So `if (blockIdx.x % 2 == 0)` causes **no divergence** (entire warps end up in one branch or the other). But `if (threadIdx.x % 2 == 0)` causes severe divergence — adjacent threads in every warp take opposite branches.\n\n### The Reduction Example\n\nThe parallel sum reduction illustrates divergence concretely. A naïve implementation:\n\n```cuda\n// Divergent implementation\nfor (int stride = 1; stride < blockDim.x; stride *= 2) {\n    __syncthreads();\n    if (threadIdx.x % (2 * stride) == 0) {\n        sdata[threadIdx.x] += sdata[threadIdx.x + stride];\n    }\n}\n```\n\nIn iteration 1 (`stride=1`): threads 0, 2, 4, ... are active; threads 1, 3, 5, ... are idle. Every warp has alternating active/idle threads → 50% warp efficiency → 2× slowdown for that pass. By iteration 5 (`stride=16`): only thread 0 is active in the first warp and all other warps do nothing. A better implementation rearranges the active threads to fill contiguous warp lanes, eliminating intra-warp divergence entirely.\n\nFor 512-element reduction: 9 iterations (log₂ 512 = 9). For 60,000 elements: 16 iterations.\n\n## Block-Level Synchronization: `__syncthreads()`\n\n`__syncthreads()` is a **barrier** — every thread in the block must reach this call before any thread is allowed to proceed past it. Its primary use is ensuring writes to shared memory by one thread are visible to all threads before they read:\n\n```cuda\n__shared__ float tile[BLOCK_SIZE][BLOCK_SIZE];\n\n// Load from global to shared\ntile[threadIdx.y][threadIdx.x] = globalData[row * N + col];\n__syncthreads();  // Ensure ALL threads have loaded before any thread reads\n\n// Now safe to read tiles loaded by other threads in the block\nfloat val = tile[threadIdx.x][threadIdx.y]; // transpose access\n```\n\nWithout `__syncthreads()`, a thread could read a shared memory slot before the thread responsible for loading it has completed the global memory fetch — a classic data race.\n\n## The 3DGS Rasterizer: Applying the Model\n\nThe `renderCUDA` kernel in `forward.cu` is structured around this model:\n\n1. **One block per tile** — 16×16 = 256 threads, one per pixel in the tile.\n2. **Gaussian list per tile** — each block processes the sorted list of Gaussians covering its tile, loaded in batches into shared memory.\n3. **Minimal divergence** — all threads loop over the same Gaussian list; the only per-thread variation is the pixel coordinate used to evaluate each Gaussian's contribution.\n4. **Shared memory for coalesced loads** — Gaussians in the batch are loaded cooperatively: thread `i` loads Gaussian `i` from the sorted list into `__shared__` arrays for position, color, opacity, and 2D covariance. After `__syncthreads()`, all 256 threads read from shared memory (fast) rather than global memory (slow) for each Gaussian in the batch.\n\nThe `3dgs_accel` branch (Module 6) precomputes each Gaussian's 2D bounding rectangle before the tile-assignment loop, replacing an \\(O(k_{\\max})\\) candidate test per Gaussian with an \\(O(1)\\) range lookup — a classic compute-vs-memory tradeoff that we will quantify precisely in the next reading.",
+  "references": [
+    {
+      "label": "Kirk & Hwu 2010",
+      "title": "Programming Massively Parallel Processors: A Hands-on Approach",
+      "url": "https://www.elsevier.com/books/programming-massively-parallel-processors/kirk/978-0-12-381472-2"
+    },
+    {
+      "label": "NVIDIA 2023",
+      "title": "CUDA C++ Programming Guide",
+      "url": "https://docs.nvidia.com/cuda/cuda-c-programming-guide/"
+    },
+    {
+      "label": "Kerbl et al. 2023",
+      "title": "3D Gaussian Splatting for Real-Time Radiance Field Rendering — forward.cu",
+      "url": "https://github.com/graphdeco-inria/diff-gaussian-rasterization"
+    }
+  ],
+  "nextItem": {
+    "type": "reading",
+    "id": "r2"
+  },
+  "prevItem": null
+}

@@ -1,0 +1,122 @@
+{
+  "id": "r10",
+  "moduleId": "linear-algebra",
+  "title": "Eigenvalues, Diagonalization, and Jordan Form",
+  "estimatedMinutes": 19,
+  "learningObjectives": [
+    {
+      "id": "r10-lo1",
+      "verb": "Find",
+      "description": "Find eigenvalues by solving the characteristic equation and compute corresponding eigenvectors",
+      "skillTags": [
+        "spectral-analysis"
+      ]
+    },
+    {
+      "id": "r10-lo2",
+      "verb": "Diagonalize",
+      "description": "Diagonalize a matrix as A = P Lambda P-inv when sufficient linearly independent eigenvectors exist",
+      "skillTags": [
+        "spectral-analysis",
+        "coordinate-frames"
+      ]
+    },
+    {
+      "id": "r10-lo3",
+      "verb": "Apply",
+      "description": "Apply eigendecomposition to compute matrix powers A^k = P Lambda^k P-inv efficiently",
+      "skillTags": [
+        "spectral-analysis"
+      ]
+    },
+    {
+      "id": "r10-lo4",
+      "verb": "Explain",
+      "description": "Explain Jordan canonical form and identify when a matrix is not diagonalisable",
+      "skillTags": [
+        "spectral-analysis",
+        "coordinate-frames"
+      ]
+    },
+    {
+      "id": "r10-lo5",
+      "verb": "Connect",
+      "description": "Connect the eigenspectrum to convergence of gradient descent and power iteration: faster convergence when the spectral gap is large",
+      "skillTags": [
+        "spectral-analysis"
+      ]
+    },
+    {
+      "id": "r10-lo6",
+      "verb": "Relate",
+      "description": "Relate eigendecomposition of A^T A to the SVD and explain why singular values are non-negative square roots of eigenvalues",
+      "skillTags": [
+        "spectral-analysis",
+        "dimensionality-reduction"
+      ]
+    }
+  ],
+  "content": "## Similarity and Diagonal Representations\n\nA transformation $t: V \\to V$ can look complicated in one basis and simple in another. The best possible representation is **diagonal** — where the matrix has nonzero entries only on the main diagonal. A diagonal transformation just scales each basis vector independently:\n\n$$t(\\vec{\\beta}_i) = \\lambda_i \\vec{\\beta}_i$$\n\nWhen can we find such a basis? The vectors $\\vec{\\beta}_i$ must be sent to scalar multiples of themselves — they are **eigenvectors**, and $\\lambda_i$ are **eigenvalues**.\n\n## Eigenvalues and Eigenvectors\n\nFor a transformation $t: V \\to V$, a nonzero vector $\\vec{v}$ is an **eigenvector** with **eigenvalue** $\\lambda$ if:\n\n$$t(\\vec{v}) = \\lambda\\vec{v}$$\n\nIn matrix form: $A\\vec{v} = \\lambda\\vec{v}$, or equivalently $(A - \\lambda I)\\vec{v} = \\vec{0}$. For a nonzero $\\vec{v}$ to exist, $A - \\lambda I$ must be singular:\n\n$$\\det(A - \\lambda I) = 0$$\n\nThis is the **characteristic equation**. Expanding the determinant gives the **characteristic polynomial** $p(\\lambda)$ — a degree-$n$ polynomial whose roots are the eigenvalues.\n\n### Finding Eigenvalues and Eigenvectors\n\n1. Compute $p(\\lambda) = \\det(A - \\lambda I)$ and find its roots $\\lambda_1, \\ldots, \\lambda_k$\n2. For each eigenvalue $\\lambda_i$, solve $(A - \\lambda_i I)\\vec{v} = \\vec{0}$ by row reduction. The null space $\\mathcal{N}(A - \\lambda_i I)$ is the **eigenspace** of $\\lambda_i$ — all eigenvectors for that eigenvalue plus $\\vec{0}$.\n\n### Properties\n\n- $\\text{tr}(A) = \\sum_i \\lambda_i$ (sum of eigenvalues = trace)\n- $\\det(A) = \\prod_i \\lambda_i$ (product of eigenvalues = determinant)\n- Eigenvectors for **distinct** eigenvalues are linearly independent\n- Real symmetric matrices always have real eigenvalues and orthogonal eigenvectors\n\n## Diagonalizability\n\nAn $n \\times n$ matrix $A$ is **diagonalizable** if it is similar to a diagonal matrix:\n\n$$A = P\\Lambda P^{-1}$$\n\nwhere $\\Lambda = \\text{diag}(\\lambda_1, \\ldots, \\lambda_n)$ and the columns of $P$ are the corresponding eigenvectors.\n\n**When is $A$ diagonalizable?**\n- $A$ has $n$ linearly independent eigenvectors (equivalently: the eigenvectors span $\\mathbb{R}^n$)\n- $A$ has $n$ distinct eigenvalues → automatically diagonalizable\n- For repeated eigenvalues: $A$ is diagonalizable iff the geometric multiplicity (dimension of the eigenspace) equals the algebraic multiplicity (multiplicity of the root in $p(\\lambda)$) for every eigenvalue\n\n### Powers and Functions of a Matrix\n\nDiagonalization makes computing powers trivial:\n\n$$A^k = P\\Lambda^k P^{-1}, \\qquad \\Lambda^k = \\text{diag}(\\lambda_1^k, \\ldots, \\lambda_n^k)$$\n\nMatrix exponential: $e^A = P\\,\\text{diag}(e^{\\lambda_1}, \\ldots, e^{\\lambda_n})\\,P^{-1}$. This underlies the solution of linear differential equations $\\dot{\\vec{x}} = A\\vec{x}$.\n\n## The Jordan Canonical Form\n\nNot all matrices are diagonalizable. The next best thing is the **Jordan canonical form** — a block-diagonal matrix where each block corresponds to one eigenvalue:\n\n$$J = \\begin{bmatrix} J_{n_1}(\\lambda_1) & & \\\\ & \\ddots & \\\\ & & J_{n_k}(\\lambda_k) \\end{bmatrix}$$\n\nA **Jordan block** $J_m(\\lambda)$ of size $m$ is:\n\n$$J_m(\\lambda) = \\begin{bmatrix} \\lambda & 1 & 0 & \\cdots & 0 \\\\ 0 & \\lambda & 1 & \\cdots & 0 \\\\ & & \\ddots & \\ddots & \\\\ 0 & 0 & 0 & \\lambda & 1 \\\\ 0 & 0 & 0 & 0 & \\lambda \\end{bmatrix}$$\n\nDiagonal blocks of size 1 are just the eigenvalue — a diagonalizable matrix has all $1 \\times 1$ Jordan blocks. A block of size $> 1$ arises when there are fewer independent eigenvectors than the algebraic multiplicity of the eigenvalue.\n\n**Theorem**: every square matrix over $\\mathbb{C}$ (or over $\\mathbb{R}$ if we allow complex eigenvectors) is similar to a Jordan canonical form. The Jordan form is unique up to reordering of blocks.\n\n## Nilpotent Matrices\n\nA matrix $N$ is **nilpotent** if $N^k = 0$ for some $k$. The only eigenvalue of a nilpotent matrix is 0. Every Jordan block with eigenvalue 0 is a nilpotent block; any nilpotent matrix is similar to a block of such blocks.\n\nThe Jordan form decomposes any transformation as:\n\n$$A = D + N, \\quad DN = ND$$\n\nwhere $D$ is diagonalizable (semisimple part) and $N$ is nilpotent. This is the Jordan-Chevalley decomposition — the foundation of the theory of matrix functions and linear ODEs.\n\n## Connection to Spectral Theory in ML\n\nFor **symmetric** matrices (which covariance matrices always are), the Jordan form is always diagonal with real entries — this is the spectral theorem. The eigendecomposition $A = Q\\Lambda Q'$ always exists, with $Q$ orthogonal.\n\nThis is why PCA is tractable: the covariance matrix $X'X/(n-1)$ is symmetric positive semi-definite, so it always diagonalizes with non-negative real eigenvalues and orthogonal eigenvectors. The Jordan form (with its potential for non-diagonal blocks) never arises in practice for covariance matrices.",
+  "equationBreakdowns": [
+    {
+      "label": "Characteristic Equation",
+      "terms": [
+        {
+          "symbol": "\\det(A - \\lambda I) = 0",
+          "name": "Characteristic equation",
+          "desc": "The condition for λ to be an eigenvalue. A − λI must be singular so that the homogeneous system (A − λI)v = 0 has a nonzero solution. Expanding the determinant gives the characteristic polynomial."
+        },
+        {
+          "symbol": "p(\\lambda) = \\det(A - \\lambda I)",
+          "name": "Characteristic polynomial",
+          "desc": "A degree-n polynomial in λ. Its roots are the eigenvalues. The coefficient of λⁿ is (−1)ⁿ; the constant term is det(A); the coefficient of λⁿ⁻¹ involves the trace."
+        }
+      ]
+    },
+    {
+      "label": "Diagonalization",
+      "terms": [
+        {
+          "symbol": "A = P\\Lambda P^{-1}",
+          "name": "Eigendecomposition",
+          "desc": "Valid when A has n linearly independent eigenvectors. Λ is diagonal with eigenvalues; P has eigenvectors as columns. Represents: change to eigenbasis (P⁻¹), scale each axis (Λ), change back (P)."
+        },
+        {
+          "symbol": "A^k = P\\Lambda^k P^{-1}",
+          "name": "Matrix power via diagonalization",
+          "desc": "Diagonalizing trivializes powers because Λᵏ just raises each diagonal entry to the k-th power. This is why diagonalizability is so useful for dynamical systems and iterative algorithms."
+        }
+      ]
+    },
+    {
+      "label": "Jordan Block",
+      "terms": [
+        {
+          "symbol": "J_m(\\lambda)",
+          "name": "Jordan block of size m",
+          "desc": "An m×m matrix with λ on the diagonal and 1s on the superdiagonal. Represents a 'generalized' eigenvector chain: applying (A−λI) shifts along the chain until it annihilates after m steps."
+        },
+        {
+          "symbol": "m > 1",
+          "name": "Defective eigenvalue",
+          "desc": "When a Jordan block has size > 1, the eigenvalue is defective: its geometric multiplicity (number of independent eigenvectors = 1) is less than its algebraic multiplicity (size of block = m). Diagonalization fails for this eigenvalue."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Hefferon 2020",
+      "title": "Linear Algebra, Ch. Five: Similarity, Eigenvalues, Jordan Form",
+      "url": null
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r9"
+  },
+  "nextItem": {
+    "type": "quiz",
+    "id": "q4"
+  }
+}

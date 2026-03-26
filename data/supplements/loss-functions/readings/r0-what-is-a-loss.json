@@ -1,0 +1,117 @@
+{
+  "id": "r0",
+  "moduleId": "loss-functions",
+  "title": "What Is a Loss Function?",
+  "estimatedMinutes": 10,
+  "learningObjectives": [
+    {
+      "id": "r0-lo1",
+      "verb": "Explain",
+      "description": "Explain the role of a loss function in supervised learning as a scalar signal that measures the gap between predictions and targets",
+      "skillTags": [
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r0-lo2",
+      "verb": "Distinguish",
+      "description": "Distinguish the three reduction modes (none, mean, sum) and identify which to use for batch training vs. manual weighting vs. sequence models",
+      "skillTags": [
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r0-lo3",
+      "verb": "Trace",
+      "description": "Trace the computational graph from a loss value back to a parameter update and explain where autograd attaches",
+      "skillTags": [
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r0-lo4",
+      "verb": "Select",
+      "description": "Select an appropriate loss family for a given supervised task using the output type and target distribution as decision criteria",
+      "skillTags": [
+        "regression",
+        "classification",
+        "probabilistic-ml"
+      ]
+    }
+  ],
+  "prevItem": null,
+  "nextItem": {
+    "type": "reading",
+    "id": "r1"
+  },
+  "content": "## Motivation\n\nA neural network learns by adjusting its parameters $\\theta$ so that its predictions $f_\\theta(x)$ are close to the ground-truth targets $y$. A **loss function** (also called a *criterion* or *objective*) gives this notion of \"closeness\" a precise scalar number that the optimizer minimizes.\n\nWithout a loss, gradient descent has no direction to follow.\n\n---\n\n## The Training Objective\n\nGiven a dataset of $N$ input-target pairs $\\{(x_i, y_i)\\}_{i=1}^N$, the empirical training loss is\n\n$$\\mathcal{L}(\\theta) = \\frac{1}{N} \\sum_{i=1}^{N} \\ell\\bigl(f_\\theta(x_i),\\, y_i\\bigr)$$\n\nwhere $\\ell$ is the **per-sample loss** specific to the task. The optimizer updates parameters via\n\n$$\\theta \\leftarrow \\theta - \\alpha \\, \\nabla_\\theta \\mathcal{L}(\\theta)$$\n\nwhere $\\alpha$ is the learning rate. PyTorch computes $\\nabla_\\theta \\mathcal{L}$ automatically via `loss.backward()`.\n\n---\n\n## PyTorch Convention\n\nIn PyTorch, a loss function is an `nn.Module` that takes two tensors — `input` (model prediction) and `target` (ground truth) — and returns a scalar:\n\n```python\nimport torch\nimport torch.nn as nn\n\ncriterion = nn.MSELoss()\ninput  = torch.randn(4, 1)   # model output\ntarget = torch.randn(4, 1)   # ground truth\nloss   = criterion(input, target)  # scalar\nloss.backward()              # populate .grad for every parameter\n```\n\nThe names `input` and `target` follow PyTorch's own documentation. In context:\n- **`input`** — the raw output of the last layer (logits or probabilities, depending on the loss)\n- **`target`** — the label or value you want the model to predict\n\n---\n\n## Reduction Modes\n\nEvery PyTorch loss accepts a `reduction` keyword that controls whether the per-sample losses $\\ell_i$ are aggregated:\n\n| `reduction` | Formula | When to use |\n|-------------|---------|-------------|\n| `'mean'` | $\\frac{1}{N}\\sum_i \\ell_i$ | Default; loss scale is independent of batch size |\n| `'sum'` | $\\sum_i \\ell_i$ | When you want total loss, e.g. VAE ELBO |\n| `'none'` | $[\\ell_1, \\ell_2, \\ldots, \\ell_N]$ | Per-sample losses; useful for custom sample-level weighting |\n\n```python\ncriterion_mean = nn.L1Loss(reduction='mean')\ncriterion_none = nn.L1Loss(reduction='none')\n\nl_mean = criterion_mean(input, target)      # scalar\nl_each = criterion_none(input, target)      # shape (4, 1)\n```\n\n---\n\n## The Computational Graph\n\nPyTorch builds a dynamic computation graph during the forward pass. The loss node sits at the top; calling `.backward()` propagates gradients back through every operation to the leaf parameters.\n\n```\n  x  ──► layer 1 ──► layer 2 ──► output\n                                     │\n                         target ──► loss ──► .backward()\n                                               │\n                                       ∇θ flows back\n```\n\nThis is why the loss **must be a scalar** (or you must specify a gradient vector if using `backward(gradient=...)`). Most built-in losses produce a scalar when `reduction != 'none'`.\n\n---\n\n## Choosing the Right Loss\n\nThe right loss encodes your **statistical assumption** about the target:\n\n| Assumption | Loss |\n|------------|------|\n| Target is a continuous value; errors are symmetric | MSELoss or HuberLoss |\n| Target follows a Poisson distribution (count data) | PoissonNLLLoss |\n| Target is Gaussian with learnable variance | GaussianNLLLoss |\n| Binary label $y \\in \\{0,1\\}$ | BCEWithLogitsLoss |\n| Categorical label $y \\in \\{0,\\ldots,C-1\\}$ | CrossEntropyLoss |\n| Two distributions should match | KLDivLoss |\n| Similar items should be embedded close together | TripletMarginLoss |\n\nThe remaining readings in this supplement cover each family in detail.",
+  "equationBreakdowns": [
+    {
+      "label": "Training Objective",
+      "terms": [
+        {
+          "symbol": "\\mathcal{L}(\\theta)",
+          "name": "Total loss",
+          "desc": "Scalar function of model parameters θ; this is what the optimizer minimizes."
+        },
+        {
+          "symbol": "\\theta",
+          "name": "Model parameters",
+          "desc": "All weights and biases in the network — everything that `optimizer.step()` updates."
+        },
+        {
+          "symbol": "f_\\theta(x_i)",
+          "name": "Model prediction",
+          "desc": "The forward-pass output for input xᵢ. Called `input` in PyTorch loss APIs."
+        },
+        {
+          "symbol": "y_i",
+          "name": "Ground-truth target",
+          "desc": "The label or value the model should predict. Called `target` in PyTorch loss APIs."
+        },
+        {
+          "symbol": "\\ell(\\hat{y}, y)",
+          "name": "Per-sample loss",
+          "desc": "Measures how wrong a single prediction is. Its form defines the task (e.g., squared error for regression, cross-entropy for classification)."
+        },
+        {
+          "symbol": "\\frac{1}{N}\\sum_{i=1}^N",
+          "name": "Mean reduction",
+          "desc": "Averages per-sample losses over the batch. Corresponds to reduction='mean', the default in most PyTorch losses."
+        }
+      ]
+    },
+    {
+      "label": "SGD Parameter Update",
+      "terms": [
+        {
+          "symbol": "\\theta \\leftarrow \\theta - \\alpha \\nabla_\\theta \\mathcal{L}",
+          "name": "Gradient descent step",
+          "desc": "Moves parameters in the direction that decreases the loss. Called by optimizer.step() after loss.backward()."
+        },
+        {
+          "symbol": "\\alpha",
+          "name": "Learning rate",
+          "desc": "Controls step size. Too large → diverges; too small → trains slowly. Set via lr= in the optimizer constructor."
+        },
+        {
+          "symbol": "\\nabla_\\theta \\mathcal{L}",
+          "name": "Gradient of loss w.r.t. parameters",
+          "desc": "Computed by loss.backward(); stored in param.grad for each parameter tensor."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "[1]",
+      "title": "PyTorch nn.Module loss functions reference",
+      "url": "https://pytorch.org/docs/stable/nn.html#loss-functions"
+    },
+    {
+      "label": "[2]",
+      "title": "PyTorch Autograd mechanics",
+      "url": "https://pytorch.org/docs/stable/notes/autograd.html"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "id": "lab1",
+  "moduleId": "matrix-algebra",
+  "title": "Einsum in PyTorch",
+  "estimatedMinutes": 45,
+  "description": "## Lab: Einstein Summation in PyTorch\n\n`torch.einsum` is a single function that can express virtually any multilinear operation on tensors — dot products, matrix multiplies, transposes, traces, outer products, and batched variants — using a compact notation borrowed directly from physics and mathematics.\n\nThis lab builds your fluency with the notation from the ground up, then shows how the same patterns appear in modern ML architectures.\n\n### What You'll Build\n\n- A reference sheet of the 5 canonical einsum families: unary, binary, batched, quadratic, and attention\n- Verified implementations of every standard matrix operation from the prereq readings, translated into einsum strings\n- A from-scratch scaled dot-product attention forward pass using only `torch.einsum`\n- A batch covariance routine that mirrors the 3DGS covariance construction \\(\\Sigma = RSS^\\top R^\\top\\)\n- A performance benchmark comparing einsum against `torch.bmm` and `torch.matmul`\n\n### Key Concepts Practiced\n\nAfter this lab you will be able to read any einsum string in a research codebase and immediately parse which axes are being contracted, which are being broadcast, and what the output shape will be — and write your own for novel tensor operations without resorting to explicit `reshape`/`transpose`/`matmul` chains.",
+  "objectives": [
+    "Translate standard matrix operations (transpose, trace, inner product, outer product, matrix multiply) into `torch.einsum` strings and verify correctness numerically.",
+    "Write einsum strings for batched operations and confirm they match `torch.bmm` output.",
+    "Express the quadratic form \\(\\mathbf{x}^\\top A \\mathbf{x}\\) and sample covariance \\(X^\\top X / (n-1)\\) as single einsum calls.",
+    "Implement the scaled dot-product attention score and weighted-sum output using einsum.",
+    "Construct batch 3D covariance matrices \\(\\Sigma = R\\,\\text{diag}(s^2)\\,R^\\top\\) via einsum and verify positive semi-definiteness.",
+    "Benchmark einsum vs explicit torch ops and reason about when to prefer each."
+  ],
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/supplements/matrix-algebra/lab_einsum_pytorch.ipynb",
+  "prevItem": {
+    "type": "quiz",
+    "id": "q1"
+  },
+  "nextItem": {
+    "type": "lab",
+    "id": "lab2"
+  }
+}

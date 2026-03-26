@@ -1,0 +1,84 @@
+{
+  "id": "d1",
+  "moduleId": "regularization",
+  "title": "Weight Penalties, Dropout, and Normalization",
+  "description": "Flashcards covering the bias-variance tradeoff, L1/L2 penalties, dropout variants, and normalization layers.",
+  "estimatedMinutes": 12,
+  "cards": [
+    {
+      "id": "c01",
+      "front": "**Overfitting** — two diagnostic signals on loss curves",
+      "back": "1. Training loss continues to decrease while validation loss **plateaus or increases**\n2. A large and growing **gap** between training and validation loss\n\nNot underfitting: both losses high and roughly equal. Not the same as large model — overfitting is about generalization gap, not model size."
+    },
+    {
+      "id": "c02",
+      "front": "**Bias-variance decomposition** — formula and what each term measures",
+      "back": "$$\\text{Test error} = \\text{Bias}^2 + \\text{Variance} + \\sigma^2$$\n\n- **Bias²:** how wrong the model is on average — fixed by using a more expressive model\n- **Variance:** sensitivity to which training examples were seen — fixed by regularization or more data\n- **$\\sigma^2$:** irreducible label noise — cannot be reduced"
+    },
+    {
+      "id": "c03",
+      "front": "**L2 regularization** — what the weight decay update looks like",
+      "back": "$$\\theta \\leftarrow (1 - \\alpha\\lambda)\\theta - \\alpha\\nabla_\\theta\\mathcal{L}$$\n\nEvery weight is multiplied by $(1-\\alpha\\lambda) < 1$ before the gradient step — continuously pulled toward zero.\n\n**Probabilistic view:** equivalent to MAP estimation with a Gaussian prior $\\mathcal{N}(0, 1/\\lambda)$."
+    },
+    {
+      "id": "c04",
+      "front": "**L1 vs. L2** — why does L1 induce sparsity but L2 does not?",
+      "back": "**L2 gradient** at small $\\theta_j$: $\\lambda\\theta_j \\to 0$ — the penalty becomes negligible near zero.\n\n**L1 gradient** at small $\\theta_j$: $\\lambda\\,\\text{sign}(\\theta_j) = \\pm\\lambda$ — constant push, independent of magnitude. Small weights reach exactly zero in finite steps.\n\n**Geometry:** L2 ball is smooth (sphere); L1 ball has corners on axes — convex optima often land at corners = sparse solutions."
+    },
+    {
+      "id": "c05",
+      "front": "**AdamW vs. Adam + L2** — why are they different?",
+      "back": "In Adam, adding L2 to the loss scales the weight penalty by $1/\\sqrt{v_t}$ — parameters with large gradients get *less* decay. This defeats the regularization intent.\n\n**AdamW** decouples: $\\theta \\leftarrow \\theta - \\alpha(\\hat{m}/\\sqrt{\\hat{v}}+\\epsilon) - \\alpha\\lambda\\theta$\n\nThe decay $\\alpha\\lambda\\theta$ bypasses the adaptive step — all weights decay equally."
+    },
+    {
+      "id": "c06",
+      "front": "**Inverted dropout** — formula and why it's needed",
+      "back": "$$\\mathbf{h}_{\\text{drop}} = \\frac{\\mathbf{m} \\odot \\mathbf{h}}{1-p}, \\quad m_i \\sim \\text{Bernoulli}(1-p)$$\n\nScaling by $1/(1-p)$ preserves $\\mathbb{E}[\\mathbf{h}_{\\text{drop}}] = \\mathbf{h}$ — the expected activation during training equals the activation at inference.\n\nWithout this, inference activations are $(1-p)^{-1}$ larger than training activations — a train/test mismatch."
+    },
+    {
+      "id": "c07",
+      "front": "**Dropout ensemble interpretation** — what distribution is being averaged?",
+      "back": "A network with $n$ neurons has $2^n$ possible subnetworks (each neuron either present or dropped). Dropout trains all $2^n$ with shared weights simultaneously.\n\nAt inference: using the full network (with scaled weights) approximates a **geometric mean ensemble** over all subnetworks. Ensembles generalize better than single models — dropout achieves this at training cost of a single model."
+    },
+    {
+      "id": "c08",
+      "front": "**MC Dropout** — what is it and what does it estimate?",
+      "back": "Keep dropout active at inference. Run $T$ stochastic forward passes:\n$$p(y|x) \\approx \\frac{1}{T}\\sum_t p(y|x, \\hat{\\theta}_t)$$\n\nThe variance across passes estimates **model uncertainty** (epistemic uncertainty). Gal & Ghahramani (2016): equivalent to variational inference in a deep GP.\n\n*Use when: medical diagnosis, autonomous driving — anytime the model should say \"I don't know.\"*"
+    },
+    {
+      "id": "c09",
+      "front": "**Stochastic Depth / DropPath** — what is dropped and how does drop rate vary with depth?",
+      "back": "Entire **residual blocks** are dropped with probability $p_\\ell$. When dropped: only the identity shortcut survives ($\\mathbf{y} = \\mathbf{x}$).\n\n$p_\\ell$ increases linearly with depth — early layers are rarely dropped (critical for features); later layers are dropped more often (less critical).\n\n*Used in: EfficientNet, DeiT, Swin Transformer*"
+    },
+    {
+      "id": "c10",
+      "front": "**Batch Normalization** — training vs. inference behavior",
+      "back": "**Training:** compute $\\mu_\\mathcal{B}$, $\\sigma^2_\\mathcal{B}$ from the current mini-batch. Maintain running stats as EMA.\n\n**Inference:** use running stats $\\mu_{\\text{run}}$, $\\sigma^2_{\\text{run}}$ — not batch stats (batch may be size 1 or from a different distribution).\n\n⚠️ Forgetting `model.eval()` at inference is one of the most common PyTorch bugs."
+    },
+    {
+      "id": "c11",
+      "front": "**BN's implicit regularization** — two mechanisms",
+      "back": "1. **Noise injection:** batch mean/variance computed from a random subset — stochastic, like dropout noise on pre-activations\n2. **Larger LR stability:** BN smooths the gradient scale, allowing larger learning rates that implicitly prefer flat minima\n\nIn practice: adding BN often allows reducing or removing dropout entirely from CNNs."
+    },
+    {
+      "id": "c12",
+      "front": "**BatchNorm vs. LayerNorm** — normalization dimension and where each is standard",
+      "back": "**BatchNorm:** normalizes over the **batch dimension** for each feature. Requires large batches (≥32). Standard in **CNNs** (ResNets, EfficientNets).\n\n**LayerNorm:** normalizes over the **feature dimension** of each example independently. Works with batch=1. Standard in **transformers and RNNs**."
+    },
+    {
+      "id": "c13",
+      "front": "**RMSNorm** — how does it differ from LayerNorm and who uses it?",
+      "back": "RMSNorm removes the mean-centering step:\n$$\\hat{x}_i = x_i / \\text{RMS}(\\mathbf{x}) \\cdot \\gamma_i$$\n\nNo $\\mu$ subtraction, no $\\beta$ shift — ~15–20% faster than LayerNorm.\n\nUsed in: **LLaMA, Mistral, Gemma** — the modern standard for decoder-only LLMs."
+    },
+    {
+      "id": "c14",
+      "front": "**GroupNorm** — where does it fit between BatchNorm and LayerNorm?",
+      "back": "Normalizes over groups of channels within each example:\n- G=1 group (all channels): **Layer Norm**\n- G=C groups (1 channel each): **Instance Norm**\n- G=32: **Group Norm** — stable across batch sizes\n\n*Standard in: object detection, segmentation, where batch sizes are necessarily small (1–2 images).*"
+    },
+    {
+      "id": "c15",
+      "front": "**Double descent** — what does it say about the classical bias-variance U-curve?",
+      "back": "Classical theory: U-shaped test error vs. capacity — there's an optimal capacity.\n\n**Double descent:** in the overparameterized regime (past the interpolation threshold), test error decreases *again* even as the model perfectly memorizes training data.\n\nSGD with small initialization and weight decay finds the minimum-norm interpolant, which generalizes for structured data. Modern NNs live in this regime."
+    }
+  ]
+}

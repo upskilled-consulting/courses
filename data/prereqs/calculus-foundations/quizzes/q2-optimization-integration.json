@@ -1,0 +1,117 @@
+{
+  "id": "q2",
+  "moduleId": "calculus-foundations",
+  "title": "Optimization, Linear Approximation, and Integration",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "type": "reading", "id": "r6" },
+  "nextItem": { "type": "lab", "id": "lab1" },
+  "questions": [
+    {
+      "id": "q2_1",
+      "type": "multiple-choice",
+      "prompt": "For $f(x) = x^4 - 8x^2$, set $f'(x) = 0$ to find the critical points.",
+      "options": [
+        { "id": "a", "text": "$x = 0$ only", "correct": false },
+        { "id": "b", "text": "$x = 0, \\pm 2$", "correct": true },
+        { "id": "c", "text": "$x = \\pm 4$", "correct": false },
+        { "id": "d", "text": "$x = \\pm\\sqrt{2}$", "correct": false }
+      ],
+      "explanation": "$f'(x) = 4x^3 - 16x = 4x(x^2-4) = 4x(x-2)(x+2) = 0$. Solutions: $x = 0, 2, -2$. Checking: $f''(x) = 12x^2 - 16$. At $x=0$: $f''=-16 < 0$ (local max). At $x=\\pm 2$: $f''=48-16=32>0$ (local minima). The function has a local maximum at the origin and symmetric minima at $\\pm 2$.",
+      "hint": "Compute $f'(x)$, factor the expression, and solve for $x$."
+    },
+    {
+      "id": "q2_2",
+      "type": "multiple-choice",
+      "prompt": "At a critical point $x_0$ where $f'(x_0) = 0$ and $f''(x_0) = -5$, what can you conclude?",
+      "options": [
+        { "id": "a", "text": "$x_0$ is a local minimum because the second derivative is nonzero", "correct": false },
+        { "id": "b", "text": "$x_0$ is a local maximum because $f''(x_0) < 0$ means the graph is concave down", "correct": true },
+        { "id": "c", "text": "The test is inconclusive", "correct": false },
+        { "id": "d", "text": "$x_0$ is a saddle point", "correct": false }
+      ],
+      "explanation": "The second derivative test: if $f'(x_0) = 0$ and $f''(x_0) < 0$, then $x_0$ is a **local maximum**. Negative $f''$ means the graph is concave down at $x_0$ — like a hill peak. The slope was positive just before (rising), zero at $x_0$, and negative just after (falling). The test is only inconclusive when $f''(x_0) = 0$.",
+      "hint": "Recall: $f'' < 0$ → concave down → what shape of critical point is that?"
+    },
+    {
+      "id": "q2_3",
+      "type": "multiple-choice",
+      "prompt": "Using linear approximation, estimate $e^{0.1}$. (Recall $e^0 = 1$, and $\\frac{d}{dx}[e^x]\\big|_{x=0} = 1$.)",
+      "options": [
+        { "id": "a", "text": "$1.0$", "correct": false },
+        { "id": "b", "text": "$1.1$", "correct": true },
+        { "id": "c", "text": "$1.01$", "correct": false },
+        { "id": "d", "text": "$e$", "correct": false }
+      ],
+      "explanation": "Linear approximation: $f(x_0+\\delta) \\approx f(x_0) + f'(x_0)\\delta$. Here $f(x) = e^x$, $x_0 = 0$, $\\delta = 0.1$. Since $f'(x) = e^x$, $f'(0) = 1$. So $e^{0.1} \\approx 1 + 1 \\cdot 0.1 = 1.1$. Actual value: $e^{0.1} \\approx 1.1052$. The linear approximation undershoots slightly because $e^x$ is concave up ($f'' = e^x > 0$) — the true function bends upward from the tangent line.",
+      "hint": "Apply $f(x_0+\\delta) \\approx f(x_0) + f'(x_0)\\cdot\\delta$ with $f(x) = e^x$, $x_0 = 0$, $\\delta = 0.1$."
+    },
+    {
+      "id": "q2_4",
+      "type": "multiple-choice",
+      "prompt": "Gradient descent updates a parameter via $w \\leftarrow w - \\eta \\cdot \\frac{\\partial \\mathcal{L}}{\\partial w}$. If $\\frac{\\partial \\mathcal{L}}{\\partial w} = +3$ at the current $w$, what happens to $w$?",
+      "options": [
+        { "id": "a", "text": "$w$ increases by $3\\eta$", "correct": false },
+        { "id": "b", "text": "$w$ decreases by $3\\eta$", "correct": true },
+        { "id": "c", "text": "$w$ stays the same", "correct": false },
+        { "id": "d", "text": "$w$ moves to zero", "correct": false }
+      ],
+      "explanation": "The update is $w \\leftarrow w - \\eta \\cdot 3 = w - 3\\eta$. Since $\\eta > 0$, this **decreases** $w$. This makes sense: a positive gradient means the loss increases when $w$ increases — so we should decrease $w$ to reduce the loss. The negative sign in the update rule always moves $w$ opposite to the gradient (downhill on the loss surface).",
+      "hint": "Substitute $\\partial\\mathcal{L}/\\partial w = 3$ into the update rule. Is $-\\eta \\cdot 3$ positive or negative?"
+    },
+    {
+      "id": "q2_5",
+      "type": "multiple-choice",
+      "prompt": "Evaluate $\\int_1^4 \\frac{1}{x}\\,dx$.",
+      "options": [
+        { "id": "a", "text": "$\\ln 3$", "correct": false },
+        { "id": "b", "text": "$\\ln 4$", "correct": true },
+        { "id": "c", "text": "$3$", "correct": false },
+        { "id": "d", "text": "$1/4$", "correct": false }
+      ],
+      "explanation": "Antiderivative of $1/x$ is $\\ln|x|$. By the Fundamental Theorem: $\\int_1^4 \\frac{1}{x}\\,dx = \\ln(4) - \\ln(1) = \\ln 4 - 0 = \\ln 4 \\approx 1.386$. Note $\\ln 3 \\approx 1.099$ — this is not the answer here because the interval is $[1,4]$, not $[1,3]$. Common error: computing $\\ln(4-1) = \\ln 3$ instead of $\\ln 4 - \\ln 1$.",
+      "hint": "The antiderivative of $1/x$ is $\\ln|x|$. Apply the Fundamental Theorem: evaluate at $x=4$ and $x=1$, then subtract."
+    },
+    {
+      "id": "q2_6",
+      "type": "multiple-choice",
+      "prompt": "A probability density function $f(x)$ for a continuous random variable $X$ must satisfy $\\int_{-\\infty}^{\\infty} f(x)\\,dx = 1$. Which statement is the correct interpretation of this condition?",
+      "options": [
+        { "id": "a", "text": "The maximum value of $f(x)$ must equal 1", "correct": false },
+        { "id": "b", "text": "The total accumulated probability over all possible values of $X$ equals 1 — something must happen", "correct": true },
+        { "id": "c", "text": "$f(x) = 1$ for all $x$", "correct": false },
+        { "id": "d", "text": "The derivative of $f$ integrates to 1", "correct": false }
+      ],
+      "explanation": "The normalization condition says the integral of the density over the entire real line equals 1 — representing certainty that $X$ takes *some* value. Note that $f(x)$ itself can exceed 1 at individual points (it is a density, not a probability); only integrals over intervals give probabilities. The Uniform$(0, 0.1)$ distribution has $f(x) = 10$, yet integrates to 1.",
+      "hint": "What does an integral represent geometrically? What does integrating a density over the whole domain give?"
+    },
+    {
+      "id": "q2_7",
+      "type": "multiple-choice",
+      "prompt": "The expected value of a continuous RV with PDF $f(x)$ is $\\mathbb{E}[X] = \\int_{-\\infty}^{\\infty} x\\,f(x)\\,dx$. For $X \\sim \\text{Uniform}(0, 2)$ with $f(x) = 1/2$ on $[0,2]$, what is $\\mathbb{E}[X]$?",
+      "options": [
+        { "id": "a", "text": "$0.5$", "correct": false },
+        { "id": "b", "text": "$1$", "correct": true },
+        { "id": "c", "text": "$2$", "correct": false },
+        { "id": "d", "text": "$1/4$", "correct": false }
+      ],
+      "explanation": "$\\mathbb{E}[X] = \\int_0^2 x \\cdot \\frac{1}{2}\\,dx = \\frac{1}{2} \\int_0^2 x\\,dx = \\frac{1}{2}\\left[\\frac{x^2}{2}\\right]_0^2 = \\frac{1}{2} \\cdot \\frac{4}{2} = \\frac{1}{2} \\cdot 2 = 1$. By symmetry, the expected value of a uniform distribution on $[a,b]$ is the midpoint $(a+b)/2 = (0+2)/2 = 1$. ✓",
+      "hint": "Apply the Fundamental Theorem: antiderivative of $x/2$ is $x^2/4$. Evaluate from 0 to 2."
+    },
+    {
+      "id": "q2_8",
+      "type": "code-completion",
+      "prompt": "Complete the function that performs a single gradient descent step on $f(x) = x^2 - 4x + 5$, whose minimum is at $x = 2$. `gradient_step(0.0, lr=0.1)` should return approximately `0.4`.",
+      "codeTemplate": "def f_prime(x):\n    \"\"\"Derivative of f(x) = x² - 4x + 5\"\"\"\n    return 2*x - 4\n\ndef gradient_step(x, lr=0.1):\n    \"\"\"\n    Return the new x after one gradient descent step.\n    x_new = x - lr * f'(x)\n    \"\"\"\n    return ___BLANK___",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "x - lr * f_prime(x)",
+        "x - lr*f_prime(x)",
+        "x - (lr * f_prime(x))"
+      ],
+      "explanation": "Gradient descent: $x \\leftarrow x - \\eta \\cdot f'(x)$. At $x=0$: $f'(0) = 2(0)-4 = -4$. Update: $0 - 0.1 \\times (-4) = 0 + 0.4 = 0.4$. The negative gradient points toward $x=2$ (the minimum), so the step correctly moves $x$ from 0 toward 2. After many such steps (each with lr=0.1), $x$ converges to 2 and $f(x)$ reaches its minimum of 1.",
+      "hint": "The update rule is $x_{\\text{new}} = x - \\text{lr} \\times f'(x)$. Use the already-defined `f_prime` function."
+    }
+  ]
+}

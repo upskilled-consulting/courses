@@ -1,0 +1,95 @@
+{
+  "id": "r6",
+  "moduleId": "probability-foundations",
+  "title": "KL Divergence and Cross-Entropy",
+  "estimatedMinutes": 16,
+  "learningObjectives": [
+    {
+      "id": "r6-lo1",
+      "verb": "Define",
+      "description": "Define entropy H(P) as the expected surprise under P, and explain why it is maximized by the uniform distribution and minimized by a point mass",
+      "skillTags": ["probability-foundations", "information-theory"]
+    },
+    {
+      "id": "r6-lo2",
+      "verb": "Derive",
+      "description": "Derive the relationship H(P,Q) = H(P) + D_KL(P‖Q) and state what each term represents in terms of unavoidable coding cost vs. the penalty for using the wrong distribution",
+      "skillTags": ["probability-foundations", "information-theory"]
+    },
+    {
+      "id": "r6-lo3",
+      "verb": "Explain",
+      "description": "Explain the asymmetry of KL divergence and distinguish the behavior of forward KL (D_KL(P‖Q), mean-seeking) from reverse KL (D_KL(Q‖P), mode-seeking) when approximating a multimodal distribution",
+      "skillTags": ["probability-foundations", "information-theory"]
+    },
+    {
+      "id": "r6-lo4",
+      "verb": "Identify",
+      "description": "Identify cross-entropy loss as −log Q minimization, explain how this equals MLE when P is the empirical data distribution, and locate KL divergence in the VAE ELBO and in PPO's policy update constraint",
+      "skillTags": ["probability-foundations", "information-theory", "training-dynamics"]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r5"
+  },
+  "nextItem": null,
+  "content": "## Information and Surprise\n\nHow surprised are you when an event occurs? If a very likely event ($p \\approx 1$) happens, you are not surprised at all. If a very unlikely event ($p \\approx 0$) happens, you are very surprised.\n\nThe **information content** (or **surprise**) of an event with probability $p$ is:\n\n$$I(x) = -\\log p(x)$$\n\nUsing natural logarithm gives information in **nats**; base-2 logarithm gives **bits**.\n\nProperties:\n- $I(x) \\geq 0$ (information is non-negative since $p \\leq 1$)\n- $I(x) = 0$ when $p(x) = 1$ (certain events are not informative)\n- $I(x) \\to \\infty$ as $p(x) \\to 0$ (impossible events would be infinitely surprising)\n- $I(x_1 x_2) = I(x_1) + I(x_2)$ for independent events (information adds)\n\n---\n\n## Entropy\n\n**Entropy** is the expected surprise of a distribution — the average information content of a draw from $P$:\n\n$$H(P) = \\mathbb{E}_{x \\sim P}[-\\log P(x)] = -\\sum_x P(x)\\log P(x)$$\n\nFor continuous distributions (differential entropy):\n\n$$H(P) = -\\int P(x) \\log P(x)\\, dx$$\n\n**Key properties:**\n- $H(P) \\geq 0$ for discrete distributions\n- Entropy is **maximized by the uniform distribution** — maximum uncertainty\n- Entropy is **minimized (= 0) by a point mass** — no uncertainty\n- A fair coin has $H = \\log 2 \\approx 0.693$ nats = 1 bit\n- A biased coin with $p = 0.9$ has $H = -(0.9\\log 0.9 + 0.1\\log 0.1) \\approx 0.325$ nats\n\n**Intuition for ML:** Entropy measures how much information (on average) you learn from a single observation. A peaked distribution is easy to predict; a flat distribution is hard.\n\n---\n\n## Cross-Entropy\n\n**Cross-entropy** $H(P, Q)$ measures the expected surprise when events are drawn from $P$ but you are using model $Q$ to predict them:\n\n$$H(P, Q) = \\mathbb{E}_{x \\sim P}[-\\log Q(x)] = -\\sum_x P(x) \\log Q(x)$$\n\n- When $Q = P$: $H(P, P) = H(P)$ — the best you can do\n- When $Q \\neq P$: $H(P, Q) > H(P)$ — you are paying an extra cost for using the wrong model\n\n**Cross-entropy loss in classification.** If $P$ is the one-hot ground truth (only class $k$ has $P(k) = 1$) and $Q = \\hat{\\pi}$ is the model's softmax output, then:\n\n$$H(P, Q) = -\\log \\hat{\\pi}_k$$\n\nMinimizing cross-entropy loss over a dataset is equivalent to maximizing the log-likelihood of the training data under the model — this is **maximum likelihood estimation (MLE)**.\n\n---\n\n## KL Divergence\n\n**Kullback-Leibler (KL) divergence** measures how much extra surprise you experience by using $Q$ instead of $P$:\n\n$$D_{\\text{KL}}(P \\| Q) = H(P, Q) - H(P) = \\mathbb{E}_{x \\sim P}\\left[\\log \\frac{P(x)}{Q(x)}\\right] = \\sum_x P(x) \\log \\frac{P(x)}{Q(x)}$$\n\n**This decomposes cross-entropy:**\n\n$$\\underbrace{H(P, Q)}_{\\text{cross-entropy}} = \\underbrace{H(P)}_{\\text{entropy (unavoidable)}} + \\underbrace{D_{\\text{KL}}(P \\| Q)}_{\\text{KL (penalty for wrong model)}}$$\n\nThe entropy $H(P)$ is fixed (you cannot change the true distribution). So minimizing cross-entropy is equivalent to minimizing KL divergence.\n\n### Non-Negativity\n\n$$D_{\\text{KL}}(P \\| Q) \\geq 0, \\quad \\text{with equality iff } P = Q$$\n\nThis follows from **Jensen's inequality** applied to the concave function $\\log$. It confirms that cross-entropy is always at least as large as entropy — the wrong model always costs more.\n\n### Asymmetry\n\n$$D_{\\text{KL}}(P \\| Q) \\neq D_{\\text{KL}}(Q \\| P) \\quad \\text{in general}$$\n\nKL divergence is **not** a distance metric. This asymmetry has important practical consequences:\n\n**Forward KL:** $D_{\\text{KL}}(P \\| Q)$ penalizes placing zero mass where $P$ has mass ($Q$ must cover all of $P$). When minimized, $Q$ spreads to cover all modes of $P$ — **mean-seeking** or **mass-covering** behavior.\n\n**Reverse KL:** $D_{\\text{KL}}(Q \\| P)$ penalizes placing mass where $P$ has zero mass ($Q$ must not assign probability to regions $P$ rejects). When minimized, $Q$ concentrates on one mode of $P$ — **mode-seeking** or **zero-forcing** behavior.\n\n**Practical implication:** Variational inference with $D_{\\text{KL}}(Q \\| P)$ (reverse KL) tends to find one good mode of the posterior rather than covering all of them.\n\n---\n\n## KL in the VAE ELBO\n\nVariational autoencoders (VAEs) optimize the **Evidence Lower BOund (ELBO)**:\n\n$$\\mathcal{L} = \\mathbb{E}_{z \\sim q_\\phi(z|x)}[\\log p_\\theta(x|z)] - D_{\\text{KL}}(q_\\phi(z|x) \\| p(z))$$\n\nThe KL term $D_{\\text{KL}}(q_\\phi(z|x) \\| p(z))$ acts as a **regularizer**: it pushes the encoder posterior $q_\\phi(z|x)$ toward the prior $p(z) = \\mathcal{N}(0, I)$. When $q_\\phi$ is a Gaussian with mean $\\mu$ and variance $\\sigma^2$, this KL has a closed form:\n\n$$D_{\\text{KL}}(\\mathcal{N}(\\mu, \\sigma^2) \\| \\mathcal{N}(0, 1)) = \\frac{1}{2}(\\mu^2 + \\sigma^2 - \\log \\sigma^2 - 1)$$\n\n---\n\n## KL and Policy Optimization\n\nIn reinforcement learning, **Trust Region Policy Optimization (TRPO)** constrains each policy update by a KL budget:\n\n$$\\mathbb{E}_{s \\sim \\rho^{\\pi_{\\text{old}}}}\\!\\left[D_{\\text{KL}}(\\pi_{\\text{old}}(\\cdot|s) \\| \\pi_\\theta(\\cdot|s))\\right] \\leq \\delta$$\n\nThis prevents the new policy from diverging too far from the old one — ensuring the importance sampling correction (from r5) remains reliable.\n\n**PPO** replaces the hard KL constraint with a clipped objective, but adds an optional KL penalty term for stability.\n\n---\n\n## Summary: The Information Theory Triangle\n\n| Quantity | Formula | Meaning |\n|---|---|---|\n| Entropy $H(P)$ | $-\\mathbb{E}_P[\\log P]$ | Uncertainty in $P$; bits needed to encode samples |\n| Cross-entropy $H(P,Q)$ | $-\\mathbb{E}_P[\\log Q]$ | Bits needed using model $Q$ to encode $P$-distributed samples |\n| KL divergence $D_{\\text{KL}}(P\\|Q)$ | $H(P,Q) - H(P)$ | Extra bits wasted using $Q$ instead of $P$ |\n\nCross-entropy = Entropy + KL. Minimizing cross-entropy = minimizing KL = maximum likelihood estimation.",
+  "equationBreakdowns": [
+    {
+      "label": "Entropy",
+      "heading": "Entropy",
+      "terms": [
+        {
+          "symbol": "H(P)",
+          "name": "Entropy",
+          "desc": "Average information content of a single draw from P. High entropy = high uncertainty = flat distribution. Low entropy = low uncertainty = peaked distribution."
+        },
+        {
+          "symbol": "-\\log P(x)",
+          "name": "Surprise at x",
+          "desc": "How unexpected is outcome x under distribution P? Common events (high P(x)) have low surprise; rare events have high surprise."
+        },
+        {
+          "symbol": "\\mathbb{E}_{x \\sim P}[\\cdot]",
+          "name": "Average over P",
+          "desc": "Entropy is the expected surprise — the average across all outcomes, weighted by how often they occur."
+        }
+      ]
+    },
+    {
+      "label": "KL Divergence",
+      "heading": "KL Divergence",
+      "terms": [
+        {
+          "symbol": "D_{\\text{KL}}(P \\| Q)",
+          "name": "KL divergence from Q to P",
+          "desc": "The extra surprise incurred by using Q to describe P-distributed samples. Zero when P = Q; always non-negative."
+        },
+        {
+          "symbol": "\\log \\frac{P(x)}{Q(x)}",
+          "name": "Log ratio",
+          "desc": "Per-sample contribution to KL. Positive when P(x) > Q(x) (Q underestimates this region); negative when P(x) < Q(x). The expectation under P is always non-negative."
+        }
+      ]
+    },
+    {
+      "label": "VAE KL Term (Gaussian)",
+      "heading": "KL in the VAE ELBO",
+      "terms": [
+        {
+          "symbol": "\\frac{1}{2}(\\mu^2 + \\sigma^2 - \\log \\sigma^2 - 1)",
+          "name": "Closed-form KL to standard normal",
+          "desc": "When both distributions are Gaussian, KL has a closed form. This term penalizes the encoder for producing posteriors with large mean (far from 0) or large/small variance (far from 1). Differentiable and cheap to compute."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "OpenAI Spinning Up — Prerequisites",
+      "title": "The Right Background for Deep RL",
+      "url": "https://spinningup.openai.com/en/latest/spinningup/spinningup.html"
+    }
+  ]
+}

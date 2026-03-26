@@ -1,0 +1,77 @@
+{
+  "id": "q1",
+  "moduleId": "m2",
+  "title": "Metrics and Evaluation Protocol",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "questions": [
+    {
+      "id": "q2_m1",
+      "type": "multiple-choice",
+      "prompt": "Method A reports PSNR = 32.1 dB. Method B reports PSNR = 31.4 dB. Both papers use the Mip-NeRF 360 dataset but different protocols. Which conclusion is most defensible?",
+      "options": [
+        { "id": "a", "text": "Method A is definitively better since 32.1 > 31.4", "correct": false },
+        { "id": "b", "text": "The comparison is invalid without verifying that both methods use the same train/test split, evaluation resolution, and initialization settings", "correct": true },
+        { "id": "c", "text": "Method B is better because it likely used a harder test protocol", "correct": false },
+        { "id": "d", "text": "PSNR differences below 1 dB are always statistically insignificant", "correct": false }
+      ],
+      "explanation": "Training resolution and test split differences alone can cause > 0.5 dB variation. A 0.7 dB difference observed under different protocols cannot be attributed to algorithmic improvements. The standardized 3DGS.zip protocol exists precisely to make such comparisons valid.",
+      "hint": "Recall which experimental variables cause the largest PSNR variation between papers."
+    },
+    {
+      "id": "q2_m2",
+      "type": "code-completion",
+      "prompt": "Implement PSNR. Given float32 images \\(I, \\hat{I}\\) with pixel values in \\([0,1]\\), complete the formula:",
+      "codeTemplate": "import numpy as np\n\ndef psnr(img_ref, img_pred):\n    \"\"\"Both inputs: float32 arrays in [0,1], shape (H,W,3)\"\"\"\n    mse = np.mean((img_ref - img_pred) ** 2)\n    if mse == 0:\n        return float('inf')\n    return ___BLANK___",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "10 * np.log10(1.0 / mse)",
+        "10 * np.log10(1 / mse)",
+        "10.0 * np.log10(1.0 / mse)",
+        "-10 * np.log10(mse)"
+      ],
+      "explanation": "PSNR = 10 * log10(MAX² / MSE). For images normalized to [0,1], MAX=1 so MAX²=1, giving PSNR = 10 * log10(1/mse) = -10 * log10(mse). Both forms are equivalent.",
+      "hint": "When pixel values are in [0,1], the peak value MAX = 1, so MAX² = 1."
+    },
+    {
+      "id": "q2_m3",
+      "type": "multiple-choice",
+      "prompt": "LPIPS uses pretrained deep network features to measure perceptual similarity. Compared to SSIM, LPIPS is expected to better capture:",
+      "options": [
+        { "id": "a", "text": "Pixel-level mean squared error across the full image", "correct": false },
+        { "id": "b", "text": "High-frequency texture degradation and semantic-level distortions that humans notice but pixel metrics miss", "correct": true },
+        { "id": "c", "text": "The structural similarity of luminance and contrast patterns in local 11×11 patches", "correct": false },
+        { "id": "d", "text": "Compression ratio, since LPIPS is smaller for more compressed images", "correct": false }
+      ],
+      "explanation": "LPIPS is trained on human perceptual judgments and uses deep features that capture semantic and texture information at multiple scales. It handles cases where SSIM and PSNR give high scores to visually degraded images (e.g., systematic blurring that preserves local statistics but destroys perceptual quality).",
+      "hint": "Think about what deep network features capture that 11×11 local statistics cannot."
+    },
+    {
+      "id": "q2_m4",
+      "type": "multiple-choice",
+      "prompt": "The Synthetic NeRF (Blender) dataset systematically yields higher PSNR values than real-capture datasets like Tanks and Temples. What is the primary reason?",
+      "options": [
+        { "id": "a", "text": "Synthetic scenes are simpler (fewer Gaussians needed), so training converges better", "correct": false },
+        { "id": "b", "text": "Ground-truth reference images are perfect (no camera noise, blur, or exposure variation), making them easier to match exactly", "correct": true },
+        { "id": "c", "text": "The Blender dataset has lower resolution, and PSNR improves with lower resolution", "correct": false },
+        { "id": "d", "text": "The white background in Blender scenes makes alpha compositing trivially accurate", "correct": false }
+      ],
+      "explanation": "Real photographs contain sensor noise, slight motion blur, auto-exposure variation, and rolling-shutter artifacts. Even a perfect 3DGS representation cannot match a noisy reference image pixel-for-pixel, capping achievable PSNR. Synthetic renders have zero noise, so a well-converged reconstruction can achieve very high PSNR. This is why Blender PSNR values (~28–35 dB) cannot be compared directly to real-capture PSNR values (~24–30 dB).",
+      "hint": "What fundamental difference exists between a rendered PNG and a photo taken with a camera sensor?"
+    },
+    {
+      "id": "q2_m5",
+      "type": "multiple-choice",
+      "prompt": "According to the standardized evaluation protocol, what is the most impactful experimental variable affecting PSNR comparability across papers?",
+      "options": [
+        { "id": "a", "text": "The number of training iterations (30K vs 7K)", "correct": false },
+        { "id": "b", "text": "The GPU model used for training", "correct": false },
+        { "id": "c", "text": "Evaluation resolution relative to training resolution", "correct": true },
+        { "id": "d", "text": "The random seed used for SfM initialization", "correct": false }
+      ],
+      "explanation": "Evaluating at a lower resolution than training (e.g., 2× downsampling) acts as antialiasing and reduces high-frequency reconstruction errors, artificially inflating PSNR. The 3DGS.zip survey identifies this as the single most impactful hidden variable — PSNR can vary by > 1 dB depending on whether eval resolution matches training resolution.",
+      "hint": "Consider the effect of downsampling on the MSE calculation used for PSNR."
+    }
+  ]
+}

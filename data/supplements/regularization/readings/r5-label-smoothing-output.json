@@ -1,0 +1,91 @@
+{
+  "id": "r5",
+  "moduleId": "regularization",
+  "title": "Label Smoothing and Output Regularizers",
+  "estimatedMinutes": 12,
+  "learningObjectives": [
+    {
+      "id": "r5-lo1",
+      "verb": "Derive",
+      "description": "Derive the label-smoothed cross-entropy target distribution and explain why it bounds the maximum logit difference, preventing overconfident outputs",
+      "skillTags": ["regularization"]
+    },
+    {
+      "id": "r5-lo2",
+      "verb": "Explain",
+      "description": "Explain what overconfident models learn about their penultimate-layer representations and why label smoothing improves calibration and cross-architecture transfer",
+      "skillTags": ["regularization", "training-dynamics"]
+    },
+    {
+      "id": "r5-lo3",
+      "verb": "Distinguish",
+      "description": "Distinguish label smoothing from temperature scaling — identifying which is applied at training time vs. inference time and what each controls",
+      "skillTags": ["regularization"]
+    },
+    {
+      "id": "r5-lo4",
+      "verb": "Explain",
+      "description": "Explain the confidence penalty as an entropy regularizer on the output distribution and relate it to maximum-entropy reinforcement learning policies",
+      "skillTags": ["regularization"]
+    }
+  ],
+  "prevItem": { "type": "reading", "id": "r4" },
+  "nextItem": { "type": "reading", "id": "r6" },
+  "content": "## The Overconfidence Problem\n\nA neural network trained with one-hot targets and cross-entropy loss has a strong incentive to push the correct class logit to $+\\infty$ while pushing all others to $-\\infty$. The softmax output approaches a unit spike: the predicted probability for the correct class approaches 1.\n\nThis creates several problems:\n1. **Poor calibration:** the model's confidence does not match actual accuracy\n2. **Brittle representations:** the penultimate layer's features cluster tightly toward the corners of the simplex, leaving little room for uncertainty or transfer\n3. **Gradient vanishing near convergence:** once softmax saturates, gradients approach zero and training stalls\n\n---\n\n## Label Smoothing\n\nLabel smoothing (Szegedy et al., 2016; first popularized in Inception-v3) replaces the one-hot target $\\mathbf{y}$ with a soft distribution:\n\n$$\\tilde{y}_k = (1-\\varepsilon)\\, y_k + \\frac{\\varepsilon}{K}$$\n\nFor the correct class $k^*$: $\\tilde{y}_{k^*} = 1 - \\varepsilon + \\varepsilon/K \\approx 1-\\varepsilon$\nFor all other classes $k \\neq k^*$: $\\tilde{y}_k = \\varepsilon/K$\n\nTypically $\\varepsilon = 0.1$ and $K$ is the number of classes.\n\nThe cross-entropy loss with smoothed labels:\n\n$$\\mathcal{L}_{\\text{LS}} = (1-\\varepsilon)\\mathcal{L}_{\\text{CE}}(\\hat{\\mathbf{p}}, \\mathbf{y}) + \\frac{\\varepsilon}{K}\\sum_{k=1}^K \\mathcal{L}_{\\text{CE}}(\\hat{\\mathbf{p}}, \\mathbf{u}_K)$$\n\nwhere $\\mathbf{u}_K$ is the uniform distribution over all classes. The second term penalizes the model for being too far from uniform — it regularizes the output distribution toward uniformity.\n\n### Effect on Logits\n\nThe optimal logits under label-smoothed cross-entropy satisfy:\n\n$$z_{k^*} - z_k = \\log\\frac{(1-\\varepsilon)(K-1)}{{\\varepsilon}} \\quad \\text{(for all } k \\neq k^*\\text{)}\n$$\n\nThis is finite. Label smoothing imposes a maximum **logit gap** — the model cannot drive $z_{k^*} - z_k \\to \\infty$ without increasing the loss. This prevents the saturation that halts training and the overconfidence that hurts calibration.\n\n### Effect on Representations\n\nMüller et al. (2019) showed that label smoothing causes penultimate-layer representations to form **compact, well-separated clusters** in feature space, rather than collapsing toward simplex corners. This is why features from models trained with label smoothing transfer better to other tasks via knowledge distillation or fine-tuning.\n\n---\n\n## Temperature Scaling\n\nTemperature scaling is a post-hoc calibration technique applied **at inference**, not during training. Divide logits by temperature $T$ before softmax:\n\n$$\\hat{p}_k = \\text{Softmax}(\\mathbf{z}/T)_k$$\n\n- $T > 1$: softer distribution — spreads probability mass across classes, reduces confidence\n- $T < 1$: sharper distribution — concentrates probability on the top class, increases confidence\n- $T = 1$: original distribution\n\n$T$ is fit on a held-out validation set by minimizing NLL. It does not change predictions (argmax is the same) — only the calibration of the probabilities.\n\n**Label smoothing** (training-time): changes the target distribution; affects learned features.\n**Temperature scaling** (inference-time): re-scales already-trained logits; does not affect features.\n\n---\n\n## The Confidence Penalty\n\nPereyra et al. (2017) add an explicit **entropy bonus** to the loss, penalizing low-entropy output distributions:\n\n$$\\mathcal{L}_{\\text{conf}} = \\mathcal{L}_{\\text{CE}} - \\beta H(\\hat{\\mathbf{p}}) = \\mathcal{L}_{\\text{CE}} + \\beta\\sum_k \\hat{p}_k \\log \\hat{p}_k$$\n\n- When $\\hat{\\mathbf{p}}$ is peaked (confident), $H(\\hat{\\mathbf{p}})$ is low and the penalty is large\n- When $\\hat{\\mathbf{p}}$ is flat (uncertain), $H(\\hat{\\mathbf{p}})$ is high and the penalty is small\n\nThis is equivalent to label smoothing when the smoothed distribution is uniform — they are two parameterizations of the same regularization idea.\n\n### Maximum-Entropy RL Policies\n\nThe confidence penalty appears prominently in reinforcement learning. **Soft Actor-Critic (SAC)** adds an entropy bonus to the RL objective:\n\n$$J(\\pi) = \\sum_t \\mathbb{E}\\bigl[r_t + \\alpha H(\\pi(\\cdot|s_t))\\bigr]$$\n\nMaximizing entropy encourages the policy to be as random as possible while still collecting rewards — this provides natural **exploration**, prevents premature convergence to a suboptimal deterministic policy, and improves robustness. The temperature $\\alpha$ balances reward maximization against entropy maximization.\n\n---\n\n## PyTorch and TensorFlow\n\n**PyTorch** — label smoothing, temperature scaling, confidence penalty:\n\n```python\nimport torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\n# Label smoothing — built into CrossEntropyLoss since PyTorch 1.10\n# Internally computes: (1-eps)*one_hot + eps/K for K classes\ncriterion = nn.CrossEntropyLoss(label_smoothing=0.1)\n\nlogits = torch.randn(16, 10)          # raw logits from model\ntargets = torch.randint(0, 10, (16,))\nloss = criterion(logits, targets)     # smoothed cross-entropy\n\n# Temperature scaling at inference (post-training calibration)\ndef temperature_scale(logits, T=1.5):\n    \"\"\"Divide logits by T before softmax to soften the probability distribution.\"\"\"\n    return F.softmax(logits / T, dim=-1)\n\nprobs_sharp = F.softmax(logits, dim=-1)          # high-confidence\nprobs_soft  = temperature_scale(logits, T=2.0)   # calibrated / softer\n\n# Confidence penalty: add entropy bonus to loss (discourages overconfident outputs)\ndef confidence_penalty(logits, beta=0.1):\n    probs   = F.softmax(logits, dim=-1)\n    entropy = -(probs * probs.log()).sum(dim=-1).mean()   # H(p)\n    return -beta * entropy     # subtract entropy to penalize low-entropy (overconfidence)\n\nloss_total = criterion(logits, targets) + confidence_penalty(logits)\n```\n\n**TensorFlow / Keras:**\n\n```python\nimport tensorflow as tf\n\n# Label smoothing built into CategoricalCrossentropy and SparseCategoricalCrossentropy\nloss_fn = tf.keras.losses.SparseCategoricalCrossentropy(\n    from_logits=True,\n    label_smoothing=0.1,    # y_smoothed = (1-0.1)*y_onehot + 0.1/K\n)\n\nlogits  = tf.random.normal((16, 10))\ntargets = tf.random.uniform((16,), 0, 10, dtype=tf.int32)\nloss    = loss_fn(targets, logits)\n\n# Temperature scaling\ndef temperature_scale(logits, T=1.5):\n    return tf.nn.softmax(logits / T, axis=-1)\n```",
+  "equationBreakdowns": [
+    {
+      "label": "Label Smoothing",
+      "heading": "Label Smoothing",
+      "terms": [
+        {
+          "symbol": "(1-\\varepsilon)\\, y_k",
+          "name": "Scaled true label",
+          "desc": "The one-hot label scaled down from 1 to (1−ε). The correct class target is no longer exactly 1 — preventing the optimizer from driving its logit to infinity."
+        },
+        {
+          "symbol": "\\varepsilon/K",
+          "name": "Uniform component",
+          "desc": "A small fraction ε of probability mass is spread uniformly across all K classes. Even the wrong classes have a nonzero target — the model must explain a little probability for each."
+        },
+        {
+          "symbol": "\\varepsilon",
+          "name": "Smoothing factor",
+          "desc": "Typically 0.1. Controls the strength of regularization. ε=0 is standard one-hot CE; ε=1 is fully uniform (no information from labels)."
+        }
+      ]
+    },
+    {
+      "label": "Confidence Penalty",
+      "heading": "The Confidence Penalty",
+      "terms": [
+        {
+          "symbol": "-\\beta H(\\hat{\\mathbf{p}})",
+          "name": "Negative entropy penalty",
+          "desc": "Subtracting entropy adds it as a reward — the optimizer is incentivized to maintain high-entropy (uncertain) output distributions. β controls the strength."
+        },
+        {
+          "symbol": "H(\\hat{\\mathbf{p}}) = -\\sum_k \\hat{p}_k \\log \\hat{p}_k",
+          "name": "Output entropy",
+          "desc": "Low when the output distribution is concentrated on one class (confident). High when probability is spread across many classes (uncertain). The penalty grows as the model becomes overconfident."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Szegedy et al. 2016",
+      "title": "Rethinking the Inception Architecture (introduces label smoothing)",
+      "url": "https://arxiv.org/abs/1512.00567"
+    },
+    {
+      "label": "Müller et al. 2019",
+      "title": "When Does Label Smoothing Help?",
+      "url": "https://arxiv.org/abs/1906.02629"
+    },
+    {
+      "label": "Haarnoja et al. 2018",
+      "title": "Soft Actor-Critic (entropy-regularized RL)",
+      "url": "https://arxiv.org/abs/1801.01290"
+    }
+  ]
+}

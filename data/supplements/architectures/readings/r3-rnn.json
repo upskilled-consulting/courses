@@ -1,0 +1,76 @@
+{
+  "id": "r3",
+  "moduleId": "architectures",
+  "title": "Vanilla RNNs and the Vanishing Gradient",
+  "estimatedMinutes": 14,
+  "learningObjectives": [
+    {
+      "id": "r3-lo1",
+      "verb": "Trace",
+      "description": "Trace the recurrent forward pass h_t = tanh(W_h h_{t-1} + W_x x_t + b) through a sequence of T timesteps, identifying the shared weights and the hidden state",
+      "skillTags": ["architectures", "rnn"]
+    },
+    {
+      "id": "r3-lo2",
+      "verb": "Explain",
+      "description": "Explain why gradients vanish through long RNN sequences by tracing the repeated multiplication of ∂h_t/∂h_{t-1} in backpropagation through time",
+      "skillTags": ["architectures", "rnn", "training-dynamics"]
+    },
+    {
+      "id": "r3-lo3",
+      "verb": "Distinguish",
+      "description": "Distinguish many-to-one, one-to-many, many-to-many (synced), and many-to-many (encoder-decoder) RNN configurations and give an example task for each",
+      "skillTags": ["architectures", "rnn"]
+    },
+    {
+      "id": "r3-lo4",
+      "verb": "Explain",
+      "description": "Explain exploding gradients and state the standard engineering fix (gradient clipping by norm), and state why gradient clipping does not solve vanishing gradients",
+      "skillTags": ["architectures", "rnn", "training-dynamics"]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r2"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r4"
+  },
+  "content": "## Why Sequences Need Special Treatment\n\nAn MLP expects a fixed-size input. Language, audio, time series, and video are sequences — they have variable length and their meaning depends on order. Two approaches exist: (1) process the entire sequence at once with attention (transformers), or (2) process it step by step with a recurrent state.\n\nRecurrent neural networks (RNNs) take the second approach: they maintain a **hidden state** that is updated at each timestep, encoding a summary of everything seen so far.\n\n---\n\n## The Vanilla RNN\n\nA vanilla (Elman) RNN processes a sequence $\\mathbf{x}_1, \\mathbf{x}_2, \\ldots, \\mathbf{x}_T$ one element at a time:\n\n$$\\mathbf{h}_t = \\phi\\bigl(W_h \\mathbf{h}_{t-1} + W_x \\mathbf{x}_t + \\mathbf{b}\\bigr)$$\n$$\\hat{\\mathbf{y}}_t = W_y \\mathbf{h}_t + \\mathbf{c}$$\n\nwhere:\n- $\\mathbf{h}_t \\in \\mathbb{R}^{d_h}$ — the **hidden state** at time $t$, the RNN's \"memory\"\n- $\\mathbf{x}_t \\in \\mathbb{R}^{d_x}$ — the input at time $t$\n- $W_h \\in \\mathbb{R}^{d_h \\times d_h}$ — recurrent weight matrix (shared across all $t$)\n- $W_x \\in \\mathbb{R}^{d_h \\times d_x}$ — input weight matrix (shared across all $t$)\n- $\\phi$ — typically tanh (saturating, keeps values in $[-1,1]$, which stabilizes the state)\n- $\\hat{\\mathbf{y}}_t$ — output at time $t$ (not always used at every step)\n\n**Weight sharing across time** is the RNN's equivalent of CNN weight sharing across space: the same function is applied at every position, regardless of $T$.\n\nInitial hidden state $\\mathbf{h}_0$ is typically set to $\\mathbf{0}$.\n\n---\n\n## Architectural Configurations\n\n| Configuration | Structure | Task examples |\n|---|---|---|\n| **Many-to-one** | Process full sequence, output at $T$ only | Sentiment analysis, document classification |\n| **One-to-many** | Single input, generate sequence | Image captioning, music generation |\n| **Many-to-many (synced)** | Output at every $t$ | Sequence tagging, language modeling |\n| **Many-to-many (seq2seq)** | Encoder (many-to-one) + decoder (one-to-many) | Machine translation, summarization |\n\nThe seq2seq configuration, introduced by Sutskever et al. (2014), encodes the entire input sequence into a single context vector $\\mathbf{h}_T$, then decodes it into the output sequence. This became the dominant approach for translation before transformers.\n\n---\n\n## Backpropagation Through Time\n\nTraining an RNN requires differentiating the loss through the recurrent computation. **Backpropagation through time (BPTT)** unrolls the RNN into a deep feedforward network and applies standard backprop.\n\nThe gradient of the loss with respect to the hidden state at time $t$ depends on all future hidden states:\n\n$$\\frac{\\partial \\mathcal{L}}{\\partial \\mathbf{h}_t} = \\sum_{k=t}^T \\frac{\\partial \\mathcal{L}_k}{\\partial \\mathbf{h}_k} \\prod_{j=t}^{k-1} \\frac{\\partial \\mathbf{h}_{j+1}}{\\partial \\mathbf{h}_j}$$\n\nThe Jacobian of one step:\n\n$$\\frac{\\partial \\mathbf{h}_{t+1}}{\\partial \\mathbf{h}_t} = \\text{diag}(\\phi'(\\cdot)) \\cdot W_h$$\n\nFor the gradient to flow from step $T$ back to step $1$, this Jacobian is multiplied $T-1$ times.\n\n---\n\n## The Vanishing Gradient Problem\n\nIf the spectral norm $\\|W_h\\| < 1$ or the activations $\\phi'(\\cdot) < 1$, the product of $T$ Jacobians shrinks exponentially:\n\n$$\\left\\| \\prod_{j=t}^{T-1} \\frac{\\partial \\mathbf{h}_{j+1}}{\\partial \\mathbf{h}_j} \\right\\| \\leq \\left(\\lambda_{\\max} \\cdot \\max |\\phi'|\\right)^{T-t}$$\n\nFor tanh: $\\max |\\phi'| = 1$ (at 0) and saturates to 0 at large values. Once activations saturate, $\\phi'(\\cdot) \\approx 0$, and the entire gradient vanishes.\n\n**The consequence:** Gradients from late timesteps do not reach early timesteps. The RNN cannot learn to correlate events separated by many steps. The hidden state $\\mathbf{h}_T$ encodes only recent history — the network has a short effective memory.\n\n---\n\n## The Exploding Gradient Problem\n\nIf $\\|W_h\\| > 1$, the product grows exponentially — gradients can become enormous, causing weight updates that destabilize training entirely (NaN loss).\n\n**Fix: gradient clipping by norm.**\n\nBefore the optimizer step, if the gradient norm exceeds a threshold $\\tau$:\n\n$$\\mathbf{g} \\leftarrow \\tau \\cdot \\frac{\\mathbf{g}}{\\|\\mathbf{g}\\|}$$\n\nThis is standard practice when training RNNs and transformers. In PyTorch: `torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)`.\n\n**Why clipping does not fix vanishing gradients:** Clipping rescales large gradients downward but cannot make small gradients larger. The zero-gradient problem requires architectural changes — specifically, gated architectures (LSTM, GRU, next reading).\n\n---\n\n## Bidirectional RNNs\n\nA standard RNN only sees past context at each step. For tasks where future context matters (e.g., part-of-speech tagging, NER), a **bidirectional RNN** runs two RNNs in opposite directions and concatenates their hidden states:\n\n$$\\mathbf{h}_t = [\\overrightarrow{\\mathbf{h}}_t\\, ;\\, \\overleftarrow{\\mathbf{h}}_t]$$\n\nThis doubles the hidden dimension. BERT uses a bidirectional architecture (via masked self-attention, not recurrence) to achieve the same effect.\n\n---\n\n## PyTorch and TensorFlow\n\n**PyTorch** — `nn.RNN`, bidirectional, manual unrolling:\n\n```python\nimport torch\nimport torch.nn as nn\n\n# nn.RNN: input_size, hidden_size, num_layers\nrnn = nn.RNN(input_size=32, hidden_size=64, num_layers=2,\n             batch_first=True,    # input shape: (B, T, input_size)\n             nonlinearity='tanh', # 'relu' also available\n             dropout=0.2)          # applied between layers (not on final output)\n\nx        = torch.randn(8, 20, 32)    # (batch=8, seq_len=20, input_size=32)\nout, h_n = rnn(x)                    # out: (8,20,64)  h_n: (num_layers,8,64)\n# out: hidden state at every timestep\n# h_n: hidden state at the final timestep for each layer\n\n# Bidirectional RNN: concatenates forward and backward hidden states\nbi_rnn = nn.RNN(32, 64, batch_first=True, bidirectional=True)\nout, h_n = bi_rnn(x)                 # out: (8,20,128)  h_n: (2,8,64)\n# out last dim = 2 * hidden_size\n\n# Gradient clipping to handle exploding gradients\noptimizer = torch.optim.Adam(rnn.parameters(), lr=1e-3)\nloss = out.sum()\nloss.backward()\ntorch.nn.utils.clip_grad_norm_(rnn.parameters(), max_norm=1.0)\noptimizer.step()\n```\n\n**TensorFlow / Keras:**\n\n```python\nimport tensorflow as tf\n\n# SimpleRNN — rarely used in practice but matches the vanilla RNN formulation\nrnn = tf.keras.layers.SimpleRNN(units=64, return_sequences=True, dropout=0.2)\nx   = tf.random.normal((8, 20, 32))\nout = rnn(x)   # (8, 20, 64) with return_sequences=True\n\n# Bidirectional wrapper\nbi_rnn = tf.keras.layers.Bidirectional(\n    tf.keras.layers.SimpleRNN(64, return_sequences=True)\n)  # output: (8, 20, 128)\n\n# Gradient clipping on the optimizer\noptimizer = tf.keras.optimizers.Adam(learning_rate=1e-3, clipnorm=1.0)\n```",
+  "equationBreakdowns": [
+    {
+      "label": "RNN Recurrence",
+      "heading": "The Vanilla RNN",
+      "terms": [
+        {
+          "symbol": "\\mathbf{h}_t",
+          "name": "Hidden state at time t",
+          "desc": "The RNN's memory — a d_h-dimensional vector summarizing all inputs seen up to time t. Updated at every step."
+        },
+        {
+          "symbol": "W_h \\mathbf{h}_{t-1}",
+          "name": "Recurrent contribution",
+          "desc": "How much the previous state influences the current one. W_h is shared across all timesteps — the network applies the same state transition at every step."
+        },
+        {
+          "symbol": "W_x \\mathbf{x}_t",
+          "name": "Input contribution",
+          "desc": "How the new input is mixed in. Also shared across all timesteps."
+        }
+      ]
+    },
+    {
+      "label": "BPTT Gradient",
+      "heading": "Backpropagation Through Time",
+      "terms": [
+        {
+          "symbol": "\\prod_{j=t}^{k-1} \\frac{\\partial \\mathbf{h}_{j+1}}{\\partial \\mathbf{h}_j}",
+          "name": "Product of Jacobians",
+          "desc": "To credit early inputs, gradients must flow backward through all intermediate timesteps. Each factor can shrink (vanish) or grow (explode) the gradient. For T=100 steps, this is a product of 99 Jacobians."
+        }
+      ]
+    }
+  ],
+  "references": []
+}

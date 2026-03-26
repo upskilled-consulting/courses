@@ -1,0 +1,20 @@
+{
+  "id": "lab4",
+  "moduleId": "m4",
+  "title": "Implementing SOM and FLAS for Grid Sorting",
+  "estimatedMinutes": 55,
+  "description": "## Lab 4: Grid Sorting Algorithms\n\nYou will implement SOM and a simplified FLAS from scratch, apply both to sorting synthetic 3DGS attributes into a 2D grid, measure quality using GAF and DPQ metrics, and demonstrate the compression benefit on a real entropy estimate.\n\n### Part 1: Quality Metrics\nImplement the D_p path metric, GAF, and a simplified DPQ. Use them to evaluate random vs. sorted arrangements.\n\n### Part 2: SOM Implementation\nBuild a SOM that sorts N RGB triples onto a 2D grid. Experiment with learning rate schedules and neighborhood radius decay. Visualize the sorted grid at multiple stages of training.\n\n### Part 3: FLAS Implementation\nImplement the core FLAS loop: Gaussian filter → local linear assignment (4×4 patches) → repeat. Compare quality and runtime to SOM on the same data.\n\n### Part 4: 3DGS Position Sorting\nApply both algorithms to sort 1024 3D Gaussian positions (xyz) onto a 32×32 grid. Measure the entropy of the sorted vs. unsorted position arrays to quantify compression benefit.",
+  "objectives": [
+    "Implement D_p path metric and Grid Adjacency Fidelity from scratch.",
+    "Build a complete SOM and tune its hyperparameters for 2D grid sorting.",
+    "Implement simplified FLAS using scipy Gaussian filter and linear_sum_assignment.",
+    "Compare SOM and FLAS on quality metrics and runtime for N=1024 and N=4096.",
+    "Demonstrate compression improvement by measuring entropy before and after sorting."
+  ],
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/3dgs/lab4_grid_sorting.ipynb",
+  "prevItem": {
+    "type": "quiz",
+    "id": "q2"
+  },
+  "nextItem": null
+}

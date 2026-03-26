@@ -1,0 +1,78 @@
+{
+  "id": "q3",
+  "moduleId": "m6",
+  "title": "SOGS Architecture, Metrics & Compression Benchmarks",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "questions": [
+    {
+      "id": "q6_q3_1",
+      "type": "multiple-choice",
+      "prompt": "The SOGS pipeline produces a 2D grid ordering of Gaussians via SOM + PLAS. Why does this ordering enable better compression than opacity-weighted volume sorting?",
+      "options": [
+        { "id": "a", "text": "Adjacent cells in the SOM grid correspond to spatially and photometrically similar Gaussians, so delta-coding across rows achieves near-zero residuals — unlike opacity sorting, which spreads spatially distant Gaussians to adjacent slots", "correct": true },
+        { "id": "b", "text": "SOM sorting always places the largest Gaussians first, reducing the range of scale values that must be encoded", "correct": false },
+        { "id": "c", "text": "Opacity-sorted Gaussians cannot be stored as PNG images, while SOM-sorted Gaussians can — the compression gain comes entirely from the PNG DEFLATE codec", "correct": false },
+        { "id": "d", "text": "SOM sorting groups Gaussians by their SH band index, allowing each band to be quantized independently at different bitwidths", "correct": false }
+      ],
+      "explanation": "The key insight is spatial coherence in feature space. In an opacity-sorted file, consecutive entries can be from entirely different regions of the scene (a ceiling tile followed by a distant tree), so their position/color/scale vectors are uncorrelated and delta coding is ineffective. SOM training minimizes the total feature-space distance between adjacent grid cells, ensuring neighboring entries describe nearby Gaussians. The high local correlation means quantization residuals are small and further compressed by entropy coding.",
+      "hint": "Think about what property of the data makes delta coding (predict from neighbor, encode the difference) effective."
+    },
+    {
+      "id": "q6_q3_2",
+      "type": "code-completion",
+      "prompt": "Implement the BMU search for a single input feature vector across all SOM grid cells. The function should return the index of the best matching unit:",
+      "codeTemplate": "import numpy as np\n\ndef find_bmu(weights, x):\n    \"\"\"\n    Find the Best Matching Unit (BMU) for feature vector x.\n    \n    weights: (N, D) array of SOM prototype weight vectors\n             N = grid_h * grid_w flattened, D = feature dimension\n    x: (D,) feature vector for a single Gaussian\n    \n    Returns: int index k* = argmin_k ||x - weights[k]||^2\n    \"\"\"\n    diffs = weights - x   # (N, D) broadcast subtraction\n    sq_dists = ___BLANK___  # (N,) squared Euclidean distances\n    return int(np.argmin(sq_dists))",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "np.sum(diffs**2, axis=1)",
+        "np.sum(diffs ** 2, axis=1)",
+        "(diffs**2).sum(axis=1)",
+        "(diffs ** 2).sum(axis=1)",
+        "np.einsum('nd,nd->n', diffs, diffs)"
+      ],
+      "explanation": "Squared Euclidean distance between each weight vector and x is ||w_k - x||² = Σ_d (w_kd - x_d)². After broadcasting subtraction `weights - x` gives an (N, D) array of differences; summing along axis=1 (the D dimension) collapses to (N,) squared distances. argmin then gives the BMU index. Note we minimise squared distance rather than Euclidean distance — the square root is monotone and adds unnecessary computation.",
+      "hint": "The squared L2 norm of each row in `diffs` gives the squared distance. Use np.sum(..., axis=1) to reduce along the feature dimension."
+    },
+    {
+      "id": "q6_q3_3",
+      "type": "multiple-choice",
+      "prompt": "A 3DGS reconstruction achieves PSNR = 28.5 dB. The SOGS-compressed version of the same scene at 20× compression achieves PSNR = 27.6 dB. How should you interpret this 0.9 dB difference?",
+      "options": [
+        { "id": "a", "text": "The SOGS version is unacceptably degraded — a 0.9 dB loss means MSE has increased by nearly 100%, which would be clearly visible to any viewer", "correct": false },
+        { "id": "b", "text": "The 0.9 dB drop corresponds to a ~23% increase in MSE; at this magnitude, quality loss is typically imperceptible and the 20× file size reduction represents a strongly favourable tradeoff for most deployment scenarios", "correct": true },
+        { "id": "c", "text": "The PSNR difference is meaningless — you need SSIM and LPIPS to determine whether the compression is acceptable", "correct": false },
+        { "id": "d", "text": "A 0.9 dB drop is equivalent to a 0.9% reduction in image quality on a linear scale, so the compression is near-lossless", "correct": false }
+      ],
+      "explanation": "A 3 dB increase in PSNR corresponds to halving MSE (10 log₁₀(2) ≈ 3). So 0.9 dB corresponds to a factor of 10^(0.9/10) ≈ 1.23 increase in MSE — about 23% more per-pixel squared error. In the 27–30 dB range typical of 3DGS, this is visually imperceptible for most viewing conditions. The threshold for perceptible quality loss is typically placed at ~1–2 dB in the 3DGS literature. A 20× file size reduction (from e.g. 400 MB to 20 MB) is a major practical benefit for web deployment.",
+      "hint": "How many dB corresponds to doubling or halving the MSE? And is 0.9 dB a large or small fraction of that?"
+    },
+    {
+      "id": "q6_q3_4",
+      "type": "multiple-choice",
+      "prompt": "The LLFF 1/8 holdout protocol selects every 8th frame as a test view. You are evaluating a reconstruction from a video where the camera barely moves for 80 consecutive frames (a stationary shot), then moves rapidly for 20 frames. How should you handle this for fair evaluation?",
+      "options": [
+        { "id": "a", "text": "Apply the 1/8 holdout uniformly — the protocol is designed to be robust to camera motion patterns and should not be modified", "correct": false },
+        { "id": "b", "text": "Subsample or deduplicate the stationary frames before applying the 1/8 holdout, so that test views are distributed across unique viewpoints rather than concentrated in the static segment", "correct": true },
+        { "id": "c", "text": "Exclude the stationary segment entirely, since stationary frames contribute no SfM information", "correct": false },
+        { "id": "d", "text": "Use a 1/4 holdout during the stationary segment and 1/8 during the motion segment to maintain equal test coverage", "correct": false }
+      ],
+      "explanation": "The 1/8 protocol assumes the camera trajectory is roughly uniform so that systematic sampling covers it evenly. When 80% of frames show an almost-identical view, 80% of your test images will evaluate interpolation of a static shot — a trivially easy task for any reconstructor. The benchmark becomes dominated by the stationary segment's easy frames, inflating PSNR scores. Deduplicating or subsampling frames from near-identical viewpoints before applying the holdout gives a more representative evaluation of the model's actual generalization capability.",
+      "hint": "What does the 1/8 holdout implicitly assume about the distribution of viewpoints in the input video?"
+    },
+    {
+      "id": "q6_q3_5",
+      "type": "multiple-choice",
+      "prompt": "LPIPS uses deep VGG features rather than pixel-level statistics. In what scenario would LPIPS disagree most strongly with PSNR — giving a much better LPIPS score than PSNR would suggest?",
+      "options": [
+        { "id": "a", "text": "A reconstruction with a small global brightness offset — e.g., the rendered image is uniformly 5 gray levels darker than the reference", "correct": true },
+        { "id": "b", "text": "A reconstruction with hallucinated geometric details — e.g., a wall with fictitious bricks added that weren't in the training images", "correct": false },
+        { "id": "c", "text": "A reconstruction with floaters — small opaque Gaussians in empty space that produce visible artifacts in novel views", "correct": false },
+        { "id": "d", "text": "A reconstruction where a small region (e.g., a face) is perfectly sharp but the rest of the image is blurry", "correct": false }
+      ],
+      "explanation": "PSNR is dominated by average per-pixel MSE. A uniform brightness offset of 5 levels across an 1280×720 image contributes 5² = 25 per pixel to MSE, producing a large PSNR penalty even though the structural content is identical. VGG features are computed from normalized feature maps that are largely invariant to global brightness and contrast shifts — so LPIPS would correctly score the two images as very similar (low LPIPS distance). This is a known limitation of PSNR for novel-view synthesis evaluation, where exposure compensation mismatches between training and test images are common.",
+      "hint": "PSNR penalises all per-pixel differences equally. What kind of difference would look bad in pixel-space but structurally identical to a human?"
+    }
+  ]
+}

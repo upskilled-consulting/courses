@@ -1,0 +1,84 @@
+{
+  "id": "d1",
+  "moduleId": "architectures",
+  "title": "MLPs, CNNs, and ResNets",
+  "description": "Flashcards covering dense layers, convolutional operations, residual connections, and architectural design principles.",
+  "estimatedMinutes": 12,
+  "cards": [
+    {
+      "id": "c01",
+      "front": "**Single dense layer** — formula and what each term does",
+      "back": "$$\\mathbf{h} = \\phi(W\\mathbf{x} + \\mathbf{b})$$\n- $W$ — weight matrix: learns a linear mixing of inputs\n- $\\mathbf{b}$ — bias: shifts the pre-activation\n- $\\phi$ — non-linearity: without this, stacking layers collapses to one linear map"
+    },
+    {
+      "id": "c02",
+      "front": "**Universal Approximation Theorem** — what it says and what it does NOT say",
+      "back": "**Says:** a single hidden layer MLP can approximate any continuous function to arbitrary precision given enough neurons.\n\n**Does NOT say:**\n- Gradient descent will find the right weights\n- The network will generalize to unseen data\n- A shallow network is *practical* (may need exponentially many neurons)"
+    },
+    {
+      "id": "c03",
+      "front": "**Depth vs. width** — when does each help?",
+      "back": "**Depth** (more layers): compositional representations, parameter efficiency for structured data, better inductive bias for hierarchical features.\n\n**Width** (larger hidden dim): more capacity, easier to train (no gradient flow issues), useful when depth doesn't help.\n\n*Rule of thumb: modern networks prefer moderate depth with sufficient width.*"
+    },
+    {
+      "id": "c04",
+      "front": "**LayerNorm vs. BatchNorm** — key difference and where each is used",
+      "back": "**LayerNorm:** normalizes over the feature dimension of each example independently. Works with batch size 1. Standard in **transformers and RNNs**.\n\n**BatchNorm:** normalizes over the batch dimension for each feature. Requires large batches. Standard in **CNNs** (ResNets, EfficientNets)."
+    },
+    {
+      "id": "c05",
+      "front": "**Convolutional layer output size** — formula",
+      "back": "$$H_{\\text{out}} = \\left\\lfloor \\frac{H_{\\text{in}} + 2P - K}{S} \\right\\rfloor + 1$$\n\n$K$ = kernel size, $S$ = stride, $P$ = padding.\n\nExamples: Input 224, $K=3$, $S=1$, $P=1$ → 224 (same). Input 224, $K=3$, $S=2$, $P=1$ → 112 (halved)."
+    },
+    {
+      "id": "c06",
+      "front": "**Weight sharing** in convolutions — what is it and what does it encode?",
+      "back": "The same kernel weights are reused at every spatial position. A $3\\times3$ kernel has $9 C_{\\text{in}}$ parameters regardless of image size.\n\n**Encodes:** translation equivariance — the same feature detector (edge, corner) is useful everywhere in the image. This is the key inductive bias of CNNs for vision."
+    },
+    {
+      "id": "c07",
+      "front": "**Receptive field** — how does it grow with depth?",
+      "back": "For $L$ stacked $3\\times3$ conv layers (stride 1), each neuron sees a $(2L+1)\\times(2L+1)$ region of the input.\n\nTwo $3\\times3$ layers → $5\\times5$ RF with $2\\times9=18$ params (vs. one $5\\times5$ layer = 25 params + one fewer non-linearity). Stacking small kernels is more efficient."
+    },
+    {
+      "id": "c08",
+      "front": "**Max pooling vs. global average pooling** — what each discards/preserves",
+      "back": "**Max pooling ($K\\times K$):** keeps strongest activation in each window; discards exact location within window; preserves \"did this feature appear?\".\n\n**Global average pooling:** averages each entire feature map to a scalar. Collapses $H\\times W\\times C$ → $C$. Replaces large FC layers at the end of modern CNNs — few parameters, good regularization."
+    },
+    {
+      "id": "c09",
+      "front": "**Depthwise separable convolution** — structure and speedup",
+      "back": "1. **Depthwise:** one $K\\times K$ filter per input channel (spatial only, no channel mixing)\n2. **Pointwise:** $1\\times1$ conv to mix channels\n\n**Parameter reduction:** $\\approx 1/K^2$ vs. standard conv. For $K=3$: ~$8\\times$ fewer params.\n\n*Used in: MobileNet, Xception, EfficientNet*"
+    },
+    {
+      "id": "c10",
+      "front": "**The degradation problem** — what is it and why does it rule out overfitting?",
+      "back": "Adding more layers to a plain CNN degrades **training** accuracy (not just test accuracy) — a 56-layer network trains worse than a 20-layer one on the same data.\n\n**Not overfitting** — worse training loss means the optimization fails, not that the model memorizes. The network cannot even learn the identity function for its extra layers."
+    },
+    {
+      "id": "c11",
+      "front": "**Residual block** formula and the gradient highway argument",
+      "back": "$$\\mathbf{y} = \\mathcal{F}(\\mathbf{x}) + \\mathbf{x}$$\n\n**Gradient:** $\\frac{\\partial\\mathcal{L}}{\\partial\\mathbf{x}} = \\frac{\\partial\\mathcal{L}}{\\partial\\mathbf{y}}\\left(\\frac{\\partial\\mathcal{F}}{\\partial\\mathbf{x}} + I\\right)$\n\nThe $+I$ term carries the gradient through the skip path even if $\\partial\\mathcal{F}/\\partial\\mathbf{x}\\approx 0$. Gradient does not have to flow through the convolutions."
+    },
+    {
+      "id": "c12",
+      "front": "**Basic block vs. bottleneck block** — when to use each",
+      "back": "**Basic block** (ResNet-18/34): two $3\\times3$ convs. $18C^2$ params. Simpler, fewer layers, no channel compression.\n\n**Bottleneck** (ResNet-50+): $1\\times1$ compress → $3\\times3$ spatial → $1\\times1$ expand. $\\approx 1.06C^2$ params (~17× fewer).\n\n*Use bottleneck for networks deeper than 34 layers where parameter count matters.*"
+    },
+    {
+      "id": "c13",
+      "front": "**Projection shortcut** — when is it needed and what does it do?",
+      "back": "When a residual block changes spatial dimensions (stride 2) or channel count, $\\mathbf{x}$ and $\\mathcal{F}(\\mathbf{x})$ have different shapes and cannot be added directly.\n\n**Solution:** apply a $1\\times1$ conv to $\\mathbf{x}$: $\\mathbf{y} = \\mathcal{F}(\\mathbf{x}) + W_s\\mathbf{x}$\n\n$W_s$ adjusts shape only; it still provides a near-identity gradient path."
+    },
+    {
+      "id": "c14",
+      "front": "**Residual connections outside CNNs** — name two architectures and explain the shared principle",
+      "back": "**Transformers:** each sub-layer (attention + FFN) wrapped as $\\mathbf{y} = \\text{LayerNorm}(\\mathbf{x} + \\text{SubLayer}(\\mathbf{x}))$. Without this, >6-layer transformers cannot train.\n\n**DenseNet:** each layer receives all previous layers as input (concatenated skip connections).\n\n**Shared principle:** provide a gradient highway that bypasses the learned transformation, enabling very deep networks to train."
+    },
+    {
+      "id": "c15",
+      "front": "**Dropout** — mechanism, purpose, and when NOT to use it",
+      "back": "During training, randomly zero activations with probability $p$; scale remaining by $1/(1-p)$ (inverted dropout).\n\n**Purpose:** prevents co-adaptation of neurons; acts as ensemble averaging.\n\n**Avoid:** in the output layer; often omitted in transformers (layer norm does the job); can hurt small models that already struggle to learn."
+    }
+  ]
+}

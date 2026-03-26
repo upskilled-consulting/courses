@@ -1,0 +1,323 @@
+{
+  "id": "r3",
+  "moduleId": "optimizers",
+  "title": "The Adam Family",
+  "estimatedMinutes": 16,
+  "learningObjectives": [
+    {
+      "id": "r3-lo1",
+      "verb": "Derive",
+      "description": "Derive Adam's bias correction terms and explain why dividing by (1 − β^t) is necessary when moment buffers are zero-initialized",
+      "skillTags": [
+        "adam-family",
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r3-lo2",
+      "verb": "Distinguish",
+      "description": "Distinguish AdamW from Adam by tracing how decoupled weight decay changes the update rule and restores uniform L2 regularization semantics",
+      "skillTags": [
+        "adam-family",
+        "regularization"
+      ]
+    },
+    {
+      "id": "r3-lo3",
+      "verb": "Compare",
+      "description": "Compare RAdam's rectification term to standard Adam and state the conditions under which RAdam falls back to SGD-like updates during early training",
+      "skillTags": [
+        "adam-family",
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r3-lo4",
+      "verb": "Select",
+      "description": "Select among Adam, AdamW, Adamax, NAdam, RAdam, and SparseAdam based on gradient sparsity, weight decay requirements, and training stability needs",
+      "skillTags": [
+        "adam-family"
+      ]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r2"
+  },
+  "nextItem": {
+    "type": "quiz",
+    "id": "q1"
+  },
+  "content": "## Adam\n\nAdam (Kingma & Ba 2014) combines momentum (first moment) with RMSprop's adaptive learning rate (second moment), and critically adds **bias correction** to compensate for zero-initialization:\n\n$$m_t = \\beta_1 m_{t-1} + (1-\\beta_1) g_t \\qquad \\text{(first moment)}$$\n\n$$v_t = \\beta_2 v_{t-1} + (1-\\beta_2) g_t^2 \\qquad \\text{(second moment)}$$\n\n$$\\hat{m}_t = \\frac{m_t}{1 - \\beta_1^t}, \\quad \\hat{v}_t = \\frac{v_t}{1 - \\beta_2^t} \\qquad \\text{(bias correction)}$$\n\n$$\\theta_{t+1} = \\theta_t - \\frac{\\eta}{\\sqrt{\\hat{v}_t} + \\varepsilon} \\hat{m}_t$$\n\nWith $\\beta_1 = 0.9$, $\\beta_2 = 0.999$, the bias-correction denominator is $1 - 0.999^t$, which is tiny at $t=1$ (≈ 0.001), inflating $\\hat{v}_t$ to a large value. This prevents exploding updates at the start of training when the second moment estimate is near zero.\n\n```python\noptimizer = torch.optim.Adam(\n    model.parameters(), lr=1e-3, betas=(0.9, 0.999), eps=1e-8, weight_decay=0\n)\n```\n\n**TensorFlow:**\n```python\noptimizer = tf.keras.optimizers.Adam(\n    learning_rate=1e-3, beta_1=0.9, beta_2=0.999, epsilon=1e-8\n)\n# AMSGrad: tf.keras.optimizers.Adam(..., amsgrad=True)  (Keras 3 / TF 2.13+)\n```\n\n**AMSGrad** (`amsgrad=True`) uses the *maximum* of all past $\\hat{v}_t$ values instead of the current estimate, guaranteeing a non-increasing effective learning rate and improving convergence guarantees at the cost of slightly slower adaptation.\n\n## AdamW — Decoupled Weight Decay\n\nIn Adam, `weight_decay` adds $\\lambda \\theta$ to the gradient before the update — making the decay *adaptive* (scaled by $1/\\sqrt{\\hat{v}}$). This means parameters with large gradient variance receive less regularization, breaking the intended uniform shrinkage.\n\nAdamW (Loshchilov & Hutter 2017) applies weight decay *after* the adaptive update, independently of the gradient:\n$$\\theta_{t+1} = \\theta_t - \\eta \\left( \\frac{\\hat{m}_t}{\\sqrt{\\hat{v}_t} + \\varepsilon} + \\lambda \\theta_t \\right)$$\n\nThis restores the original L2 semantics: every parameter is shrunk by the same fraction $\\eta \\lambda$ regardless of its gradient history. **AdamW is the default choice for transformers, diffusion models, and most modern architectures.**\n\n```python\noptimizer = torch.optim.AdamW(\n    model.parameters(), lr=1e-3, betas=(0.9, 0.999), eps=1e-8,\n    weight_decay=0.01  # typical range: 0.01 – 0.1\n)\n```\n\n**TensorFlow:**\n```python\noptimizer = tf.keras.optimizers.AdamW(\n    learning_rate=1e-3, weight_decay=0.01,\n    beta_1=0.9, beta_2=0.999, epsilon=1e-8\n)\n```\n\n## Adamax\n\nAdamax is a variant of Adam that replaces the L2 norm in the second moment with the **L∞ (max) norm**:\n$$u_t = \\max(\\beta_2 u_{t-1}, |g_t|)$$\n\n$$\\theta_{t+1} = \\theta_t - \\frac{\\eta}{u_t + \\varepsilon} \\hat{m}_t$$\n\nBecause the max operation is naturally bounded (no runaway accumulation), Adamax does not need bias correction on $u_t$. It is more robust to large gradient spikes and can be useful for embedding layers with extreme gradient variance.\n\n```python\noptimizer = torch.optim.Adamax(\n    model.parameters(), lr=2e-3, betas=(0.9, 0.999), eps=1e-8\n)\n```\n\n**TensorFlow:**\n```python\noptimizer = tf.keras.optimizers.Adamax(\n    learning_rate=2e-3, beta_1=0.9, beta_2=0.999, epsilon=1e-8\n)\n```\n\n## NAdam — Nesterov Adam\n\nNAdam (Dozat 2016) incorporates Nesterov momentum into Adam by using a *lookahead* first moment — the gradient contribution from the next step's momentum is included in the current update:\n$$\\theta_{t+1} = \\theta_t - \\frac{\\eta}{\\sqrt{\\hat{v}_t} + \\varepsilon} \\left( \\frac{\\beta_1 \\hat{m}_t}{1 - \\beta_1^{t+1}} + \\frac{(1-\\beta_1) g_t}{1 - \\beta_1^t} \\right)$$\n\nIn practice, NAdam converges slightly faster than Adam on smooth objectives and is a low-risk drop-in replacement.\n\n```python\noptimizer = torch.optim.NAdam(\n    model.parameters(), lr=2e-3, betas=(0.9, 0.999),\n    momentum_decay=0.004  # gradual momentum warmup\n)\n```\n\n**TensorFlow:**\n```python\noptimizer = tf.keras.optimizers.Nadam(\n    learning_rate=2e-3, beta_1=0.9, beta_2=0.999, epsilon=1e-8\n)\n```\n\n## RAdam — Rectified Adam\n\nRAdam (Liu et al. 2019) diagnoses Adam's instability in early training: the second moment estimate has high variance when $t$ is small, causing the effective learning rate to fluctuate wildly. RAdam computes an analytical *rectification term* $r_t$ based on the estimated variance of the second moment:\n\n$$\\rho_t = \\rho_\\infty - \\frac{2t\\beta_2^t}{1 - \\beta_2^t}, \\quad \\rho_\\infty = \\frac{2}{1 - \\beta_2} - 1$$\n\n- If $\\rho_t > 4$: variance is tractable — apply the rectified adaptive update (like Adam)\n- Else: fall back to SGD with momentum (no adaptive scaling)\n\nThis gives RAdam automatic **warmup-free** behavior: the early steps are SGD-like and the adaptive phase engages once the second moment estimate stabilizes.\n\n```python\noptimizer = torch.optim.RAdam(\n    model.parameters(), lr=1e-3, betas=(0.9, 0.999), eps=1e-8\n)\n```\n\n**TensorFlow:** No built-in RAdam in core TF. Available via TF-Addons (`tfa.optimizers.RectifiedAdam`) or implement from the paper. In practice, AdamW with a short LinearLR warmup achieves similar early-training stability.\n\n## SparseAdam\n\nStandard Adam updates the second moment for every parameter every step, even when a parameter's gradient is zero (e.g., an embedding row for a token not in the batch). SparseAdam applies a **lazy update**: only parameters with non-zero gradients are updated at each step.\n\n```python\n# Only valid for parameters with sparse gradients (e.g., nn.Embedding)\noptimizer = torch.optim.SparseAdam(\n    [{'params': model.embedding.parameters()}],\n    lr=1e-3, betas=(0.9, 0.999), eps=1e-8\n)\n```\n\n**TensorFlow:** TF handles sparse gradients automatically — `tf.keras.optimizers.Adam` applies lazy updates for `tf.IndexedSlices` (the TF equivalent of sparse tensors). No separate SparseAdam class is needed.\n\n> **Constraint:** SparseAdam only supports sparse gradients. Dense parameters must use a separate optimizer (use multiple param groups with different optimizer types, or AdamW for everything).\n\n## Adam Family Summary\n\n| Variant | Key difference | Default `weight_decay` |\n|---|---|---|\n| Adam | First + second moment with bias correction | 0 |\n| AdamW | Decoupled weight decay | 0.01 |\n| Adamax | L∞ second moment, robust to spikes | 0 |\n| NAdam | Nesterov lookahead first moment | 0 |\n| RAdam | Variance-rectified warmup, auto SGD fallback | 0 |\n| SparseAdam | Lazy update for sparse gradients | n/a |\n",
+  "equationBreakdowns": [
+    {
+      "label": "Adam — first moment",
+      "heading": "Adam",
+      "terms": [
+        {
+          "symbol": "m_t",
+          "name": "First moment estimate",
+          "desc": "EMA of gradients — tracks the direction of recent gradient flow, analogous to momentum"
+        },
+        {
+          "symbol": "\\beta_1",
+          "name": "First moment decay",
+          "desc": "Typical value 0.9 — gives a ~10-step exponential moving average of gradients"
+        },
+        {
+          "symbol": "m_{t-1}",
+          "name": "Previous first moment",
+          "desc": "Accumulated gradient direction from all prior steps, decayed by $\\beta_1$"
+        },
+        {
+          "symbol": "(1-\\beta_1) g_t",
+          "name": "Current gradient contribution",
+          "desc": "Fraction of the new gradient added each step — small (0.1) so the EMA changes slowly"
+        }
+      ]
+    },
+    {
+      "label": "Adam — second moment",
+      "heading": "Adam",
+      "terms": [
+        {
+          "symbol": "v_t",
+          "name": "Second moment estimate",
+          "desc": "EMA of squared gradients — tracks per-parameter gradient magnitude, used to normalize the step size"
+        },
+        {
+          "symbol": "\\beta_2",
+          "name": "Second moment decay",
+          "desc": "Typical value 0.999 — gives a ~1000-step window, making $v_t$ a very stable estimate of gradient variance"
+        },
+        {
+          "symbol": "v_{t-1}",
+          "name": "Previous second moment",
+          "desc": "Accumulated squared-gradient history from all prior steps"
+        },
+        {
+          "symbol": "(1-\\beta_2) g_t^2",
+          "name": "Current squared gradient contribution",
+          "desc": "Fraction of the new squared gradient added — tiny (0.001) for stable variance tracking"
+        }
+      ]
+    },
+    {
+      "label": "Adam — bias correction",
+      "heading": "Adam",
+      "terms": [
+        {
+          "symbol": "\\hat{m}_t",
+          "name": "Bias-corrected first moment",
+          "desc": "$m_t$ divided by $(1 - \\beta_1^t)$ — at $t=1$ this inflates the near-zero $m_1$ to a proper gradient estimate"
+        },
+        {
+          "symbol": "\\hat{v}_t",
+          "name": "Bias-corrected second moment",
+          "desc": "$v_t$ divided by $(1 - \\beta_2^t)$ — critical at early steps: with $\\beta_2=0.999$, $(1-\\beta_2^1) \\approx 0.001$, inflating $\\hat{v}_1$ from near-zero to $g_1^2$"
+        },
+        {
+          "symbol": "1 - \\beta_1^t",
+          "name": "First moment correction factor",
+          "desc": "Grows from ~0.1 at $t=1$ toward 1 — correction fades away after the first few dozen steps"
+        },
+        {
+          "symbol": "1 - \\beta_2^t",
+          "name": "Second moment correction factor",
+          "desc": "Grows from ~0.001 at $t=1$ toward 1 — larger correction needed because $\\beta_2$ is much closer to 1"
+        }
+      ]
+    },
+    {
+      "label": "Adam — parameter update",
+      "heading": "Adam",
+      "terms": [
+        {
+          "symbol": "\\theta_{t+1}",
+          "name": "Updated parameters",
+          "desc": "Parameters after the adaptive step"
+        },
+        {
+          "symbol": "\\eta",
+          "name": "Learning rate",
+          "desc": "Global step size — typical value 1e-3. Acts as an upper bound on the effective per-parameter rate"
+        },
+        {
+          "symbol": "\\sqrt{\\hat{v}_t} + \\varepsilon",
+          "name": "Adaptive denominator",
+          "desc": "Square root of the bias-corrected second moment — normalizes the update so parameters with large gradient variance take smaller steps"
+        },
+        {
+          "symbol": "\\hat{m}_t",
+          "name": "Bias-corrected gradient direction",
+          "desc": "Smoothed gradient direction used as the numerator — momentum reduces noise compared to using $g_t$ directly"
+        },
+        {
+          "symbol": "\\varepsilon",
+          "name": "Epsilon",
+          "desc": "Numerical stability constant (default 1e-8) — also sets a floor on the effective learning rate when $\\hat{v}_t \\approx 0$"
+        }
+      ]
+    },
+    {
+      "label": "AdamW — decoupled update",
+      "heading": "AdamW",
+      "terms": [
+        {
+          "symbol": "\\theta_{t+1}",
+          "name": "Updated parameters",
+          "desc": "Parameters after both the adaptive gradient step and the weight decay shrinkage"
+        },
+        {
+          "symbol": "\\frac{\\hat{m}_t}{\\sqrt{\\hat{v}_t} + \\varepsilon}",
+          "name": "Adaptive gradient term",
+          "desc": "Standard Adam update — bias-corrected momentum divided by the adaptive denominator"
+        },
+        {
+          "symbol": "\\lambda \\theta_t",
+          "name": "Decoupled weight decay",
+          "desc": "Uniform shrinkage applied *after* the adaptive step — every parameter is reduced by $\\eta \\lambda$ regardless of its gradient history. Contrast with Adam's L2, where high-variance parameters receive less decay."
+        },
+        {
+          "symbol": "\\lambda",
+          "name": "Weight decay coefficient",
+          "desc": "Typical values 0.01–0.1 for transformers — sets how aggressively parameters are pulled toward zero each step"
+        },
+        {
+          "symbol": "\\eta",
+          "name": "Learning rate",
+          "desc": "Scales both the adaptive term and the weight decay — they share the same step size, keeping their relative magnitudes consistent across LR schedules"
+        }
+      ]
+    },
+    {
+      "label": "NAdam — Nesterov update",
+      "heading": "NAdam",
+      "terms": [
+        {
+          "symbol": "\\theta_{t+1}",
+          "name": "Updated parameters",
+          "desc": "Parameters after the Nesterov-corrected adaptive step"
+        },
+        {
+          "symbol": "\\frac{\\eta}{\\sqrt{\\hat{v}_t} + \\varepsilon}",
+          "name": "Adaptive step size",
+          "desc": "Same adaptive denominator as Adam — scales the update by the RMS of recent gradients"
+        },
+        {
+          "symbol": "\\frac{\\beta_1 \\hat{m}_t}{1 - \\beta_1^{t+1}}",
+          "name": "Lookahead momentum term",
+          "desc": "Projects the current momentum one step forward using next-step bias correction — the Nesterov component. Anticipates where momentum will take the parameters."
+        },
+        {
+          "symbol": "\\frac{(1-\\beta_1)g_t}{1 - \\beta_1^t}",
+          "name": "Current gradient term",
+          "desc": "Bias-corrected contribution of the current gradient — added directly alongside the lookahead momentum, giving the update access to both the present gradient and the anticipated next-step direction"
+        },
+        {
+          "symbol": "1 - \\beta_1^{t+1}",
+          "name": "Next-step correction factor",
+          "desc": "Bias correction denominator for step $t+1$ — slightly larger than $1 - \\beta_1^t$, giving the lookahead term a slightly smaller weight than it would have at the current step"
+        }
+      ]
+    },
+    {
+      "label": "RAdam — rectification term",
+      "heading": "RAdam",
+      "terms": [
+        {
+          "symbol": "\\rho_t",
+          "name": "Effective SMA length",
+          "desc": "Estimated length of the simple moving average of the second moment at step $t$ — used to decide whether the adaptive update is stable enough to apply"
+        },
+        {
+          "symbol": "\\rho_\\infty",
+          "name": "Maximum SMA length",
+          "desc": "$\\frac{2}{1-\\beta_2} - 1$ — the SMA length as $t \\to \\infty$. With $\\beta_2 = 0.999$: $\\rho_\\infty = 1999$. Acts as an upper bound on $\\rho_t$."
+        },
+        {
+          "symbol": "\\frac{2t\\beta_2^t}{1 - \\beta_2^t}",
+          "name": "Variance correction term",
+          "desc": "Subtracted from $\\rho_\\infty$ to account for the high variance in early second moment estimates — large when $t$ is small, shrinking as training progresses"
+        },
+        {
+          "symbol": "\\beta_2^t",
+          "name": "Decay at step $t$",
+          "desc": "The momentum decay raised to the $t$-th power — near 1 at early steps, approaching 0 as $t$ grows. Controls how much variance correction is needed."
+        }
+      ]
+    },
+    {
+      "label": "Adamax — L∞ accumulator",
+      "heading": "Adamax",
+      "terms": [
+        {
+          "symbol": "u_t",
+          "name": "L∞ second moment",
+          "desc": "Running maximum of $\\beta_2 u_{t-1}$ and $|g_t|$ — replaces Adam's EMA of $g^2$ with the infinity norm of the gradient history"
+        },
+        {
+          "symbol": "\\max(\\beta_2 u_{t-1},\\, |g_t|)",
+          "name": "Max operation",
+          "desc": "Takes the larger of the decayed previous max and the current absolute gradient — naturally bounded, never grows unboundedly like a cumulative sum"
+        },
+        {
+          "symbol": "\\beta_2 u_{t-1}",
+          "name": "Decayed previous max",
+          "desc": "Prior L∞ estimate decayed by $\\beta_2$ — allows the accumulator to forget very old large gradients"
+        },
+        {
+          "symbol": "|g_t|",
+          "name": "Absolute gradient",
+          "desc": "Element-wise absolute value of the current gradient — the L∞ norm contribution from this step"
+        }
+      ]
+    },
+    {
+      "label": "Adamax — parameter update",
+      "heading": "Adamax",
+      "terms": [
+        {
+          "symbol": "\\theta_{t+1}",
+          "name": "Updated parameters",
+          "desc": "Parameters after the L∞-normalized adaptive step"
+        },
+        {
+          "symbol": "\\frac{\\eta}{u_t + \\varepsilon}",
+          "name": "Adaptive step size",
+          "desc": "Learning rate divided by the L∞ accumulator — parameters with large recent gradients get a smaller effective rate"
+        },
+        {
+          "symbol": "u_t",
+          "name": "L∞ second moment",
+          "desc": "Max-based accumulator — no bias correction needed because the max operation is not zero-initialized in a way that distorts early estimates"
+        },
+        {
+          "symbol": "\\hat{m}_t",
+          "name": "Bias-corrected first moment",
+          "desc": "Same bias-corrected momentum as standard Adam — provides the gradient direction"
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Kingma & Ba 2014",
+      "title": "Adam: A Method for Stochastic Optimization",
+      "url": "https://arxiv.org/abs/1412.6980",
+      "note": "Original Adam paper — one of the most cited ML papers ever"
+    },
+    {
+      "label": "Loshchilov & Hutter 2017",
+      "title": "Decoupled Weight Decay Regularization (AdamW)",
+      "url": "https://arxiv.org/abs/1711.05101",
+      "note": "Shows L2 ≠ weight decay under Adam; AdamW fix"
+    },
+    {
+      "label": "Liu et al. 2019",
+      "title": "On the Variance of the Adaptive Learning Rate and Beyond (RAdam)",
+      "url": "https://arxiv.org/abs/1908.03265",
+      "note": "Explains Adam's early-training instability and the rectification fix"
+    }
+  ]
+}

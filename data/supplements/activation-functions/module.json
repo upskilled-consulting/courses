@@ -1,0 +1,107 @@
+{
+  "id": "activation-functions",
+  "type": "supplement",
+  "title": "Activation Functions",
+  "level": "Intermediate",
+  "estimatedHours": 3,
+  "description": "A comprehensive guide to all 31 PyTorch activation functions — from foundational ReLU variants to smooth modern activations, gating mechanisms, and advanced NLP functions. Covers formulas, gradient analysis, and side-by-side PyTorch and TensorFlow implementations.",
+  "readings": [
+    {
+      "id": "r0",
+      "title": "What Is an Activation Function?",
+      "estimatedMinutes": 12,
+      "description": "The role of non-linearity, backpropagation chain rule, vanishing/dying gradient problems, and a practical selection guide.",
+      "dataPath": "data/supplements/activation-functions/readings/r0-foundations.json"
+    },
+    {
+      "id": "r1",
+      "title": "The ReLU Family",
+      "estimatedMinutes": 15,
+      "description": "ReLU, LeakyReLU, PReLU, RReLU, and ReLU6 — gradients, dying neurons, and quantization-friendly bounds.",
+      "dataPath": "data/supplements/activation-functions/readings/r1-relu-family.json"
+    },
+    {
+      "id": "r2",
+      "title": "Saturating Activations",
+      "estimatedMinutes": 14,
+      "description": "Sigmoid, Tanh, Hardsigmoid, Hardtanh, Softsign, and LogSigmoid — vanishing gradients and zero-centering.",
+      "dataPath": "data/supplements/activation-functions/readings/r2-saturating.json"
+    },
+    {
+      "id": "r3",
+      "title": "Smooth Modern Activations",
+      "estimatedMinutes": 16,
+      "description": "GELU, SiLU/Swish, Mish, ELU, CELU, and SELU — smooth gates, self-normalization, and modern architecture choices.",
+      "dataPath": "data/supplements/activation-functions/readings/r3-smooth-modern.json"
+    },
+    {
+      "id": "r4",
+      "title": "Gating & Normalization",
+      "estimatedMinutes": 15,
+      "description": "GLU, Hardswish, Softmax, LogSoftmax, Softmax2d, and Softmin — gating mechanisms and probability normalization.",
+      "dataPath": "data/supplements/activation-functions/readings/r4-gating-normalization.json"
+    },
+    {
+      "id": "r5",
+      "title": "Shrinkage & Threshold Functions",
+      "estimatedMinutes": 13,
+      "description": "Hardshrink, Softshrink, Tanhshrink, Threshold, and Softplus — sparsity promotion and smooth ReLU approximations.",
+      "dataPath": "data/supplements/activation-functions/readings/r5-shrinkage-threshold.json"
+    },
+    {
+      "id": "r6",
+      "title": "NLP & Advanced Activations",
+      "estimatedMinutes": 14,
+      "description": "LogSigmoid, AdaptiveLogSoftmax, MultiheadAttention, and SwiGLU — large-vocabulary NLP and transformer architectures.",
+      "dataPath": "data/supplements/activation-functions/readings/r6-nlp-advanced.json"
+    }
+  ],
+  "drills": [
+    {
+      "id": "d1",
+      "title": "ReLU Family & Saturating Activations",
+      "cardCount": 12,
+      "estimatedMinutes": 10,
+      "dataPath": "data/supplements/activation-functions/drills/d1-relu-saturating.json"
+    },
+    {
+      "id": "d2",
+      "title": "Smooth, Gating & Advanced Activations",
+      "cardCount": 12,
+      "estimatedMinutes": 10,
+      "dataPath": "data/supplements/activation-functions/drills/d2-smooth-gating-advanced.json"
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "q1",
+      "title": "ReLU & Saturating Activations",
+      "questionCount": 6,
+      "passingScore": 0.7,
+      "dataPath": "data/supplements/activation-functions/quizzes/q1-relu-saturating.json"
+    },
+    {
+      "id": "q2",
+      "title": "Smooth, Gating & Specialized Activations",
+      "questionCount": 6,
+      "passingScore": 0.7,
+      "dataPath": "data/supplements/activation-functions/quizzes/q2-smooth-specialized.json"
+    }
+  ],
+  "labs": [
+    {
+      "id": "lab1",
+      "title": "Activation Functions in PyTorch",
+      "estimatedMinutes": 50,
+      "description": "Implement all activations from scratch, run the dying ReLU experiment, benchmark compute costs, and compare convergence on CIFAR-10.",
+      "dataPath": "data/supplements/activation-functions/labs/lab1-pytorch.json"
+    },
+    {
+      "id": "lab2",
+      "title": "Activation Functions in TensorFlow",
+      "estimatedMinutes": 40,
+      "description": "Custom Keras layers for Mish, GLU, and SwiGLU, parity check vs PyTorch, and Fashion-MNIST activation comparison.",
+      "dataPath": "data/supplements/activation-functions/labs/lab2-tensorflow.json"
+    }
+  ]
+}

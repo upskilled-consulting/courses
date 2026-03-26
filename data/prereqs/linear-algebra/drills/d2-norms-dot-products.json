@@ -1,0 +1,84 @@
+{
+  "id": "d2",
+  "moduleId": "linear-algebra",
+  "title": "Norms, Dot Products & Angles",
+  "description": "Flashcards for norm formulas, the dot product, Cauchy–Schwarz, angles, cosine similarity, and their ML applications.",
+  "estimatedMinutes": 8,
+  "cards": [
+    {
+      "id": "c01",
+      "front": "$$\\|\\vec{v}\\|_2 = ?$$",
+      "back": "**Euclidean ($\\ell^2$) norm**\n\n$$\\|\\vec{v}\\|_2 = \\sqrt{v_1^2 + v_2^2 + \\cdots + v_n^2} = \\sqrt{\\vec{v}\\cdot\\vec{v}}$$\n\n*Usage: default distance measure; L2 regularisation penalises $\\|W\\|_F^2$*"
+    },
+    {
+      "id": "c02",
+      "front": "$$\\|\\vec{v}\\|_1 = ?$$",
+      "back": "**Manhattan ($\\ell^1$) norm**\n\n$$\\|\\vec{v}\\|_1 = |v_1| + |v_2| + \\cdots + |v_n|$$\n\n*Usage: promotes sparsity in LASSO regression; robust to outliers*"
+    },
+    {
+      "id": "c03",
+      "front": "$$\\|\\vec{v}\\|_\\infty = ?$$",
+      "back": "**Chebyshev ($\\ell^\\infty$) norm**\n\n$$\\|\\vec{v}\\|_\\infty = \\max_i |v_i|$$\n\n*Usage: bounding absolute worst-case component; clipping in RL*"
+    },
+    {
+      "id": "c04",
+      "front": "$$\\|\\vec{v}\\|_p = ?$$",
+      "back": "**General $\\ell^p$ norm**\n\n$$\\|\\vec{v}\\|_p = \\left(\\sum_i |v_i|^p\\right)^{1/p}, \\quad p \\geq 1$$\n\n*Usage: $p=2$ is Euclidean, $p\\to\\infty$ gives $\\ell^\\infty$; $p<1$ is non-convex (not a true norm)*"
+    },
+    {
+      "id": "c05",
+      "front": "$$\\vec{u} \\cdot \\vec{v} = ?$$",
+      "back": "**Dot product (inner product on $\\mathbb{R}^n$)**\n\n$$\\vec{u}\\cdot\\vec{v} = \\sum_{i=1}^n u_i v_i = \\vec{u}^T\\vec{v}$$\n\nBilinear, symmetric, positive-definite.\n\n*Usage: matrix multiplication, projections, attention scores*"
+    },
+    {
+      "id": "c06",
+      "front": "$$\\vec{v}\\cdot\\vec{v} = ?$$",
+      "back": "**Self-dot-product equals squared norm**\n\n$$\\vec{v}\\cdot\\vec{v} = \\|\\vec{v}\\|_2^2$$\n\n*Usage: expanding $\\|\\vec{u}-\\vec{v}\\|^2 = \\|\\vec{u}\\|^2 - 2\\vec{u}\\cdot\\vec{v} + \\|\\vec{v}\\|^2$*"
+    },
+    {
+      "id": "c07",
+      "front": "**Cauchy–Schwarz inequality**",
+      "back": "$$|\\vec{u}\\cdot\\vec{v}| \\leq \\|\\vec{u}\\|\\,\\|\\vec{v}\\|$$\n\nEquality holds iff $\\vec{u}$ and $\\vec{v}$ are scalar multiples of each other.\n\n*Usage: justifies defining angle via the dot product; underlies the triangle inequality*"
+    },
+    {
+      "id": "c08",
+      "front": "$$\\cos\\theta_{\\vec{u},\\vec{v}} = ?$$",
+      "back": "**Angle between two vectors**\n\n$$\\cos\\theta = \\frac{\\vec{u}\\cdot\\vec{v}}{\\|\\vec{u}\\|\\,\\|\\vec{v}\\|}$$\n\n*Usage: $\\theta=0$ means parallel; $\\theta=90°$ means orthogonal; $\\theta=180°$ means anti-parallel*"
+    },
+    {
+      "id": "c09",
+      "front": "$$\\mathrm{sim}(\\vec{u},\\vec{v}) = ?$$",
+      "back": "**Cosine similarity**\n\n$$\\mathrm{sim}(\\vec{u},\\vec{v}) = \\frac{\\vec{u}\\cdot\\vec{v}}{\\|\\vec{u}\\|\\,\\|\\vec{v}\\|} \\in [-1,\\,1]$$\n\nEquivalent to $\\hat{\\vec{u}}\\cdot\\hat{\\vec{v}}$ (dot product of unit vectors).\n\n*Usage: nearest-neighbour retrieval in embedding spaces; semantic search*"
+    },
+    {
+      "id": "c10",
+      "front": "When are $\\vec{u}$ and $\\vec{v}$ **orthogonal**?",
+      "back": "**Orthogonality condition**\n\n$$\\vec{u}\\perp\\vec{v} \\iff \\vec{u}\\cdot\\vec{v} = 0$$\n\n*Usage: orthogonal bases have no redundancy; orthogonal projections minimise residual norm*"
+    },
+    {
+      "id": "c11",
+      "front": "How do you **normalise** a vector?",
+      "back": "**Unit vector (normalisation)**\n\n$$\\hat{\\vec{v}} = \\frac{\\vec{v}}{\\|\\vec{v}\\|_2}$$\n\nResult has $\\|\\hat{\\vec{v}}\\|=1$.\n\n*Usage: comparing directions without magnitude; cosine similarity is dot product of unit vectors*"
+    },
+    {
+      "id": "c12",
+      "front": "**Triangle inequality** for norms",
+      "back": "$$\\|\\vec{u} + \\vec{v}\\| \\leq \\|\\vec{u}\\| + \\|\\vec{v}\\|$$\n\nThis must hold for any valid norm; it is a consequence of Cauchy–Schwarz for $\\ell^2$.\n\n*Usage: one of the three axioms defining a norm (positive definiteness, homogeneity, triangle ineq.)*"
+    },
+    {
+      "id": "c13",
+      "front": "**$\\ell^2$ regularisation** adds what penalty?",
+      "back": "**Weight decay / Ridge penalty**\n\n$$\\mathcal{L}_{\\mathrm{reg}} = \\mathcal{L} + \\frac{\\lambda}{2}\\|\\vec{w}\\|_2^2$$\n\nGradient: $\\nabla_{\\vec{w}}\\mathcal{L}_{\\mathrm{reg}} = \\nabla_{\\vec{w}}\\mathcal{L} + \\lambda\\vec{w}$\n\n*Usage: shrinks weights toward zero; equivalent to MAP inference with Gaussian prior*"
+    },
+    {
+      "id": "c14",
+      "front": "**$\\ell^1$ regularisation** adds what penalty?",
+      "back": "**LASSO penalty**\n\n$$\\mathcal{L}_{\\mathrm{reg}} = \\mathcal{L} + \\lambda\\|\\vec{w}\\|_1$$\n\nSubgradient: $\\lambda\\,\\mathrm{sign}(w_i)$ per component.\n\n*Usage: promotes exact zeros — automatic feature selection; non-differentiable at zero*"
+    },
+    {
+      "id": "c15",
+      "front": "$$d(\\vec{u},\\vec{v}) = ?$$",
+      "back": "**Euclidean distance**\n\n$$d(\\vec{u},\\vec{v}) = \\|\\vec{u}-\\vec{v}\\|_2 = \\sqrt{\\sum_i(u_i - v_i)^2}$$\n\n*Usage: $k$-NN, $k$-means clustering; for normalised vectors, $d^2 = 2(1-\\cos\\theta)$ so cosine and Euclidean distance rank identically*"
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "id": "r5",
+  "moduleId": "architectures",
+  "title": "Attention Mechanisms",
+  "estimatedMinutes": 16,
+  "learningObjectives": [
+    {
+      "id": "r5-lo1",
+      "verb": "Explain",
+      "description": "Explain the query-key-value abstraction: what each vector represents and how the dot product of a query with all keys produces an attention distribution over values",
+      "skillTags": ["architectures", "attention"]
+    },
+    {
+      "id": "r5-lo2",
+      "verb": "Compute",
+      "description": "Compute scaled dot-product attention Softmax(QK⊤/√d_k)V for small matrices and explain why the √d_k scaling factor is necessary",
+      "skillTags": ["architectures", "attention"]
+    },
+    {
+      "id": "r5-lo3",
+      "verb": "Explain",
+      "description": "Explain multi-head attention: why projecting into h separate subspaces and concatenating the results gives richer representations than a single large attention operation",
+      "skillTags": ["architectures", "attention"]
+    },
+    {
+      "id": "r5-lo4",
+      "verb": "Distinguish",
+      "description": "Distinguish self-attention, masked self-attention, and cross-attention by their source of queries, keys, and values, and identify where each appears in transformer encoder and decoder blocks",
+      "skillTags": ["architectures", "attention"]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r4"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r6"
+  },
+  "content": "## The Bottleneck Problem in Seq2Seq\n\nThe original seq2seq architecture (Sutskever et al., 2014) compressed an entire input sentence into a single fixed-size context vector — the final hidden state of the encoder. For long sequences, this vector becomes a bottleneck: it must encode all relevant information, but its capacity is fixed.\n\nBahdanau et al. (2015) proposed a solution: at each decoder step, instead of always reading from the same context vector, let the decoder **attend** to different encoder states depending on what it is currently generating. This was attention.\n\n---\n\n## The Query-Key-Value Framework\n\nAttention generalizes the retrieval metaphor: you have a **query** (what you're looking for), a set of **keys** (labels on stored information), and **values** (the stored information itself). The attention operation retrieves a weighted combination of values, where the weights reflect how well each key matches the query.\n\nFormally, given:\n- Query $\\mathbf{q} \\in \\mathbb{R}^{d_k}$\n- Keys $K \\in \\mathbb{R}^{n \\times d_k}$ — one row per position\n- Values $V \\in \\mathbb{R}^{n \\times d_v}$ — one row per position\n\n$$\\text{Attention}(\\mathbf{q}, K, V) = \\text{Softmax}\\!\\left(\\frac{\\mathbf{q} K^\\top}{\\sqrt{d_k}}\\right) V$$\n\nThe dot products $\\mathbf{q} K^\\top \\in \\mathbb{R}^n$ score how well the query matches each key. Softmax converts these to a probability distribution (attention weights). The output is a weighted sum of values.\n\n---\n\n## Scaled Dot-Product Attention\n\nFor a batch of queries packed into matrix $Q \\in \\mathbb{R}^{m \\times d_k}$:\n\n$$\\text{Attention}(Q, K, V) = \\text{Softmax}\\!\\left(\\frac{QK^\\top}{\\sqrt{d_k}}\\right) V$$\n\n**Why divide by $\\sqrt{d_k}$?** The dot product $\\mathbf{q} \\cdot \\mathbf{k} = \\sum_{i=1}^{d_k} q_i k_i$. If $q_i$ and $k_i$ are independent with mean 0 and variance 1, the sum has variance $d_k$. Without scaling, the dot products grow with $d_k$, pushing softmax into regions with very small gradients (the \"sharp softmax\" problem — one position gets weight ≈ 1, all others ≈ 0, and gradients vanish). Dividing by $\\sqrt{d_k}$ restores unit variance.\n\n**Complexity:** $O(n^2 d_k)$ in time (all pairs of positions interact) and $O(n^2)$ in memory for the attention matrix. This is the quadratic scaling that limits transformers to moderate sequence lengths.\n\n---\n\n## Multi-Head Attention\n\nA single attention operation computes one weighted combination of values. But different aspects of a relationship (syntactic vs. semantic, local vs. global) may need to be captured simultaneously.\n\n**Multi-head attention** projects $Q$, $K$, $V$ into $h$ different lower-dimensional subspaces, computes attention in each, then concatenates and projects:\n\n$$\\text{head}_i = \\text{Attention}(Q W_i^Q, K W_i^K, V W_i^V)$$\n$$\\text{MultiHead}(Q, K, V) = [\\text{head}_1; \\ldots; \\text{head}_h]\\, W^O$$\n\nwhere $W_i^Q \\in \\mathbb{R}^{d_{\\text{model}} \\times d_k}$, $W_i^K \\in \\mathbb{R}^{d_{\\text{model}} \\times d_k}$, $W_i^V \\in \\mathbb{R}^{d_{\\text{model}} \\times d_v}$ are learned projections, and $W^O \\in \\mathbb{R}^{h d_v \\times d_{\\text{model}}}$ is the output projection.\n\nTypically $d_k = d_v = d_{\\text{model}} / h$ — the total computation is similar to single-head attention with the same dimension, but distributed across $h$ parallel subspaces.\n\n**What each head learns:** Analysis (Voita et al., 2019) shows different heads specialize — some track syntactic dependencies, some track coreference, some attend locally. The multi-head structure allows the model to jointly attend to information from different representation subspaces.\n\n---\n\n## Self-Attention, Masked Self-Attention, and Cross-Attention\n\nThe attention mechanism is general — the source of $Q$, $K$, and $V$ determines the variant:\n\n### Self-Attention\n\n$Q$, $K$, $V$ all come from the **same sequence**. Each position attends to all other positions in the same sequence.\n\n- Used in transformer **encoders** (e.g., BERT)\n- Every input position can attend to every other input position — bidirectional\n- Captures global dependencies in a single operation, regardless of sequence length\n\n### Masked Self-Attention (Causal Attention)\n\nSame as self-attention, but future positions are **masked** — position $t$ can only attend to positions $1, \\ldots, t$:\n\n$$\\text{mask}_{ij} = \\begin{cases} 0 & j \\leq i \\\\ -\\infty & j > i \\end{cases}$$\n\nAdding $-\\infty$ before softmax makes the corresponding attention weight exactly 0.\n\n- Used in transformer **decoders** for autoregressive generation (GPT, LLaMA)\n- Enforces that the model cannot \"cheat\" by looking at future tokens\n\n### Cross-Attention\n\n$Q$ comes from one sequence (the **decoder**); $K$ and $V$ come from a different sequence (the **encoder output**).\n\n- Used in seq2seq transformers (T5, original transformer for translation)\n- Allows the decoder to selectively read from the encoder's representations\n- Mechanistically equivalent to the original Bahdanau attention\n\n---\n\n## Attention vs. Recurrence\n\n| Property | RNN | Self-Attention |\n|---|---|---|\n| Max path length (signal between positions $i$, $j$) | $O(|i-j|)$ | $O(1)$ |\n| Parallelizable | No (sequential) | Yes (all positions at once) |\n| Complexity per layer | $O(n \\cdot d^2)$ | $O(n^2 \\cdot d)$ |\n| Long-range dependencies | Hard (LSTM mitigates) | Easy (direct connection) |\n\nSelf-attention connects any two positions with a path of length 1 — there are no intermediate steps for the signal to travel through. This is why transformers dramatically outperform LSTMs on long-range dependencies in language.\n\n---\n\n## PyTorch and TensorFlow\n\n**PyTorch** — scaled dot-product attention and `nn.MultiheadAttention`:\n\n```python\nimport torch\nimport torch.nn as nn\nimport torch.nn.functional as F\nimport math\n\n# Scaled dot-product attention — from scratch\ndef scaled_dot_product_attention(Q, K, V, mask=None):\n    \"\"\"\n    Q: (B, heads, T_q, d_k)\n    K: (B, heads, T_k, d_k)\n    V: (B, heads, T_k, d_v)\n    \"\"\"\n    d_k    = Q.size(-1)\n    scores = Q @ K.transpose(-2, -1) / math.sqrt(d_k)   # (B, heads, T_q, T_k)\n    if mask is not None:\n        scores = scores.masked_fill(mask == 0, float('-inf'))\n    weights = F.softmax(scores, dim=-1)                  # attention weights\n    return weights @ V                                   # (B, heads, T_q, d_v)\n\n# PyTorch 2.0+ built-in (fused, memory-efficient)\nQ = torch.randn(2, 8, 10, 64)   # (B, heads, T, d_k)\nK = torch.randn(2, 8, 10, 64)\nV = torch.randn(2, 8, 10, 64)\nout = F.scaled_dot_product_attention(Q, K, V)            # uses FlashAttention when available\n\n# nn.MultiheadAttention — handles projection, splitting into heads, and output projection\nd_model = 512\nmha = nn.MultiheadAttention(embed_dim=d_model, num_heads=8, batch_first=True)\n\nx        = torch.randn(2, 10, d_model)   # (B, T, d_model)\n# Self-attention: query=key=value=x\nout, attn_weights = mha(x, x, x)         # out: (2,10,512)  weights: (2,10,10)\n\n# Cross-attention: query from decoder, key/value from encoder\nenc_out  = torch.randn(2, 20, d_model)   # encoder output\ndec_query = torch.randn(2, 5, d_model)   # decoder query\nout, _   = mha(dec_query, enc_out, enc_out)\n\n# Causal mask for autoregressive (decoder-only) models\nT    = 10\nmask = torch.tril(torch.ones(T, T)).bool()   # lower-triangular\nout, _ = mha(x, x, x, attn_mask=~mask)       # mask future positions\n```\n\n**TensorFlow / Keras:**\n\n```python\nimport tensorflow as tf\n\n# MultiHeadAttention layer\nmha = tf.keras.layers.MultiHeadAttention(num_heads=8, key_dim=64)  # key_dim = d_k per head\n\nx   = tf.random.normal((2, 10, 512))   # (B, T, d_model)\nout = mha(query=x, key=x, value=x)    # self-attention; out: (2, 10, 512)\n\n# Cross-attention\nenc = tf.random.normal((2, 20, 512))\nout = mha(query=x, key=enc, value=enc)\n\n# Causal mask\nout = mha(query=x, key=x, value=x, use_causal_mask=True)  # masks future tokens automatically\n```",
+  "equationBreakdowns": [
+    {
+      "label": "Scaled Dot-Product Attention",
+      "heading": "Scaled Dot-Product Attention",
+      "terms": [
+        {
+          "symbol": "QK^\\top",
+          "name": "Attention logits",
+          "desc": "Matrix of dot products between all queries and all keys. Shape (m × n) where m is number of queries, n is number of key-value pairs. High dot product = query and key are aligned = high attention weight."
+        },
+        {
+          "symbol": "\\sqrt{d_k}",
+          "name": "Scaling factor",
+          "desc": "Square root of key dimension. Normalizes the dot products so their variance stays ≈ 1 regardless of d_k. Without this, large d_k makes softmax extremely sharp and gradients vanish."
+        },
+        {
+          "symbol": "\\text{Softmax}(\\cdot)\\, V",
+          "name": "Weighted sum of values",
+          "desc": "The attention weights (rows sum to 1) multiply the value matrix. The output is a convex combination of value rows — a content-based lookup."
+        }
+      ]
+    },
+    {
+      "label": "Multi-Head Attention",
+      "heading": "Multi-Head Attention",
+      "terms": [
+        {
+          "symbol": "W_i^Q, W_i^K, W_i^V",
+          "name": "Per-head projection matrices",
+          "desc": "Project the full d_model-dimensional Q/K/V into d_k-dimensional subspaces. Each head i has its own projections — it attends to a different 'aspect' of the representation."
+        },
+        {
+          "symbol": "[\\text{head}_1; \\ldots; \\text{head}_h]",
+          "name": "Concatenation of heads",
+          "desc": "Stack all h head outputs into a single h·d_v-dimensional vector per position."
+        },
+        {
+          "symbol": "W^O",
+          "name": "Output projection",
+          "desc": "Projects the concatenated heads back to d_model dimensions. Mixes information from all heads into a unified representation."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Bahdanau et al. 2015",
+      "title": "Neural Machine Translation by Jointly Learning to Align and Translate",
+      "url": "https://arxiv.org/abs/1409.0473"
+    },
+    {
+      "label": "Vaswani et al. 2017",
+      "title": "Attention Is All You Need",
+      "url": "https://arxiv.org/abs/1706.03762"
+    }
+  ]
+}

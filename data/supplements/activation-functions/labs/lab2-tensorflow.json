@@ -1,0 +1,20 @@
+{
+  "id": "lab2",
+  "moduleId": "activation-functions",
+  "title": "Activation Functions in TensorFlow",
+  "estimatedMinutes": 40,
+  "prevItem": {
+    "type": "lab",
+    "id": "lab1"
+  },
+  "nextItem": null,
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/supplements/activation-functions/lab_activation_functions_tensorflow.ipynb",
+  "objectives": [
+    "Implement the core activation functions using `tf.keras.activations`, `tf.nn`, and custom `tf.keras.layers.Layer` subclasses",
+    "Verify numerical parity between PyTorch and TensorFlow outputs for all shared activation functions",
+    "Implement custom activations (Mish, Softshrink, GLU variants) as `tf.keras.layers.Layer` subclasses and use them in `model.compile` workflows",
+    "Profile activation compute cost using `tf.function` and `tf.test.Benchmark`",
+    "Train a Keras model end-to-end with five different activation functions and compare validation accuracy curves"
+  ],
+  "description": "## Lab Overview\n\nThis notebook is the TensorFlow companion to the PyTorch lab. For every activation function implemented in PyTorch you will find the TensorFlow/Keras equivalent — or implement it from scratch when no built-in exists.\n\n### PyTorch vs TensorFlow API Differences\n\n| Concept | PyTorch | TensorFlow/Keras |\n|---------|---------|------------------|\n| ReLU | `nn.ReLU()` | `tf.keras.layers.ReLU()` or `'relu'` |\n| GELU | `nn.GELU()` | `tf.keras.activations.gelu(x)` |\n| SiLU/Swish | `nn.SiLU()` | `tf.keras.activations.swish(x)` |\n| Sigmoid | `nn.Sigmoid()` | `tf.keras.activations.sigmoid(x)` |\n| Softmax | `nn.Softmax(dim=-1)` | `tf.keras.activations.softmax(x)` |\n| PReLU | `nn.PReLU()` | `tf.keras.layers.PReLU()` |\n| Hardsigmoid | `nn.Hardsigmoid()` | `tf.keras.activations.hard_sigmoid(x)` |\n| Custom | `nn.Module` subclass | `tf.keras.layers.Layer` subclass |\n\n### Key TF-Specific Notes\n\n- **Hardsigmoid formula differs:** PyTorch uses $(x+3)/6$ clamped to $[0,1]$; TensorFlow uses $\\text{clip}(0.2x + 0.5, 0, 1)$. Different slopes and centers — verify numerically.\n- **Mish, GLU, Softshrink, Hardshrink, Tanhshrink:** No built-in TF equivalent — implement as custom `tf.keras.layers.Layer` subclasses.\n- **`@tf.function` for JIT:** Wrapping custom activations with `@tf.function` enables XLA compilation and significant speedups.\n- **`tf.GradientTape`:** Used to verify analytical gradients against `tape.gradient()`.\n\n### Sections\n\n| Section | Content |\n|---------|--------|\n| 1 | ReLU family: `layers.ReLU`, `layers.LeakyReLU`, `layers.PReLU` + custom ReLU6 |\n| 2 | Saturating: sigmoid, tanh, hardsigmoid (TF vs PT formula diff), hardtanh custom |\n| 3 | Smooth modern: gelu, swish, custom Mish layer, ELU/SELU |\n| 4 | Gating: custom GLU layer, Softmax, LogSoftmax, Softmin |\n| 5 | Shrinkage: custom Hardshrink, Softshrink, Tanhshrink, Softplus |\n| 6 | Numerical parity check: PyTorch vs TensorFlow on all shared functions (requires `import torch`) |\n| 7 | Custom activation as Keras layer: implement SwiGLU as `tf.keras.layers.Layer` with `model.compile` |\n| 8 | End-to-end: train on CIFAR-10 with 5 activations using `model.fit`, compare learning curves |"
+}

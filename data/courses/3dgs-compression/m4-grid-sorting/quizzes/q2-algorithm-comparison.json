@@ -1,0 +1,63 @@
+{
+  "id": "q2",
+  "moduleId": "m4",
+  "title": "Algorithm Comparison and Spatial Constraints",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "questions": [
+    {
+      "id": "q4_q2_1",
+      "type": "multiple-choice",
+      "prompt": "SOM produces isolated outliers in dense grids. What is the root cause?",
+      "options": [
+        { "id": "a", "text": "SOM uses L2 distance for BMU selection, which doesn't work in high dimensions", "correct": false },
+        { "id": "b", "text": "Sequential updates: early data points claim nearby cells, and later points are forced into distant leftover positions regardless of their similarity to neighbors", "correct": true },
+        { "id": "c", "text": "SOM's neighborhood radius never reaches zero, so all cells remain permanently coupled", "correct": false },
+        { "id": "d", "text": "SOM cannot handle non-square grids, creating unused cells that become outliers", "correct": false }
+      ],
+      "explanation": "SOM processes data points sequentially. The first \\(K\\) data points shape the grid's topology early. Later data points, even if similar to early ones, may find the nearby grid region already occupied by a well-matched prototype — they get assigned to the next available spot, which may be geometrically distant in the grid.",
+      "hint": "Consider what happens when a late-arriving data point tries to find its BMU in a grid that's already mostly 'claimed'."
+    },
+    {
+      "id": "q4_q2_2",
+      "type": "multiple-choice",
+      "prompt": "FLAS replaces LAS's global linear assignment with many local assignments. What guarantees that local assignments collectively approximate the global optimum?",
+      "options": [
+        { "id": "a", "text": "The filter step provides global context before each local assignment, so each local assignment is seeded with globally-aware targets", "correct": true },
+        { "id": "b", "text": "Local assignments are proven mathematically equivalent to the global assignment for Gaussian-distributed data", "correct": false },
+        { "id": "c", "text": "FLAS runs more iterations than LAS to compensate for local approximation", "correct": false },
+        { "id": "d", "text": "The grid is split into non-overlapping tiles, and within each tile the global assignment is exact", "correct": false }
+      ],
+      "explanation": "The Gaussian filter in FLAS is a global operation — it computes a weighted average of the entire grid's content before any local assignment. The resulting smoothed grid acts as a target that encodes global structure. Local assignments then find the best match between data points and these globally-informed targets. Without the filter, local assignments would be myopic; with it, they collectively produce a globally coherent ordering.",
+      "hint": "Think about what information the filter step provides to each local assignment."
+    },
+    {
+      "id": "q4_q2_3",
+      "type": "code-completion",
+      "prompt": "Implement the FLAS weighted filter for a grid with holes. Given feature grid F and weight grid W, compute the filtered output F_smooth:",
+      "codeTemplate": "from scipy.ndimage import gaussian_filter\nimport numpy as np\n\ndef weighted_gaussian_filter(F, W, sigma=2.0):\n    \"\"\"\n    F: (H, W, D) feature grid (holes have F=0)\n    W: (H, W) weight grid (holes=0.01, normal=1.0, pinned=10.0)\n    sigma: Gaussian filter radius\n    Returns F_smooth: (H, W, D) filtered features\n    \"\"\"\n    W_exp = W[:, :, np.newaxis]  # (H, W, 1) for broadcasting\n    # Scale features by weights before filtering\n    F_weighted = ___BLANK___\n    # Filter both numerator and denominator\n    num = gaussian_filter(F_weighted, sigma=[sigma, sigma, 0])\n    den = gaussian_filter(W_exp,      sigma=[sigma, sigma, 0])\n    return num / (den + 1e-8)",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "F * W_exp",
+        "F * W[:, :, np.newaxis]",
+        "W_exp * F"
+      ],
+      "explanation": "Weighted Gaussian filtering normalizes by the sum of weights in the neighborhood: F_smooth = Σ(w_j * f_j) / Σ(w_j). By pre-multiplying features by weights and then dividing by the filtered weights, we correctly handle holes (weight 0.01) and pinned points (weight 10) without them distorting neighbors inappropriately.",
+      "hint": "Weighted average = sum(weight * value) / sum(weight). Apply the filter to both numerator and denominator separately."
+    },
+    {
+      "id": "q4_q2_4",
+      "type": "multiple-choice",
+      "prompt": "You want to sort 3DGS attributes into a non-rectangular logo shape. What does FLAS do to positions outside the logo boundary?",
+      "options": [
+        { "id": "a", "text": "They are excluded from the grid entirely, reducing the grid to the exact logo shape", "correct": false },
+        { "id": "b", "text": "The bounding box of the logo is used as the full grid; outside-shape positions are treated as holes with weight 0.01, effectively making them low-priority filler positions", "correct": true },
+        { "id": "c", "text": "A separate FLAS instance is run for inside and outside positions, then merged", "correct": false },
+        { "id": "d", "text": "Outside positions mirror the boundary values to avoid edge artifacts", "correct": false }
+      ],
+      "explanation": "FLAS extends to arbitrary shapes by setting weights for out-of-shape grid positions to a small value (0.01). These positions act as low-attraction 'holes' that absorb data points only when no better (higher-weight) grid position is available. The result: nearly all data points end up inside the logo shape, with a few stragglers in the boundary holes. The filter correctly deprioritizes hole positions during the smoothing step.",
+      "hint": "How does the weighted filter treat positions with weight 0.01 vs. weight 1.0?"
+    }
+  ]
+}

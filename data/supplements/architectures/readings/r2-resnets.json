@@ -1,0 +1,82 @@
+{
+  "id": "r2",
+  "moduleId": "architectures",
+  "title": "Going Deeper — ResNets and Residual Connections",
+  "estimatedMinutes": 14,
+  "learningObjectives": [
+    {
+      "id": "r2-lo1",
+      "verb": "Explain",
+      "description": "Explain the degradation problem — why naively adding layers to a CNN can degrade training accuracy — and why it cannot be explained by overfitting",
+      "skillTags": ["architectures", "resnet"]
+    },
+    {
+      "id": "r2-lo2",
+      "verb": "Describe",
+      "description": "Describe the residual block formula F(x) + x and explain how the identity shortcut enables very deep networks to train by preserving gradient flow",
+      "skillTags": ["architectures", "resnet"]
+    },
+    {
+      "id": "r2-lo3",
+      "verb": "Distinguish",
+      "description": "Distinguish the basic residual block from the bottleneck block, compute the parameter count of each, and state why bottleneck blocks are used in deeper ResNets",
+      "skillTags": ["architectures", "resnet"]
+    },
+    {
+      "id": "r2-lo4",
+      "verb": "Identify",
+      "description": "Identify where residual connections appear beyond CNNs — including transformer FFN sub-layers and highway networks — and explain what they have in common",
+      "skillTags": ["architectures", "resnet", "training-dynamics"]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r1"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r3"
+  },
+  "content": "## The Degradation Problem\n\nA reasonable hypothesis in 2015 was that deeper networks should perform at least as well as shallower ones: a 56-layer network can always learn the identity function for its extra layers, matching the 20-layer baseline.\n\nExperiment showed the opposite. He et al. (2015) demonstrated that a plain 56-layer CNN had **higher training error** than a 20-layer CNN on CIFAR-10 — not just test error, but training error. This rules out overfitting as the cause. The network was failing to learn even on the data it had seen.\n\n**Why?** As gradients backpropagate through many layers, they are multiplied by weight matrices repeatedly. With random initialization and no special design, gradients either **vanish** (product shrinks toward zero) or **explode** (product grows unbounded). The signal from the loss disappears before reaching early layers.\n\nBatch normalization helped, but did not fully solve the problem. The breakthrough was a structural change.\n\n---\n\n## Residual Connections\n\nHe et al. (2016) introduced the **residual block**:\n\n$$\\mathbf{y} = \\mathcal{F}(\\mathbf{x}) + \\mathbf{x}$$\n\nwhere $\\mathcal{F}(\\mathbf{x})$ is a small sub-network (two conv + BN + ReLU layers), and $\\mathbf{x}$ is routed directly to the output via a **skip connection** (also called a shortcut or residual connection).\n\nThe network learns **the residual** $\\mathcal{F}(\\mathbf{x})$ rather than the full transformation $\\mathbf{H}(\\mathbf{x})$. If the optimal mapping is close to the identity, $\\mathcal{F}(\\mathbf{x})$ only needs to learn a small correction — easier than learning the full mapping from scratch.\n\n### Why Residuals Help Gradient Flow\n\nBy the chain rule, the gradient of a loss $\\mathcal{L}$ with respect to the block input $\\mathbf{x}$ is:\n\n$$\\frac{\\partial \\mathcal{L}}{\\partial \\mathbf{x}} = \\frac{\\partial \\mathcal{L}}{\\partial \\mathbf{y}} \\cdot \\left(\\frac{\\partial \\mathcal{F}}{\\partial \\mathbf{x}} + I\\right)$$\n\nThe $+I$ term is the **identity shortcut**. Even if $\\partial \\mathcal{F}/\\partial \\mathbf{x}$ becomes very small (vanishing gradients), the gradient of $\\mathcal{L}$ still flows back through the $+I$ path unobstructed. Residual connections are a **gradient highway** through the entire network.\n\n---\n\n## Block Variants\n\n### Basic Block (ResNet-18, ResNet-34)\n\nTwo $3 \\times 3$ conv layers with batch normalization:\n\n```\nx → Conv(3×3, C) → BN → ReLU → Conv(3×3, C) → BN → (+x) → ReLU → y\n```\n\nParameters per block (ignoring BN): $2 \\times 3^2 \\times C^2 = 18C^2$\n\n### Bottleneck Block (ResNet-50, ResNet-101, ResNet-152)\n\nThree layers: a $1 \\times 1$ conv to reduce channels, a $3 \\times 3$ conv, and a $1 \\times 1$ conv to expand back:\n\n```\nx → Conv(1×1, C/4) → BN → ReLU → Conv(3×3, C/4) → BN → ReLU → Conv(1×1, C) → BN → (+x) → ReLU → y\n```\n\nParameters: $C \\cdot (C/4) + 9 \\cdot (C/4)^2 + (C/4) \\cdot C = C^2/2 + 9C^2/16 \\approx 1.06 C^2$\n\nVs. basic block at $18C^2$: the bottleneck uses ~17× fewer parameters for the same output dimension. This is why ResNets deeper than 34 layers all use bottleneck blocks.\n\n### Projection Shortcut\n\nWhen the block changes spatial dimensions (stride 2) or the number of channels, the shortcut $\\mathbf{x}$ cannot be added directly. A **projection shortcut** applies a $1 \\times 1$ conv (with matching stride) to $\\mathbf{x}$ before addition:\n\n$$\\mathbf{y} = \\mathcal{F}(\\mathbf{x}) + W_s \\mathbf{x}$$\n\n---\n\n## The ResNet Family\n\n| Model | Layers | Params | ImageNet Top-1 |\n|---|---|---|---|\n| ResNet-18 | 18 | 11M | 69.8% |\n| ResNet-50 | 50 | 25M | 76.1% |\n| ResNet-101 | 101 | 44M | 77.4% |\n| ResNet-152 | 152 | 60M | 78.3% |\n\nResNets enabled training of networks 2–10× deeper than previous state-of-the-art and won ILSVRC 2015 by a large margin. The architecture remains a standard backbone for vision today.\n\n---\n\n## Residual Connections Everywhere\n\nThe idea generalized far beyond CNNs:\n\n**Transformers:** Both the self-attention sub-layer and the FFN sub-layer use residual connections: $\\mathbf{y} = \\text{LayerNorm}(\\mathbf{x} + \\text{Attention}(\\mathbf{x}))$. Without them, transformers with more than a few layers cannot train.\n\n**Highway networks (Srivastava 2015):** A gated variant: $\\mathbf{y} = T(\\mathbf{x}) \\odot \\mathcal{F}(\\mathbf{x}) + (1 - T(\\mathbf{x})) \\odot \\mathbf{x}$, where $T$ is a learned gate. Conceptually similar but with adaptive blending.\n\n**DenseNet:** Each layer receives as input the concatenation of all previous layers' outputs — an extreme form of residual connectivity that improves gradient and feature reuse.\n\n**The universal pattern:** Residual connections allow deep networks to be viewed as ensembles of shallow paths. Veit et al. (2016) showed that unrolling a ResNet reveals exponentially many paths of varying depth; most gradient flows through relatively short paths, with depth providing robustness rather than strictly sequential computation.\n\n---\n\n## PyTorch and TensorFlow\n\n**PyTorch** — basic block, bottleneck block, and projection shortcut:\n\n```python\nimport torch\nimport torch.nn as nn\n\n# Basic residual block (ResNet-18 / ResNet-34)\nclass BasicBlock(nn.Module):\n    def __init__(self, channels: int):\n        super().__init__()\n        self.conv1 = nn.Conv2d(channels, channels, 3, padding=1, bias=False)\n        self.bn1   = nn.BatchNorm2d(channels)\n        self.conv2 = nn.Conv2d(channels, channels, 3, padding=1, bias=False)\n        self.bn2   = nn.BatchNorm2d(channels)\n        self.relu  = nn.ReLU()\n\n    def forward(self, x):\n        residual = x\n        out = self.relu(self.bn1(self.conv1(x)))\n        out = self.bn2(self.conv2(out))\n        return self.relu(out + residual)   # F(x) + x\n\n# Bottleneck block (ResNet-50/101/152): 1x1 → 3x3 → 1x1\nclass Bottleneck(nn.Module):\n    expansion = 4\n    def __init__(self, in_ch: int, mid_ch: int):\n        super().__init__()\n        out_ch = mid_ch * self.expansion\n        self.net = nn.Sequential(\n            nn.Conv2d(in_ch,  mid_ch, 1, bias=False), nn.BatchNorm2d(mid_ch), nn.ReLU(),\n            nn.Conv2d(mid_ch, mid_ch, 3, padding=1, bias=False), nn.BatchNorm2d(mid_ch), nn.ReLU(),\n            nn.Conv2d(mid_ch, out_ch, 1, bias=False), nn.BatchNorm2d(out_ch),\n        )\n        # Projection shortcut when dimensions change\n        self.shortcut = nn.Sequential(\n            nn.Conv2d(in_ch, out_ch, 1, bias=False), nn.BatchNorm2d(out_ch)\n        ) if in_ch != out_ch else nn.Identity()\n        self.relu = nn.ReLU()\n\n    def forward(self, x):\n        return self.relu(self.net(x) + self.shortcut(x))\n\n# Use torchvision for pretrained ResNets\nimport torchvision.models as models\nresnet50 = models.resnet50(weights='IMAGENET1K_V2')\nresnet50.fc = nn.Linear(2048, 10)   # replace head for fine-tuning\n```\n\n**TensorFlow / Keras:**\n\n```python\nimport tensorflow as tf\n\n# Functional API makes skip connections explicit\ndef residual_block(x, filters: int):\n    residual = x\n    x = tf.keras.layers.Conv2D(filters, 3, padding='same', use_bias=False)(x)\n    x = tf.keras.layers.BatchNormalization()(x)\n    x = tf.keras.layers.ReLU()(x)\n    x = tf.keras.layers.Conv2D(filters, 3, padding='same', use_bias=False)(x)\n    x = tf.keras.layers.BatchNormalization()(x)\n    return tf.keras.layers.ReLU()(x + residual)   # F(x) + x\n\n# Pretrained ResNet50 from Keras applications\nbase = tf.keras.applications.ResNet50(weights='imagenet', include_top=False)\nbase.trainable = False   # freeze for transfer learning\nout  = tf.keras.layers.GlobalAveragePooling2D()(base.output)\nout  = tf.keras.layers.Dense(10)(out)\nmodel = tf.keras.Model(base.input, out)\n```",
+  "equationBreakdowns": [
+    {
+      "label": "Residual Block",
+      "heading": "Residual Connections",
+      "terms": [
+        {
+          "symbol": "\\mathbf{y} = \\mathcal{F}(\\mathbf{x}) + \\mathbf{x}",
+          "name": "Residual block output",
+          "desc": "The output is the sum of the learned residual F(x) and the identity shortcut x. The network learns the difference from identity, not the full mapping."
+        },
+        {
+          "symbol": "\\mathcal{F}(\\mathbf{x})",
+          "name": "Residual function",
+          "desc": "The transformation learned by the conv layers in the block. If the optimal H(x) ≈ x, then F(x) ≈ 0 — easier to learn than learning the full identity mapping from scratch."
+        },
+        {
+          "symbol": "+\\mathbf{x}",
+          "name": "Identity shortcut",
+          "desc": "Direct path from input to output that bypasses the conv layers. Carries gradients backward without any modification — the gradient highway."
+        }
+      ]
+    },
+    {
+      "label": "Gradient Through a Residual Block",
+      "heading": "Why Residuals Help Gradient Flow",
+      "terms": [
+        {
+          "symbol": "\\frac{\\partial \\mathcal{F}}{\\partial \\mathbf{x}} + I",
+          "name": "Jacobian of block output w.r.t. input",
+          "desc": "The +I term guarantees that even if the conv layers have near-zero Jacobian (vanishing gradients), the overall Jacobian is at least the identity — the gradient flows through unchanged."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "He et al. 2016",
+      "title": "Deep Residual Learning for Image Recognition",
+      "url": "https://arxiv.org/abs/1512.03385"
+    }
+  ]
+}

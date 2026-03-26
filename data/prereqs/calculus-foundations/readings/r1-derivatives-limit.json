@@ -1,0 +1,75 @@
+{
+  "id": "r1",
+  "moduleId": "calculus-foundations",
+  "title": "Derivatives: Rate of Change and the Limit",
+  "estimatedMinutes": 15,
+  "learningObjectives": [
+    {
+      "id": "r1-lo1",
+      "verb": "Explain",
+      "description": "Explain what a derivative is as the limit of a difference quotient and interpret it geometrically as the slope of a tangent line",
+      "skillTags": ["calculus-foundations", "derivatives"]
+    },
+    {
+      "id": "r1-lo2",
+      "verb": "Compute",
+      "description": "Compute the derivative of a power function using the power rule and state the derivative of a constant",
+      "skillTags": ["calculus-foundations", "derivatives"]
+    },
+    {
+      "id": "r1-lo3",
+      "verb": "Interpret",
+      "description": "Interpret a partial derivative in an ML context as the rate at which a loss function changes when one parameter is adjusted",
+      "skillTags": ["calculus-foundations", "ml-connection"]
+    }
+  ],
+  "prevItem": null,
+  "nextItem": { "type": "reading", "id": "r2" },
+  "content": "## The Central Question of Calculus\n\nWhen something changes continuously — a car accelerating, a neural network's loss falling with each training step — it changes at some rate at each instant. The **average rate of change** over an interval is easy: divide the change in output by the change in input. But what is the rate of change *at a single moment*?\n\nThis question, well-posed but deceptively subtle, is what calculus was invented to answer. The answer is the **derivative**.\n\n---\n\n## Average Rate of Change: The Secant Line\n\nGiven a function $f(x)$, the average rate of change between $x$ and $x+h$ is:\n\n$$\\frac{f(x+h) - f(x)}{h}$$\n\nGeometrically this is the slope of the **secant line** — the straight line connecting $(x,\\, f(x))$ and $(x+h,\\, f(x+h))$ on the graph.\n\n**Example.** For $f(x) = x^2$, the average rate of change from $x = 2$ to $x = 3$ (so $h = 1$):\n$$\\frac{3^2 - 2^2}{1} = \\frac{9 - 4}{1} = 5$$\n\nBut the slope of $x^2$ is clearly different at $x = 2$ versus $x = 3$. The value 5 is only a coarse average across the interval, not the instantaneous rate at either endpoint.\n\n---\n\n## The Limit: From Secant to Tangent\n\nAs $h$ shrinks toward zero, the secant line pivots toward a limiting position: the **tangent line** at $x$. The slope of that tangent line is the instantaneous rate of change.\n\nThe **derivative** of $f$ at $x$, written $f'(x)$, is:\n\n$$f'(x) = \\lim_{h \\to 0} \\frac{f(x+h) - f(x)}{h}$$\n\n$\\lim_{h \\to 0}$ means: the value this expression converges to as $h$ gets arbitrarily close to zero (without reaching it). We do not plug in $h = 0$ directly — that gives $0/0$. We simplify first, then let $h$ vanish.\n\n**Worked example: $f(x) = x^2$**\n\n$$\\frac{(x+h)^2 - x^2}{h} = \\frac{x^2 + 2xh + h^2 - x^2}{h} = \\frac{2xh + h^2}{h} = 2x + h$$\n\nOnce simplified, letting $h \\to 0$ gives $f'(x) = 2x$.\n\n- At $x = 3$: slope $= 6$. The parabola is rising steeply.\n- At $x = 0$: slope $= 0$. The parabola is flat at its vertex.\n- At $x = -2$: slope $= -4$. The parabola is falling.\n\nThe derivative $f'(x) = 2x$ is itself a function — it gives the slope at *every* point.\n\n---\n\n## Notation\n\nSeveral notations for the derivative appear in the literature:\n\n| Notation | Read as |\n|----------|---------|\n| $f'(x)$ | \"f prime of x\" |\n| $\\frac{dy}{dx}$ | \"dy by dx\" (when $y = f(x)$) |\n| $\\frac{d}{dx}[f(x)]$ | \"d by dx of f\" |\n\nThe **Leibniz notation** $dy/dx$ is especially useful in ML because it makes explicit *which variable* we are differentiating with respect to — essential when a model has thousands of parameters. It also makes the chain rule (r3) read like canceling fractions.\n\n---\n\n## The Power Rule\n\nCarrying out the difference-quotient calculation for $x^n$ in general (using the binomial theorem to expand $(x+h)^n$) yields a clean pattern:\n\n$$\\frac{d}{dx}\\left[x^n\\right] = n x^{n-1}$$\n\nThis holds for any real exponent — positive integers, fractions, negatives.\n\n| Function | Derivative |\n|----------|------------|\n| $x^4$ | $4x^3$ |\n| $\\sqrt{x} = x^{1/2}$ | $\\frac{1}{2}x^{-1/2} = \\frac{1}{2\\sqrt{x}}$ |\n| $x^{-1} = 1/x$ | $-x^{-2} = -1/x^2$ |\n| $c$ (any constant) | $0$ |\n\nA constant function is horizontal — zero slope everywhere.\n\n---\n\n## Differentiability\n\nThe limit $f'(x)$ exists only when the ratio converges to a definite value from both sides. This requires:\n- $f$ is **continuous** at $x$ (no jumps or holes)\n- No sharp corner or cusp at $x$\n\nThe absolute value $|x|$ is continuous but *not* differentiable at $x = 0$: the left-hand slope is $-1$ and the right-hand slope is $+1$, so the limit does not exist. Every differentiable function is continuous, but not vice versa.\n\nIn practice, the activation functions and loss functions used in ML are differentiable almost everywhere. ReLU is the notable exception — its derivative is undefined at exactly $x = 0$, which frameworks handle by convention.\n\n---\n\n## Why This Matters for ML\n\nTraining a neural network is an optimization problem: minimize a loss function $\\mathcal{L}(\\theta)$ over parameters $\\theta$. Gradient descent updates each parameter by:\n\n$$w \\leftarrow w - \\eta \\cdot \\frac{\\partial \\mathcal{L}}{\\partial w}$$\n\nThe symbol $\\partial$ denotes a **partial derivative**: the derivative of $\\mathcal{L}$ with respect to $w$ while all other parameters are held fixed. Partial derivatives follow exactly the same rules as ordinary derivatives — the notation simply acknowledges that there are multiple variables.\n\nThe term $\\partial \\mathcal{L}/\\partial w$ asks: *if I nudge $w$ up by a tiny amount, how much does the loss increase?* If the answer is positive, decreasing $w$ decreases the loss — which is exactly what the minus sign in the update achieves.\n\nWithout derivatives, training is impossible. With them, every update is a principled step toward lower loss.\n\n---\n\n## PyTorch and TensorFlow\n\nBoth frameworks compute derivatives automatically via **automatic differentiation** (autograd). They record each operation during the forward pass and apply the derivative rules from this reading (and the next three) to compute exact derivatives — no numerical approximations.\n\n```python\nimport torch\n\nx = torch.tensor(3.0, requires_grad=True)\nf = x ** 2          # f(x) = x²\n\nf.backward()        # accumulate gradients\nprint(x.grad)       # tensor(6.)  ← f'(3) = 2·3 = 6  ✓\n```\n\n```python\nimport tensorflow as tf\n\nx = tf.Variable(3.0)\nwith tf.GradientTape() as tape:\n    f = x ** 2\n\ndf_dx = tape.gradient(f, x)\nprint(df_dx.numpy())   # 6.0\n```\n\nThe `requires_grad=True` flag (PyTorch) and `GradientTape` context (TensorFlow) tell the framework to track operations so that derivatives can be computed afterward. This is the machinery that makes backpropagation possible at scale.",
+  "equationBreakdowns": [
+    {
+      "label": "Derivative Definition",
+      "heading": "The Limit of the Difference Quotient",
+      "terms": [
+        {
+          "symbol": "f(x+h) - f(x)",
+          "name": "Change in output",
+          "desc": "How much the function value changes when the input moves from x to x+h. The numerator of the slope ratio."
+        },
+        {
+          "symbol": "h",
+          "name": "Change in input",
+          "desc": "The width of the interval. Dividing by h gives the average slope. As h shrinks, this ratio approaches the instantaneous slope."
+        },
+        {
+          "symbol": "\\lim_{h \\to 0}",
+          "name": "The limit",
+          "desc": "The value the ratio converges to as h approaches zero — not by plugging in h=0 (which gives 0/0), but by simplifying first so the h in the denominator cancels."
+        }
+      ]
+    },
+    {
+      "label": "Power Rule",
+      "heading": "Differentiating x^n",
+      "terms": [
+        {
+          "symbol": "n",
+          "name": "Exponent",
+          "desc": "The current power. It comes down in front as a multiplier."
+        },
+        {
+          "symbol": "x^{n-1}",
+          "name": "Reduced power",
+          "desc": "The exponent decreases by one. Each application of the power rule drops the exponent by 1."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "MIT 18.01SC — Sessions 1–3",
+      "title": "Derivatives, Slope, Velocity, Rate of Change",
+      "url": "https://ocw.mit.edu/courses/18-01sc-single-variable-calculus-fall-2010/"
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "id": "q1",
+  "moduleId": "m6",
+  "title": "Structure from Motion & Reconstruction Theory",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "questions": [
+    {
+      "id": "q6_q1_1",
+      "type": "multiple-choice",
+      "prompt": "GLOMAP's global positioning stage reports: Initial cost 1.906 × 10⁶ → Final cost 1.300 × 10¹ in 54 Ceres iterations. What does this ~10⁵× cost reduction tell you about the optimization landscape near the solution?",
+      "options": [
+        { "id": "a", "text": "The cost landscape has many local minima, so Ceres found the global minimum only by chance", "correct": false },
+        { "id": "b", "text": "The problem is strongly convex near the solution — the Gauss-Newton steps each reduce cost by a roughly constant factor, consistent with quadratic convergence in a well-conditioned neighborhood", "correct": true },
+        { "id": "c", "text": "The 10⁵× reduction proves the initial estimate was completely random, so 54 iterations of gradient descent were needed to recover any structure", "correct": false },
+        { "id": "d", "text": "Ceres achieved this reduction by switching from first-order to second-order optimization partway through", "correct": false }
+      ],
+      "explanation": "A ~10⁵× cost reduction in 54 iterations is characteristic of a well-conditioned least-squares problem: early iterations make large cost reductions (the solution is far from the optimum), and later iterations converge rapidly. This is not random luck — GLOMAP initializes with rotation averaging and a linear position solver that places cameras close to their final positions, so the nonlinear BA refinement starts near the true solution and converges quickly.",
+      "hint": "What does it mean for an optimization to converge quickly from a large initial cost to a very small final cost in a modest number of iterations?"
+    },
+    {
+      "id": "q6_q1_2",
+      "type": "multiple-choice",
+      "prompt": "In GLOMAP's pipeline, 4,549 of 16,451 established tracks are discarded due to 'too small triangulation angle'. Which scenario would produce the most tracks with small triangulation angles?",
+      "options": [
+        { "id": "a", "text": "A video captured with a drone flying a wide arc around a building at constant altitude", "correct": false },
+        { "id": "b", "text": "A video filmed by walking slowly forward through a corridor, with the camera always pointing straight ahead", "correct": true },
+        { "id": "c", "text": "A handheld video circling a statue with the camera aimed at the statue throughout", "correct": false },
+        { "id": "d", "text": "A multi-camera rig with cameras placed 10 meters apart pointing at the same scene", "correct": false }
+      ],
+      "explanation": "Walking forward with a forward-facing camera produces near-parallel rays from successive frames to any given 3D point. The baseline between consecutive frames is small relative to scene depth, and all cameras point in nearly the same direction — so the angle between rays from any two cameras to the same point is tiny. This is the worst case for triangulation: the estimated 3D point position is extremely sensitive to small errors in ray direction. Wide-baseline captures (arc, circle, multi-camera rig) produce large triangulation angles and well-conditioned point estimates.",
+      "hint": "Draw two camera positions and the rays they emit toward a single 3D point. What happens to the intersection as the cameras get closer together and more similarly oriented?"
+    },
+    {
+      "id": "q6_q1_3",
+      "type": "code-completion",
+      "prompt": "Implement the Schur complement elimination for bundle adjustment. Given the normal equations partitioned into camera block B, point block A, and coupling C, compute the reduced camera system:",
+      "codeTemplate": "import numpy as np\n\ndef schur_complement_camera_system(B, A, C, g_c, g_p):\n    \"\"\"\n    Bundle adjustment Schur complement.\n    B: (6m x 6m) camera-camera block\n    A: (3n x 3n) point-point block, block-diagonal, each block is 3x3\n    C: (6m x 3n) camera-point coupling block\n    g_c: (6m,) camera gradient\n    g_p: (3n,) point gradient\n    \n    Returns: (S, rhs) where S @ delta_c = rhs is the reduced system\n    \"\"\"\n    # A is block diagonal: invert block by block\n    n_blocks = A.shape[0] // 3\n    A_inv = np.zeros_like(A)\n    for k in range(n_blocks):\n        A_inv[3*k:3*k+3, 3*k:3*k+3] = np.linalg.inv(A[3*k:3*k+3, 3*k:3*k+3])\n    \n    # Schur complement matrix\n    S = ___BLANK___\n    \n    # Right-hand side\n    rhs = -(g_c - C @ A_inv @ g_p)\n    \n    return S, rhs",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "B - C @ A_inv @ C.T",
+        "B - C @ A_inv @ C.T  # Schur complement",
+        "B - (C @ A_inv @ C.T)"
+      ],
+      "explanation": "The Schur complement of A in the full normal equations is S = B - C A⁻¹ Cᵀ. Solving S δ_c = rhs gives the camera update δ_c; the point update follows as δ_p = -A⁻¹(g_p + Cᵀ δ_c). The efficiency gain is that A is block-diagonal (3×3 blocks, one per 3D point), making A⁻¹ trivial to compute, while the reduced system S is of size 6m×6m (cameras only) — far smaller than the full (6m+3n)×(6m+3n) system.",
+      "hint": "The Schur complement of block A in the matrix [[B, C], [Cᵀ, A]] is S = B - C A⁻¹ Cᵀ."
+    },
+    {
+      "id": "q6_q1_4",
+      "type": "multiple-choice",
+      "prompt": "GLOMAP registers 585 of 1,179 input images (49.6%). The notebook reports 585 cameras after sparse reconstruction. What is the most likely reason the other 594 images were not registered?",
+      "options": [
+        { "id": "a", "text": "GLOMAP has a maximum image count of 600 and stopped after reaching it", "correct": false },
+        { "id": "b", "text": "The unregistered images have insufficient feature matches with already-registered cameras — their keypoints either weren't matched (e.g., motion blur, featureless sky regions) or landed in rejected tracks", "correct": true },
+        { "id": "c", "text": "GLOMAP discards images with resolution lower than a fixed threshold", "correct": false },
+        { "id": "d", "text": "The unregistered images are duplicates of registered ones that GLOMAP automatically deduplicates", "correct": false }
+      ],
+      "explanation": "Global SfM requires a connected graph of pairwise matches. Images that lack sufficient overlap with the registered set cannot be localized: they have no reliable 2D-3D correspondences to use for PnP. For a video at 8 fps of a 2-minute walkthrough, many frames will capture nearly identical views (slow camera motion) or scenes with low texture (sky, smooth stone walls). These produce few SIFT keypoints and/or poor match quality, resulting in rejection at the feature matching or track validation stage.",
+      "hint": "What would cause an image to have no usable correspondences with an existing reconstruction?"
+    },
+    {
+      "id": "q6_q1_5",
+      "type": "multiple-choice",
+      "prompt": "The Bamburgh Castle pipeline uses `--ImageReader.camera_model PINHOLE`. A more general option would be OPENCV (which adds radial distortion parameters k1, k2 and tangential p1, p2). When would you choose PINHOLE over OPENCV for a cell phone video?",
+      "options": [
+        { "id": "a", "text": "Always — PINHOLE is strictly better because it has fewer parameters and can't overfit", "correct": false },
+        { "id": "b", "text": "When the lens distortion is negligible (e.g., video shot at a moderate focal length with a high-end phone) and you want faster feature matching without distortion correction overhead", "correct": true },
+        { "id": "c", "text": "When the video resolution is below 720p, because OPENCV can only handle HD footage", "correct": false },
+        { "id": "d", "text": "PINHOLE is only valid for cameras with zero sensor size; for phone cameras you must always use OPENCV", "correct": false }
+      ],
+      "explanation": "PINHOLE omits distortion parameters, which is valid when lens distortion is small relative to the reprojection error tolerance. Modern phone cameras at moderate zoom have relatively low distortion, especially in the center of the frame. For wide-angle or fisheye lenses, OPENCV or FULL_OPENCV is necessary. The tradeoff is model expressiveness vs. parameter count: adding distortion parameters that aren't needed increases BA degrees of freedom without improving reconstruction quality, and can even hurt by fitting noise.",
+      "hint": "Consider the tradeoff between model flexibility and overfitting. When is adding parameters harmful?"
+    }
+  ],
+  "prevItem": { "type": "reading", "id": "r5" },
+  "nextItem": { "type": "quiz", "id": "q2" }
+}

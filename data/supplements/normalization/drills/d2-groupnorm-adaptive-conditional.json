@@ -1,0 +1,84 @@
+{
+  "id": "d2",
+  "moduleId": "normalization",
+  "title": "GroupNorm, InstanceNorm, Adaptive and Conditional Normalization",
+  "description": "Small-batch alternatives and the progression from fixed to condition-predicted affine parameters",
+  "estimatedMinutes": 20,
+  "cards": [
+    {
+      "id": "d2-c1",
+      "front": "Why does BatchNorm fail with small batch sizes, and what is the threshold where degradation becomes significant?",
+      "back": "**Failure mechanism:** batch statistics $\\mu_\\mathcal{B}$ and $\\sigma^2_\\mathcal{B}$ are noisy estimates of the true feature distribution when $B$ is small.\n\nFor object detection: 2 images/GPU × 7×7 spatial = 98 samples per channel — the feature distributions of 2 images can differ dramatically, making the batch statistics unreliable.\n\n**Threshold:** performance degrades sharply below ~**16–32 examples per device**.\n\nWu & He (2018) showed GroupNorm matches or outperforms BatchNorm at batch size ≤ 8 on COCO object detection."
+    },
+    {
+      "id": "d2-c2",
+      "front": "What dimension does InstanceNorm normalize, and why does this normalization axis capture style information?",
+      "back": "InstanceNorm normalizes over the **spatial dimensions** $(H, W)$ of each example $b$ and each channel $c$ independently:\n\n$$\\mu_{b,c} = \\frac{1}{HW}\\sum_{h,w} x_{b,c,h,w}$$\n\n**Why this captures style:** the per-channel spatial statistics (mean = average color/activation level, variance = texture intensity) encode style in the sense of Gram matrix methods. InstanceNorm removes these statistics from the content features — stripping the content image's appearance — so they can be replaced with the style image's statistics.\n\nThis is why InstanceNorm is the default in style transfer but not classification (where it destroys discriminative signals)."
+    },
+    {
+      "id": "d2-c3",
+      "front": "What are the two special cases of GroupNorm (G=1 and G=C), and what normalization do they reduce to?",
+      "back": "GroupNorm divides $C$ channels into $G$ groups and normalizes over (group channels) × (spatial dims) per example.\n\n| $G$ | Equivalent to | Statistics pooled over |\n|---|---|---|\n| $G = C$ | **InstanceNorm** | Spatial dims $(H, W)$ only, per channel |\n| $G = 1$ | **LayerNorm** | All $C$ channels + spatial dims $(H, W)$ |\n\nBatchNorm cannot be recovered from GroupNorm — it requires statistics across the batch dimension, which GroupNorm never uses."
+    },
+    {
+      "id": "d2-c4",
+      "front": "In GroupNorm, do the learned parameters γ and β apply per group or per channel?",
+      "back": "**Per channel** — not per group.\n\nThe grouping affects only the statistics computation ($\\mu_{b,g}$ and $\\sigma^2_{b,g}$ are group-level). The learned affine parameters $\\gamma_c$ and $\\beta_c$ remain **one scalar per feature channel**.\n\nThis preserves full per-channel expressive capacity in the output while using group-level statistics for normalization stability. A network with 256 channels and $G = 32$ groups has 256 $\\gamma$ and 256 $\\beta$ values — not 32."
+    },
+    {
+      "id": "d2-c5",
+      "front": "What is the recommended default value of G in GroupNorm for image models, and what constraint should hold for C/G?",
+      "back": "**Recommended default:** $G = 32$\n\nFor smaller channel counts (e.g., 64), $G = C/2$ or $G = C/4$ is common.\n\n**Constraint:** $C/G$ (channels per group) should be **≥ 8** to provide stable statistics within each group. If $C/G$ is too small (1–2 channels), the group statistics become noisy — similar to the small-batch problem that motivated GroupNorm in the first place.\n\nSensitivity to $G$ is relatively low in practice as long as this minimum is met."
+    },
+    {
+      "id": "d2-c6",
+      "front": "Which tasks use BatchNorm, GroupNorm, InstanceNorm, and LayerNorm as their standard? Name one architecture for each.",
+      "back": "| Technique | Standard domain | Example architecture |\n|---|---|---|\n| **BatchNorm** | Supervised vision, large batch | ResNet, EfficientNet |\n| **GroupNorm** | Object detection/segmentation, small batch | Mask R-CNN (Detectron2) |\n| **InstanceNorm** | Style transfer, image-to-image | CycleGAN, pix2pix |\n| **LayerNorm / RMSNorm** | Language models, transformers | GPT-3, LLaMA |\n\nKey distinction: BN needs large batches; GN is batch-size independent; IN removes per-example appearance; LN normalizes per token."
+    },
+    {
+      "id": "d2-c7",
+      "front": "What is Adaptive Instance Normalization (AdaIN), and what are its two inputs?",
+      "back": "AdaIN transfers the statistical \"style\" of one image onto the normalized features of another:\n\n$$\\text{AdaIN}(\\mathbf{x}_c, \\mathbf{x}_s) = \\sigma(\\mathbf{x}_s) \\cdot \\frac{\\mathbf{x}_c - \\mu(\\mathbf{x}_c)}{\\sigma(\\mathbf{x}_c)} + \\mu(\\mathbf{x}_s)$$\n\n**Two inputs:**\n- $\\mathbf{x}_c$ — **content** feature map (structure to preserve)\n- $\\mathbf{x}_s$ — **style** feature map (statistics to transfer)\n\n**Steps:** (1) Instance-normalize the content features (remove content's style). (2) Re-scale and re-shift using the *style* image's per-channel spatial mean and variance.\n\n**No learned parameters** — $\\gamma$ and $\\beta$ come directly from $\\mathbf{x}_s$ at inference time."
+    },
+    {
+      "id": "d2-c8",
+      "front": "Why does AdaIN produce a style transfer effect without any learned affine parameters?",
+      "back": "Style in neural networks is encoded in the **first and second moments of channel activations** (Gatys et al., 2015 — the basis for Gram matrix style transfer).\n\nAdaIN:\n1. Removes the content image's channel moments (InstanceNorm step)\n2. Inserts the style image's channel moments as the new mean and variance\n\nThis approximates full Gram matrix matching at negligible computational cost: two scalars per channel rather than a $C \\times C$ covariance matrix.\n\n**Result:** the spatial structure of the content (object layout, edges) is preserved, while the texture statistics (color, stroke scale, tone) are replaced with those of the style image."
+    },
+    {
+      "id": "d2-c9",
+      "front": "What is Conditional Batch Normalization, and how does it inject a conditioning signal?",
+      "back": "Standard BN has fixed learned $\\gamma$ and $\\beta$ (updated by the optimizer, same for all inputs at test time).\n\n**Conditional BN** replaces them with vectors predicted from a conditioning signal $\\mathbf{c}$:\n\n$$\\gamma(\\mathbf{c}) = W_\\gamma\\mathbf{c} + b_\\gamma \\qquad \\beta(\\mathbf{c}) = W_\\beta\\mathbf{c} + b_\\beta$$\n\nThe normalization step is the same as standard BN; only the affine parameters change at runtime.\n\n**FiLM (Perez et al., 2018)** generalized this as Feature-wise Linear Modulation — the same principle applied in transformers and VQA. The conditioning signal (e.g., a language question) predicts $\\gamma$ and $\\beta$ that modulate image features."
+    },
+    {
+      "id": "d2-c10",
+      "front": "Why is Conditional BatchNorm more parameter-efficient than concatenating the condition to every feature map?",
+      "back": "**Concatenation approach:** append the conditioning vector (or a tiled version) to feature maps at every layer. This adds parameters proportional to the spatial extent of the feature maps and requires the network to learn to extract the conditioning signal from a mixed feature+condition tensor.\n\n**Conditional BN approach:** project the conditioning vector $\\mathbf{c} \\in \\mathbb{R}^d$ to $\\gamma, \\beta \\in \\mathbb{R}^C$ via a single linear layer ($W_\\gamma, W_\\beta \\in \\mathbb{R}^{C \\times d}$).\n\n**Efficiency advantage:** the projection is shared across all spatial positions. For 512 channels with a 128-dim condition, this is $512 \\times 128 = 65,536$ parameters per layer — regardless of spatial resolution. A 256×256 feature map concatenation would need to process $256 \\times 256 = 65,536$ extra input positions."
+    },
+    {
+      "id": "d2-c11",
+      "front": "What does SPADE produce that standard conditional BN cannot, and why is this needed for semantic image synthesis?",
+      "back": "SPADE produces **spatially-varying** $\\gamma$ and $\\beta$ maps — different scale and shift at each spatial location:\n\n$$\\gamma_{c,h,w}(\\mathbf{m}) = \\text{Conv}_{\\gamma}(\\text{Conv}_{\\text{shared}}(\\text{resize}(\\mathbf{m})))_{c,h,w}$$\n\nConditional BN produces a single global $\\gamma \\in \\mathbb{R}^C$ — the same shift everywhere in the feature map.\n\n**Why spatial variation is needed:** a segmentation mask has different labels at different locations (sky, grass, road). To generate sky texture at the top and grass texture at the bottom, the generator needs different normalization parameters at different spatial positions. A global $\\gamma/\\beta$ cannot simultaneously communicate both."
+    },
+    {
+      "id": "d2-c12",
+      "front": "How does SPADE inject the segmentation mask into the generator at each layer?",
+      "back": "**At each generator layer:**\n1. Resize the segmentation mask $\\mathbf{m}$ to the current feature resolution\n2. Apply a shared convolutional layer to get a shared embedding\n3. Apply two separate convolutional projections to produce per-pixel $\\gamma_{c,h,w}$ and $\\beta_{c,h,w}$ maps\n4. Instance-normalize the feature map\n5. Apply the spatial affine: $y_{b,c,h,w} = \\gamma_{c,h,w} \\cdot \\hat{x}_{b,c,h,w} + \\beta_{c,h,w}$\n\n**Key design:** the mask is injected **at every layer** (not just the input), so spatial conditioning is refreshed throughout the generator. This prevents the spatial information from being lost through downsampling in the encoder."
+    },
+    {
+      "id": "d2-c13",
+      "front": "What conditioning signals does adaLN-Zero use in Diffusion Transformers (DiT), and what does the single linear layer produce?",
+      "back": "**Conditioning signals:**\n- Diffusion **timestep** $t$ (how much noise is in the input)\n- **Class label** $y$ (for class-conditional generation)\n\nBoth are embedded and summed: $\\mathbf{c} = \\text{embed}(t) + \\text{embed}(y) \\in \\mathbb{R}^d$\n\n**Linear layer output per block:**\n$$[\\gamma_1, \\beta_1, \\alpha_1, \\gamma_2, \\beta_2, \\alpha_2] = \\text{Linear}(\\mathbf{c}) \\in \\mathbb{R}^{6d}$$\n\n- $\\gamma_1, \\beta_1$: scale and shift for the pre-attention LayerNorm\n- $\\gamma_2, \\beta_2$: scale and shift for the pre-FFN LayerNorm\n- $\\alpha_1, \\alpha_2$: gates applied to the attention and FFN residual branches"
+    },
+    {
+      "id": "d2-c14",
+      "front": "What is the 'zero' in adaLN-Zero, and why does it help training?",
+      "back": "The linear projection layer (that outputs $[\\gamma, \\beta, \\alpha]$) is initialized with **zero weights and zero bias**.\n\n**At initialization:** all projected values are zero.\n- $\\gamma = 0$, $\\beta = 0$: LayerNorm acts as standard normalization with no affine correction\n- $\\alpha = 0$: both residual branches contribute zero\n\n**Effect on the block:** $\\mathbf{x} \\leftarrow \\mathbf{x} + 0 \\cdot \\text{Attention}(\\cdot) = \\mathbf{x}$. Every DiT block starts as an **identity function**.\n\n**Why it helps:** the network begins as the identity; gradient updates incrementally add structure. This is the zero-init residual trick extended to the conditioning mechanism. DiT showed this substantially improves training stability and final generation quality (FID)."
+    },
+    {
+      "id": "d2-c15",
+      "front": "Trace the evolution from BatchNorm's fixed γ/β to SPADE's spatial maps. What does each step unlock?",
+      "back": "**BatchNorm** — fixed $\\gamma, \\beta \\in \\mathbb{R}^C$ learned by optimizer. Same affine for all inputs. Unlocks: stable training via learned scale/shift.\n\n**AdaIN** — $\\gamma, \\beta$ come from style image statistics at runtime. No learning. Unlocks: arbitrary style transfer in one forward pass.\n\n**Conditional BN / FiLM** — $\\gamma, \\beta$ predicted by a linear layer from condition $\\mathbf{c}$. Global per-channel, learned projection. Unlocks: parameter-efficient conditioning on class, timestep, language.\n\n**SPADE** — $\\gamma_{c,h,w}, \\beta_{c,h,w}$ predicted by convolutions from a spatial mask. Different value at every pixel. Unlocks: spatially-specific conditioning needed for semantic image synthesis.\n\n**adaLN-Zero** — $\\gamma, \\beta, \\alpha$ all zero-initialized, predicted from timestep+class. Unlocks: stable diffusion transformer training with gate-controlled residuals."
+    }
+  ]
+}

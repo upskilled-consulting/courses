@@ -1,0 +1,59 @@
+{
+  "id": "q2",
+  "moduleId": "m1",
+  "title": "Gaussian Mathematics",
+  "passingScore": 0.75,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "questions": [
+    {
+      "id": "q2_1",
+      "type": "multiple-choice",
+      "prompt": "The covariance factorization \\(\\Sigma = RSS^\\top R^\\top\\) guarantees \\(\\Sigma\\) is positive semi-definite. Which algebraic fact makes this true?",
+      "options": [
+        { "id": "a", "text": "\\(R\\) is orthogonal, so \\(R^\\top = R^{-1}\\), making \\(\\Sigma\\) symmetric", "correct": false },
+        { "id": "b", "text": "For any vector \\(v\\), \\(v^\\top \\Sigma v = \\|S^\\top R^\\top v\\|^2 \\geq 0\\) — it equals a squared norm", "correct": true },
+        { "id": "c", "text": "\\(S\\) is diagonal with positive entries, so its eigenvalues are positive", "correct": false },
+        { "id": "d", "text": "The product \\(RSS^\\top R^\\top\\) always has trace equal to \\(\\text{tr}(S)^2\\)", "correct": false }
+      ],
+      "explanation": "PSD requires \\(v^\\top \\Sigma v \\geq 0\\) for all \\(v\\). Substituting: \\(v^\\top RSS^\\top R^\\top v = (R^\\top v)^\\top SS^\\top (R^\\top v) = \\|S R^\\top v\\|^2 \\geq 0\\). The key insight is that any expression of the form \\(A^\\top A\\) is PSD (it equals a squared norm). Option (a) is also true but describes symmetry, not semi-definiteness.",
+      "hint": "Write out \\(v^\\top \\Sigma v\\) explicitly and see what form it takes."
+    },
+    {
+      "id": "q2_2",
+      "type": "multiple-choice",
+      "prompt": "How many learnable SH coefficients encode view-dependent color if you use SH degree 1 instead of degree 3? (3 color channels, not counting the DC term which is stored separately.)",
+      "options": [
+        { "id": "a", "text": "3", "correct": false },
+        { "id": "b", "text": "9", "correct": true },
+        { "id": "c", "text": "12", "correct": false },
+        { "id": "d", "text": "27", "correct": false }
+      ],
+      "explanation": "Degree 1 has \\((1+1)^2 = 4\\) total coefficients per channel. Subtract the DC term (order 0, 1 coefficient): 3 AC coefficients per channel × 3 channels = 9 total. Compared to degree 3's 45 AC coefficients, this is an 80% reduction for view-dependent parameters alone.",
+      "hint": "Use the formula \\((l+1)^2\\) for the total number of SH coefficients up to and including degree \\(l\\). Then subtract the DC term and multiply by 3 channels."
+    },
+    {
+      "id": "q2_3",
+      "type": "code-completion",
+      "prompt": "Complete the quaternion-to-rotation-matrix conversion. Given unit quaternion \\(q = (w, x, y, z)\\), fill in the \\(R[0,1]\\) element (top-center of the matrix):",
+      "codeTemplate": "def quat_to_rot(w, x, y, z):\n    # Assumes unit quaternion: w^2+x^2+y^2+z^2 = 1\n    R = [\n        [1-2*(y*y+z*z),  ___BLANK___,      2*(x*z+w*y)  ],\n        [2*(x*y+w*z),    1-2*(x*x+z*z),    2*(y*z-w*x)  ],\n        [2*(x*z-w*y),    2*(y*z+w*x),      1-2*(x*x+y*y)]\n    ]\n    return R",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": ["2*(x*y-w*z)", "2*(x*y - w*z)", "2 * (x*y - w*z)", "2*(x*y-w*z)"],
+      "explanation": "The standard quaternion-to-rotation formula for element \\(R[0,1]\\) (row 0, column 1) is \\(2(xy - wz)\\). This can be derived from the matrix representation of quaternion multiplication \\(R = qq^* \\).",
+      "hint": "The rotation matrix from a unit quaternion \\((w,x,y,z)\\) has \\(R[0,1] = 2(xy - wz)\\). Note the minus sign."
+    },
+    {
+      "id": "q2_4",
+      "type": "multiple-choice",
+      "prompt": "Spherical harmonics provide a view-dependent color model. For a highly specular surface with a sharp, narrow highlight, what SH degree is *most likely insufficient* to capture it accurately?",
+      "options": [
+        { "id": "a", "text": "Order 0 (DC only) — it cannot vary with direction at all", "correct": false },
+        { "id": "b", "text": "Order 1 — it can model smooth gradients but not sharp highlights", "correct": false },
+        { "id": "c", "text": "Order 3 — it may still be insufficient for very high-frequency specularities", "correct": true },
+        { "id": "d", "text": "All SH orders above 0 are equivalent for specular highlights", "correct": false }
+      ],
+      "explanation": "SH are a low-frequency basis. A sharp specular highlight has high spatial frequency on the sphere, requiring many SH bands to represent accurately. Order 3 (16 coefficients per channel) can capture moderately directional effects but will ring (Gibbs phenomenon) around sharp specular spikes. This is a fundamental limitation of SH-based view-dependent color, motivating hybrid approaches (SH + residual MLP in ScaffoldGS, or environment-map-based relighting).",
+      "hint": "Think about the analogy with Fourier series: how many terms do you need to represent a sharp spike vs. a smooth curve?"
+    }
+  ]
+}

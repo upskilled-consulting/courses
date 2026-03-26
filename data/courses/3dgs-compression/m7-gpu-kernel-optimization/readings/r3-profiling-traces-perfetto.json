@@ -1,0 +1,76 @@
+{
+  "id": "r3",
+  "moduleId": "m7",
+  "title": "Kernel Profiling & Tracing: torch.profiler, NVTX & Perfetto",
+  "estimatedMinutes": 15,
+  "learningObjectives": [
+    {
+      "id": "m7r3-lo1",
+      "verb": "Use",
+      "description": "Use torch.profiler with the correct schedule and activities to record a 3DGS training step trace and identify the top CPU and CUDA kernel time consumers",
+      "skillTags": [
+        "profiling",
+        "cuda-programming"
+      ]
+    },
+    {
+      "id": "m7r3-lo2",
+      "verb": "Add",
+      "description": "Add NVTX range annotations to a 3DGS training loop, export to Perfetto JSON, and interpret the resulting timeline to distinguish CPU-GPU synchronization gaps from kernel execution time",
+      "skillTags": [
+        "profiling",
+        "cuda-programming"
+      ]
+    },
+    {
+      "id": "m7r3-lo3",
+      "verb": "Read",
+      "description": "Read ncu hardware counter output to extract achieved warp occupancy, memory throughput, warp divergence rate, and L1 hit rate for a specific CUDA kernel",
+      "skillTags": [
+        "profiling",
+        "memory-optimization"
+      ]
+    },
+    {
+      "id": "m7r3-lo4",
+      "verb": "Apply",
+      "description": "Apply the optimization loop (measure → roofline → diagnose → implement one change → validate) to propose and justify a concrete optimization for a memory-bound kernel identified in a profiler trace",
+      "skillTags": [
+        "profiling",
+        "memory-optimization",
+        "cuda-programming"
+      ]
+    }
+  ],
+  "content": "## Measure Before You Optimize\n\nKnowing the CGMA ratio and the roofline model tells you what is *theoretically* possible. Profiling tells you what is *actually* happening. The two together give you a complete picture: roofline sets the ceiling, profiling shows you where the floor is and why.\n\nThe Amdahl's Law corollary for optimization: if a kernel takes 80% of total runtime and you speed it up 2×, the system speedup is only 1.43×. Profiling first ensures you optimize the *right* thing. Without measurement, expert intuition is unreliable — the GPU's out-of-order scheduler, warp switcher, and memory subsystem interact in ways that confound even experienced engineers.\n\n## The Profiling Tool Stack\n\nFor 3DGS training in PyTorch+CUDA, there are three layers of tooling:\n\n| Tool | Granularity | Cost | Output |\n|---|---|---|---|\n| `torch.profiler` | CPU ops, CUDA kernel launches, memory | Low | Chrome/Perfetto JSON |\n| NVTX annotations | User-defined code ranges | Zero (disabled in prod) | Markers in nsys timeline |\n| `ncu` (Nsight Compute) | Per-kernel hardware counters | High (serializes execution) | SM utilization, warp efficiency, bandwidth, roofline |\n\nStart with `torch.profiler` to identify *which* kernel is slow. Then use `ncu` to understand *why* it is slow. Use NVTX to add semantic labels that survive both tools.\n\n## torch.profiler: System-Level Tracing\n\n`torch.profiler` hooks into PyTorch's dispatch mechanism and CUDA's activity API. It records:\n- CPU-side PyTorch operations (with shapes and call stacks)\n- CUDA kernel launch timestamps and durations\n- CUDA memory allocations and copies (H→D, D→H, D→D)\n- GPU-side kernel execution on each CUDA stream\n\n```python\nimport torch\nfrom torch.profiler import profile, ProfilerActivity, tensorboard_trace_handler\n\n# Profile a 3DGS training step\nwith profile(\n    activities=[\n        ProfilerActivity.CPU,\n        ProfilerActivity.CUDA,\n    ],\n    record_shapes=True,           # capture tensor shapes\n    profile_memory=True,          # track allocations\n    with_stack=True,              # include Python call stacks\n    with_flops=True,              # estimate FLOPs for supported ops\n) as prof:\n    # Run a few warmup steps first, then profile\n    for step in range(5):\n        gaussians.optimizer.zero_grad()\n        rendered, radii = render(viewpoint, gaussians, pipe, bg)\n        loss = (1.0 - lambda_dssim) * l1_loss + lambda_dssim * (1.0 - ssim(rendered, gt))\n        loss.backward()\n        gaussians.optimizer.step()\n\n# Export for Perfetto / Chrome\nprof.export_chrome_trace(\"3dgs_training_trace.json\")\n\n# Also print a text summary\nprint(prof.key_averages().table(\n    sort_by=\"cuda_time_total\", row_limit=20\n))\n```\n\nThe `key_averages()` table immediately shows which CUDA kernels consumed the most GPU time:\n\n```\n---------------------------------  --------  --------  --------\nName                               CPU time  CUDA time  # Calls\n---------------------------------  --------  --------  --------\nrenderCUDA                         1.2ms     28.4ms     1\nvoid at::native::elementwise...    0.3ms     4.1ms      12\nadam_update                        0.2ms     2.8ms      1\ncudaMemcpyAsync                    0.8ms     1.9ms      3\n---------------------------------  --------  --------  --------\n```\n\nIn a typical 3DGS training step, `renderCUDA` dominates at 60–80% of GPU time — the forward rasterization pass is the bottleneck, confirming where to focus optimization effort.\n\n## NVTX: Semantic Annotations\n\nNVTX (NVIDIA Tools Extension) lets you insert named ranges into your code that appear as colored bands in timeline profilers. They add zero overhead when profiling is disabled.\n\n```python\nimport torch.cuda.nvtx as nvtx\n\ndef train_step(gaussians, viewpoint, pipe, bg, optimizer):\n    nvtx.range_push(\"zero_grad\")\n    optimizer.zero_grad()\n    nvtx.range_pop()\n\n    nvtx.range_push(\"forward_render\")\n    rendered, radii = render(viewpoint, gaussians, pipe, bg)\n    nvtx.range_pop()\n\n    nvtx.range_push(\"loss_computation\")\n    loss = compute_loss(rendered, viewpoint.original_image)\n    nvtx.range_pop()\n\n    nvtx.range_push(\"backward\")\n    loss.backward()\n    nvtx.range_pop()\n\n    nvtx.range_push(\"optimizer_step\")\n    optimizer.step()\n    nvtx.range_pop()\n```\n\nWith NVTX ranges, the Perfetto timeline shows each phase as a labeled slice rather than an anonymous CUDA kernel launch — making it immediately clear whether the backward pass or the forward render dominates, and where CPU–GPU synchronization is causing bubbles.\n\n## Perfetto: Reading the Timeline\n\nPerfetto (https://ui.perfetto.dev) is an open-source trace analysis tool from Google, originally built for Android system tracing. It reads the Chrome Trace Event Format — the same format that `torch.profiler` and `nsys` export — making it the standard viewer for cross-framework GPU traces.\n\n### Opening a Trace\n\nNavigate to **ui.perfetto.dev** and drag-drop `3dgs_training_trace.json`. The UI shows:\n\n1. **Process/Thread tracks** (top): CPU-side Python threads. Each torch operation appears as a nested stack of colored slices.\n2. **CUDA stream tracks** (middle): GPU-side execution on each CUDA stream (usually stream 7 for compute, stream 13 for memory ops).\n3. **Counter tracks** (bottom): GPU utilization % and memory allocation over time.\n\n### What to Look For\n\n**Long GPU kernel slices**: The widest bar in the CUDA stream track is your primary optimization target. Hovering shows duration, kernel name, and launch parameters.\n\n**CPU–GPU gaps**: A gap between the end of one GPU kernel and the start of the next, with CPU activity in between, indicates a **synchronization point** — the CPU waited for GPU results before launching the next kernel. In 3DGS training, the `backward()` pass triggers a GPU→CPU copy of radii/gradients for the Gaussian densification check at iteration 100, 300, 500... This is often visible as a periodic sync gap.\n\n**Flow events**: Arrows from CPU launch events to GPU execution events show scheduling latency. If the GPU starts a kernel 200μs after the CPU launched it, the launch overhead is 200μs — potentially significant for short kernels.\n\n**Memory transfer bands**: Wide `cudaMemcpy` slices in the CUDA stream track indicate large H→D or D→H transfers. In 3DGS, the initial point cloud upload (SfM → GPU) should appear as one large H→D transfer at the start, with no subsequent large transfers if everything stays on-device.\n\n## Nsight Compute: Kernel-Level Hardware Counters\n\nWhile `torch.profiler` shows *timing*, Nsight Compute (`ncu`) shows *why*. It re-runs a target kernel multiple times, each pass collecting a different set of hardware performance counters, then presents a unified report.\n\nKey metrics for 3DGS kernel analysis:\n\n| Metric | Command | Meaning |\n|---|---|---|\n| Achieved occupancy | `sm__warps_active.avg.pct_of_peak_sustained_active` | Active warps / theoretical max |\n| Warp divergence | `smsp__thread_inst_executed_pred_on.avg.pct_of_peak_sustained_elapsed` | Fraction of instruction slots with at least one active thread |\n| Global memory throughput | `l1tex__t_bytes_pipe_lsu_mem_global_op_ld.sum.per_second` | Actual load bandwidth |\n| L1 hit rate | `l1tex__t_sector_hit_rate.pct` | Fraction of L1 lookups that hit |\n| Compute throughput | `sm__pipe_alu_cycles_active.avg.pct_of_peak_sustained_elapsed` | ALU pipeline utilization |\n\nA quick `ncu` invocation on the 3DGS rasterizer:\n\n```bash\nncu --metrics \\\n    sm__warps_active.avg.pct_of_peak_sustained_active,\\\n    l1tex__t_bytes_pipe_lsu_mem_global_op_ld.sum.per_second,\\\n    sm__pipe_alu_cycles_active.avg.pct_of_peak_sustained_elapsed \\\n    --kernel-name renderCUDA \\\n    python train.py -s scene/ --iterations 1\n```\n\nTypical results for the `renderCUDA` forward kernel on an A100:\n- Achieved occupancy: ~72% (limited by shared memory per block)\n- Global memory throughput: ~1.4 TB/s (70% of A100 peak)\n- ALU pipeline utilization: ~18%\n\nThe pattern — high memory throughput, low ALU utilization — confirms the earlier roofline analysis: the kernel is memory-bound at low arithmetic intensity.\n\n## The Optimization Loop\n\nProfiling is not a one-time event — it is a feedback loop:\n\n```\n1. Baseline: profile, identify top kernel by GPU time\n2. Analyze: compute arithmetic intensity, place on roofline\n3. Diagnose: if memory-bound → check coalescing, increase data reuse\n               if compute-bound → check occupancy, reduce divergence\n4. Implement: apply one change at a time\n5. Validate: re-profile, compare timing and hardware counters\n6. Repeat from step 1\n```\n\nApplying this loop to the `3dgs_accel` branch optimization:\n1. **Baseline**: `renderCUDA` dominated at 28ms/iteration on a test scene.\n2. **Analyze**: arithmetic intensity ≈ 0.5 FLOP/byte → deeply memory-bound.\n3. **Diagnose**: ncu showed that the tile-assignment loop (computing which tiles each Gaussian covers) was adding ~4ms/iteration with many redundant boundary checks per Gaussian.\n4. **Implement**: precompute 2D bounding rectangles before the tiling loop (the `3dgs_accel` change).\n5. **Validate**: tile-assignment time drops from 4ms to <0.2ms; overall iteration time falls from 28ms to ~24ms — an 14% wall-clock improvement from one targeted change.\n\nThis is the discipline that converts theoretical understanding of GPU architecture into practical performance gains.",
+  "references": [
+    {
+      "label": "PyTorch 2024",
+      "title": "torch.profiler — PyTorch Documentation",
+      "url": "https://pytorch.org/docs/stable/profiler.html"
+    },
+    {
+      "label": "Google 2024",
+      "title": "Perfetto — System Profiling, App Tracing and Trace Analysis",
+      "url": "https://perfetto.dev"
+    },
+    {
+      "label": "NVIDIA 2024",
+      "title": "Nsight Compute CLI — Profiling CUDA Kernels",
+      "url": "https://docs.nvidia.com/nsight-compute/NsightComputeCli/index.html"
+    },
+    {
+      "label": "Williams et al. 2009",
+      "title": "Roofline: An Insightful Visual Performance Model",
+      "url": "https://dl.acm.org/doi/10.1145/1498765.1498785"
+    }
+  ],
+  "nextItem": {
+    "type": "quiz",
+    "id": "q1"
+  },
+  "prevItem": {
+    "type": "reading",
+    "id": "r2"
+  }
+}

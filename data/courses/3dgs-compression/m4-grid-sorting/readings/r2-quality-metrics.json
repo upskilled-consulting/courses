@@ -1,0 +1,161 @@
+{
+  "id": "r2",
+  "moduleId": "m4",
+  "title": "Sorting Quality Metrics: D<sub>p</sub>, GAF, GDF, and DPQ",
+  "estimatedMinutes": 13,
+  "learningObjectives": [
+    {
+      "id": "m4r2-lo1",
+      "verb": "Compute",
+      "description": "Compute D_p (path length metric) for a 1D Gaussian ordering and explain what a lower value means for downstream image codec compression efficiency",
+      "skillTags": [
+        "grid-sorting",
+        "evaluation"
+      ]
+    },
+    {
+      "id": "m4r2-lo2",
+      "verb": "Distinguish",
+      "description": "Distinguish GAF (local grid adjacency fidelity) from GDF (global distance fidelity) as local vs. global quality measures and explain why both are necessary for a complete sorting quality assessment",
+      "skillTags": [
+        "grid-sorting",
+        "evaluation"
+      ]
+    },
+    {
+      "id": "m4r2-lo3",
+      "verb": "Explain",
+      "description": "Explain the DPQ composite metric and use it to rank the output of different sorting algorithms on the same Gaussian set",
+      "skillTags": [
+        "grid-sorting",
+        "evaluation"
+      ]
+    },
+    {
+      "id": "m4r2-lo4",
+      "verb": "Identify",
+      "description": "Identify when torus wrapping improves 2D grid sorting quality and explain why periodic boundary conditions reduce boundary artifacts in the final compressed grid",
+      "skillTags": [
+        "grid-sorting"
+      ]
+    }
+  ],
+  "content": "## Measuring Sorting Quality\n\nTo compare sorting algorithms we need quantitative metrics. Three complementary criteria capture different aspects of what makes a sorted grid layout good.\n\n## 1D Sorting: The D<sub>p</sub> Path Metric\n\nFor 1D sorting (arranging \\(n\\) values on a line), the natural quality measure is the **path length** — the sum of distances between consecutive elements:\n\n\\[D_p = \\left(\\frac{1}{n-1} \\sum_{i=1}^{n-1} d(x_i, x_{i+1})^p\\right)^{1/p}\\]\n\nwhere \\(d(x_i, x_{i+1})\\) is the distance between consecutive elements and \\(p \\geq 0\\).\n\n- **\\(p=1\\)**: average absolute difference (Manhattan-like)\n- **\\(p=2\\)**: root mean squared difference (Euclidean-like)\n\nOptimal sorting (smallest values next to small values) minimizes \\(D_p\\) for any \\(p > 0\\). This fact lets us define a quality score:\n\n\\[\\text{quality}_{1D} = 1 - \\frac{D_{sort}}{D_{opt}}\\]\n\nwhere \\(D_{opt}\\) is the path length of the globally optimal sort. **Quality = 1** for optimal sorting, **quality = 0** for random permutation.\n\n**Complication for high-dimensional data**: \\(D_{opt}\\) is trivially computed for 1D scalars (just sort), but for high-dimensional data (RGB triples, 59-dimensional Gaussian attributes), computing the optimal 1D arrangement is the **Traveling Salesman Problem** — NP-hard.\n\n## Torus Sorting and Wrap-Around\n\nFor 2D grids, the choice of topology matters. A **non-wrapped** grid has edges — boundary cells have fewer neighbors. A **wrapped** grid (torus topology) has no boundaries, making every cell equivalent. Torus sorting is preferred when the data has no natural boundary (which Gaussian splats do not).\n\n## 2D Grid Quality Metrics\n\nFor 2D grids, we need metrics that capture both **global** and **local** quality.\n\n### Grid Adjacency Fidelity (GAF) — Local Quality\n\n\\[GAF = \\frac{1}{N} \\sum_{i} \\frac{1}{|\\mathcal{N}(i)|} \\sum_{j \\in \\mathcal{N}(i)} d(x_i, x_j)\\]\n\nwhere \\(\\mathcal{N}(i)\\) is the set of 4 grid neighbors (N, E, S, W) of cell \\(i\\).\n\nGAF measures the **mean distance to immediate neighbors in attribute space**. A perfectly sorted grid would have zero GAF (all neighbors identical). In practice, we normalize and report as the mean neighborhood distance — lower is better.\n\n**GAF captures**: local smoothness, absence of sharp discontinuities, compressibility under local prediction.\n\n### Global Distance Fidelity (GDF) — Global Quality\n\n\\[GDF = \\frac{\\text{corr}(D_{grid}, D_{attr})}{\\|D_{grid}\\|\\|D_{attr}\\|}\\]\n\nwhere \\(D_{grid}\\) is the pairwise distance matrix in grid space (Manhattan distance between cell coordinates) and \\(D_{attr}\\) is the pairwise distance matrix in attribute space.\n\nGDF measures whether the grid distances **correlate** with attribute distances. A good sorting preserves the global structure: elements that are far apart in attribute space should be far apart in the grid.\n\n**GDF captures**: global structure preservation, usefulness for visual search (finding similar elements in the grid).\n\n### Distance Preservation Quality (DPQ)\n\nDPQ combines both local and global aspects into a single score used for ranking sorting algorithms. It normalizes the measured grid adjacency fidelity against the optimal achievable value.\n\n## Sorted Grids Support Visual Search\n\nBeyond compression, well-sorted grids have a practical benefit: **visual similarity search**. If you display the \\(N\\) Gaussian attribute vectors as a sorted grid of colored squares, similar attributes cluster together. A user can visually locate similar Gaussians in O(1) time by looking at a neighborhood, rather than searching the full unordered set.\n\nThis is analogous to organizing a color palette as a smooth gradient — much easier to find a specific color than in a random arrangement.",
+  "equationBreakdowns": [
+    {
+      "label": "D_p Path Length Metric",
+      "terms": [
+        {
+          "symbol": "D_p",
+          "name": "Generalised path length",
+          "desc": "A scalar summarising how large the jumps are between consecutive elements in the sorted sequence. Lower D_p means smoother transitions — adjacent elements are more similar — which is exactly what image codecs exploit."
+        },
+        {
+          "symbol": "\\frac{1}{n-1}",
+          "name": "Normalisation by sequence length",
+          "desc": "Averages the contribution over all n−1 consecutive pairs so that D_p is comparable across sequences of different lengths."
+        },
+        {
+          "symbol": "d(x_i, x_{i+1})^p",
+          "name": "Powered pairwise distance",
+          "desc": "Distance between consecutive elements raised to the power p. Larger p penalises occasional large jumps more severely than many small ones — p=2 is Euclidean (RMS), p=1 is mean absolute difference."
+        },
+        {
+          "symbol": "(\\cdots)^{1/p}",
+          "name": "p-th root",
+          "desc": "Undoes the power p so the result is in the original distance units. Together with the inner power, this defines the L^p norm of the gap sequence."
+        },
+        {
+          "symbol": "p",
+          "name": "Order parameter",
+          "desc": "Controls sensitivity to outlier jumps. p=1 treats all gaps equally; p=2 penalises large gaps quadratically. For sorting quality, p=1 or p=2 are most common."
+        }
+      ]
+    },
+    {
+      "label": "1D Sorting Quality Score",
+      "terms": [
+        {
+          "symbol": "\\text{quality}_{1D}",
+          "name": "Normalised sorting quality",
+          "desc": "A score in [0, 1] measuring how close the achieved sort is to the theoretical optimum. 1 = perfectly optimal ordering, 0 = random permutation (worst case)."
+        },
+        {
+          "symbol": "D_{sort}",
+          "name": "Path length of the actual sort",
+          "desc": "The D_p value of the ordering produced by the algorithm being evaluated. Lower is better."
+        },
+        {
+          "symbol": "D_{opt}",
+          "name": "Optimal path length",
+          "desc": "The D_p value of the theoretically best possible ordering — trivially computed for 1D scalars (just sort ascending), but NP-hard to find for high-dimensional data like Gaussian attributes."
+        }
+      ]
+    },
+    {
+      "label": "GAF — Grid Adjacency Fidelity",
+      "terms": [
+        {
+          "symbol": "\\frac{1}{N} \\sum_i",
+          "name": "Average over all grid cells",
+          "desc": "Computes the metric independently for each of the N grid cells then averages, so every cell contributes equally regardless of position."
+        },
+        {
+          "symbol": "\\frac{1}{|\\mathcal{N}(i)|}",
+          "name": "Average over neighbors",
+          "desc": "Normalises by the number of immediate neighbors (4 for interior cells on a torus, fewer at boundaries on a non-wrapped grid). Makes boundary and interior cells comparable."
+        },
+        {
+          "symbol": "\\sum_{j \\in \\mathcal{N}(i)}",
+          "name": "Sum over grid neighbors",
+          "desc": "Sums contributions from the N, E, S, W neighbors of cell i in the 2D grid. Only immediate neighbors are considered — GAF is a purely local metric."
+        },
+        {
+          "symbol": "d(x_i, x_j)",
+          "name": "Attribute-space distance",
+          "desc": "Distance between the attribute vectors of cells i and j (e.g., Euclidean distance over all 59 Gaussian parameters). Small values mean neighboring grid cells are attributionally similar — smooth, compressible images."
+        }
+      ]
+    },
+    {
+      "label": "GDF — Global Distance Fidelity",
+      "terms": [
+        {
+          "symbol": "\\text{corr}(D_{grid}, D_{attr})",
+          "name": "Correlation of distance matrices",
+          "desc": "Pearson or rank correlation between two N×N matrices: grid distances (how far apart two cells are in the 2D layout) and attribute distances (how different their Gaussian parameters are). High correlation means the layout respects global structure."
+        },
+        {
+          "symbol": "D_{grid}",
+          "name": "Pairwise grid distance matrix",
+          "desc": "Entry (i,j) is the Manhattan distance between cell i and cell j in the 2D grid. Purely a function of layout positions — independent of attribute values."
+        },
+        {
+          "symbol": "D_{attr}",
+          "name": "Pairwise attribute distance matrix",
+          "desc": "Entry (i,j) is the distance between the attribute vectors of Gaussians i and j. This is the ground truth of how similar two Gaussians actually are."
+        },
+        {
+          "symbol": "\\|D_{grid}\\|\\|D_{attr}\\|",
+          "name": "Normalisation",
+          "desc": "Divides by the norms of the two distance matrices to produce a value in [−1, 1], analogous to a cosine similarity between the flattened matrices. Values near 1 indicate strong global structure preservation."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Barthel et al. 2023",
+      "title": "Improved Evaluation and Generation of Grid Layouts using Distance Preservation Quality",
+      "url": "https://arxiv.org/abs/2309.12463"
+    }
+  ],
+  "nextItem": {
+    "type": "reading",
+    "id": "r3"
+  },
+  "prevItem": {
+    "type": "reading",
+    "id": "r1"
+  }
+}

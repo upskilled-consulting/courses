@@ -1,0 +1,81 @@
+{
+  "id": "r1",
+  "moduleId": "normalization",
+  "title": "Batch Normalization — Algorithm, Placement, and Multi-GPU",
+  "estimatedMinutes": 17,
+  "learningObjectives": [
+    {
+      "id": "r1-lo1",
+      "verb": "Trace",
+      "description": "Trace the full BatchNorm forward pass — computing batch mean and variance, normalizing, then applying learned scale and shift — and identify what changes between training and inference",
+      "skillTags": ["normalization", "training-dynamics"]
+    },
+    {
+      "id": "r1-lo2",
+      "verb": "Explain",
+      "description": "Explain why BatchNorm maintains running statistics during training and uses them at inference, and state the consequence of failing to call model.eval() before inference",
+      "skillTags": ["normalization", "training-dynamics"]
+    },
+    {
+      "id": "r1-lo3",
+      "verb": "Compare",
+      "description": "Compare pre-activation BatchNorm (original) with post-activation placement, state the empirical finding from pre-activation ResNets, and explain what the learned γ and β parameters recover",
+      "skillTags": ["normalization"]
+    },
+    {
+      "id": "r1-lo4",
+      "verb": "Explain",
+      "description": "Explain Synchronized BatchNorm — why per-device BatchNorm fails for small per-GPU batches, and how SyncBN gathers statistics across devices to restore accurate normalization",
+      "skillTags": ["normalization", "training-dynamics"]
+    }
+  ],
+  "prevItem": { "type": "reading", "id": "r0" },
+  "nextItem": { "type": "reading", "id": "r2" },
+  "content": "## The BatchNorm Algorithm\n\nFor a mini-batch $\\mathcal{B} = \\{z_1, \\ldots, z_B\\}$ of scalar pre-activations for one feature (the same operation is applied independently per feature across the batch):\n\n**Step 1 — Compute batch statistics:**\n$$\\mu_\\mathcal{B} = \\frac{1}{B}\\sum_{i=1}^B z_i \\qquad \\sigma^2_\\mathcal{B} = \\frac{1}{B}\\sum_{i=1}^B (z_i - \\mu_\\mathcal{B})^2$$\n\n**Step 2 — Normalize:**\n$$\\hat{z}_i = \\frac{z_i - \\mu_\\mathcal{B}}{\\sqrt{\\sigma^2_\\mathcal{B} + \\epsilon}}$$\n\n**Step 3 — Scale and shift:**\n$$y_i = \\gamma\\hat{z}_i + \\beta$$\n\n$\\epsilon$ is a numerical stability constant (typically $10^{-5}$). $\\gamma$ and $\\beta$ are **learned parameters** — one scalar each per feature, updated by the optimizer like any other weight.\n\n### What γ and β Recover\n\nPure normalization forces every feature to have exactly zero mean and unit variance. This would prevent the network from representing, for example, a layer that should output large activations. The $\\gamma$ and $\\beta$ parameters restore that capacity: the network can learn any mean and variance, but now in a parameterized way that the optimizer can control stably.\n\nIf the optimal transformation is the identity, the network can learn $\\gamma = \\sigma_\\mathcal{B}$ and $\\beta = \\mu_\\mathcal{B}$. BatchNorm never forces any particular scale — it only stabilizes training by starting from a normalized baseline.\n\n---\n\n## Training vs. Inference\n\nDuring training, batch statistics $\\mu_\\mathcal{B}$ and $\\sigma^2_\\mathcal{B}$ are computed from the current mini-batch — they are stochastic (different for each batch). BN also maintains **running statistics** via an exponential moving average:\n\n$$\\mu_{\\text{run}} \\leftarrow (1-m)\\mu_{\\text{run}} + m\\,\\mu_\\mathcal{B}$$\n$$\\sigma^2_{\\text{run}} \\leftarrow (1-m)\\sigma^2_{\\text{run}} + m\\,\\sigma^2_\\mathcal{B}$$\n\nwhere $m$ is the momentum (typically 0.1 in PyTorch — confusingly, this is the weight on the *new* batch, not the running average).\n\nDuring inference, use the running statistics:\n$$y = \\gamma \\cdot \\frac{x - \\mu_{\\text{run}}}{\\sqrt{\\sigma^2_{\\text{run}} + \\epsilon}} + \\beta$$\n\nThis is deterministic — the same input always produces the same output.\n\n**Why not use batch statistics at inference?** (1) The inference batch may be a single example, giving unreliable statistics. (2) The test distribution may differ from training, giving wrong statistics. (3) Determinism is required for production systems.\n\n### The `model.eval()` Bug\n\nIn PyTorch, `model.eval()` switches BatchNorm layers to use running statistics. `model.train()` switches back to batch statistics. Forgetting `model.eval()` before inference — or forgetting `model.train()` before resuming training — is among the most common bugs in PyTorch code:\n\n- **Inference with `train()` mode:** non-deterministic outputs that depend on what other examples are in the batch; outputs change if batch size changes\n- **Training with `eval()` mode:** gradients flow through fixed running statistics rather than the batch — effectively no BatchNorm regularization effect\n\n---\n\n## Placement: Pre-Activation vs. Post-Activation\n\n**Original paper (Ioffe & Szegedy):** BN is placed *before* the activation:\n$$x \\to \\text{Linear/Conv} \\to \\text{BN} \\to \\phi \\to \\text{next layer}$$\n\n**Pre-activation ResNets (He et al., 2016 — \"Identity Mappings\"):** BN placed *before* both the activation and the convolution:\n$$x \\to \\text{BN} \\to \\phi \\to \\text{Conv} \\to \\text{BN} \\to \\phi \\to \\text{Conv} \\to (+x)$$\n\nKey advantage: the residual shortcut is a clean identity path — no activation or BN sits on the skip connection. The gradient flows back through the shortcut without any transformation. Pre-activation ResNets train more stably at very large depths (ResNet-1001 in the original pre-activation paper).\n\n**Post-activation (common alternative):**\n$$x \\to \\text{Linear/Conv} \\to \\phi \\to \\text{BN} \\to \\text{next layer}$$\n\nIn practice, the difference is often small. For new architectures: default to pre-activation (BN before activation); switch to post-activation if training diverges.\n\n---\n\n## BatchNorm in Convolutional Layers\n\nFor a convolutional feature map with shape $(B, C, H, W)$ (batch, channels, height, width), BatchNorm normalizes over the $(B, H, W)$ dimensions **per channel**:\n\n$$\\mu_c = \\frac{1}{B \\cdot H \\cdot W}\\sum_{b,i,j} x_{b,c,i,j}$$\n\nOne $\\mu_c$, $\\sigma^2_c$, $\\gamma_c$, $\\beta_c$ per channel. This is sometimes called **Spatial BatchNorm** — the spatial dimensions are treated as extra batch dimensions.\n\nA network with 64 channels has 64 sets of BN parameters, regardless of spatial resolution.\n\n---\n\n## Limitations\n\n| Limitation | Cause | Fix |\n|---|---|---|\n| Small batch sizes | Noisy batch statistics | Use GroupNorm or LayerNorm |\n| Recurrent networks | Different sequence positions have different statistics | Use LayerNorm |\n| Online / single-sample inference | Can't compute batch stats | Use running stats (eval mode) |\n| Very small per-GPU batches | See SyncBN below | Synchronized BatchNorm |\n\n---\n\n## Synchronized BatchNorm (SyncBN)\n\nIn multi-GPU training, each device typically processes a sub-batch. For small total batch sizes (e.g., 32 images across 8 GPUs → 4 images per GPU), per-device batch statistics are extremely noisy.\n\n**Synchronized BatchNorm** gathers statistics across all devices before normalizing:\n\n1. Each GPU computes its local sum $\\sum z_i$ and $\\sum z_i^2$\n2. These are all-reduced across devices to compute the global $\\mu$ and $\\sigma^2$\n3. Each GPU normalizes using the global statistics\n\nAll-reduce adds a communication cost but ensures BN statistics are as accurate as if the entire batch were on one device. SyncBN is standard in object detection and segmentation, where per-image processing limits the per-GPU batch to 1–4 images.\n\n---\n\n## PyTorch and TensorFlow\n\n**PyTorch** — `nn.BatchNorm1d` / `nn.BatchNorm2d` / `nn.BatchNorm3d`:\n\n```python\nimport torch\nimport torch.nn as nn\n\n# BatchNorm1d: features or (batch, features, length)\nbn1d = nn.BatchNorm1d(num_features=128)\nx = torch.randn(32, 128)          # (batch, features)\nout = bn1d(x)                     # normalized per feature across batch\n\n# BatchNorm2d: convolutional maps (batch, channels, H, W)\nbn2d = nn.BatchNorm2d(num_features=64)\nx = torch.randn(8, 64, 32, 32)\nout = bn2d(x)                     # statistics over (B, H, W) per channel\n\n# Inspect stored state\nprint(bn2d.running_mean.shape)    # torch.Size([64]) — one per channel\nprint(bn2d.weight.shape)          # torch.Size([64]) — learned gamma\nprint(bn2d.bias.shape)            # torch.Size([64]) — learned beta\n\n# CRITICAL: mode switching\nmodel = nn.Sequential(nn.Linear(128, 64), nn.BatchNorm1d(64), nn.ReLU())\n\nmodel.train()                     # batch stats, updates running stats\nout_train = model(torch.randn(16, 128))\n\nmodel.eval()                      # running stats, deterministic\nout_eval  = model(torch.randn(1, 128))   # works at batch size 1\n\n# Synchronized BatchNorm for multi-GPU (convert before wrapping with DDP)\nsync_model = nn.SyncBatchNorm.convert_sync_batchnorm(model)\n# then: model = nn.parallel.DistributedDataParallel(sync_model, device_ids=[local_rank])\n```\n\n**TensorFlow / Keras:**\n\n```python\nimport tensorflow as tf\n\nbn = tf.keras.layers.BatchNormalization(momentum=0.9, epsilon=1e-5)\nx  = tf.random.normal((32, 64))\n\nout_train = bn(x, training=True)   # batch stats; updates moving_mean / moving_variance\nout_infer = bn(x, training=False)  # uses stored moving averages\n\nprint(bn.moving_mean.shape)        # (64,)\nprint(bn.gamma.shape)              # (64,) — learned scale\nprint(bn.beta.shape)               # (64,) — learned shift\n\n# training flag is propagated automatically when calling model(x, training=...)\nmodel = tf.keras.Sequential([\n    tf.keras.layers.Dense(64),\n    tf.keras.layers.BatchNormalization(),\n    tf.keras.layers.Activation('relu'),\n])\nmodel(x, training=True)            # train mode\nmodel(x, training=False)           # inference mode\n```",
+  "equationBreakdowns": [
+    {
+      "label": "Batch Normalization Forward Pass",
+      "heading": "The BatchNorm Algorithm",
+      "terms": [
+        {
+          "symbol": "\\mu_\\mathcal{B},\\, \\sigma^2_\\mathcal{B}",
+          "name": "Batch mean and variance",
+          "desc": "Computed from the current mini-batch only. Stochastic during training — different for each batch. Replaced by running statistics at inference."
+        },
+        {
+          "symbol": "\\epsilon",
+          "name": "Numerical stability constant",
+          "desc": "Added to the variance before taking the square root. Prevents division by zero when a feature has near-zero variance in the batch. Typically 1e-5."
+        },
+        {
+          "symbol": "\\gamma,\\, \\beta",
+          "name": "Learned affine parameters",
+          "desc": "One scalar per feature, updated by the optimizer. γ rescales the normalized output; β shifts it. Together they allow the network to represent any mean and variance — restoring the expressive power that pure normalization would remove."
+        }
+      ]
+    },
+    {
+      "label": "Running Statistics Update",
+      "heading": "Training vs. Inference",
+      "terms": [
+        {
+          "symbol": "(1-m)\\mu_{\\text{run}} + m\\,\\mu_\\mathcal{B}",
+          "name": "Exponential moving average",
+          "desc": "Maintains a running estimate of the population mean across all training batches. m=0.1 in PyTorch: 10% weight on the new batch, 90% on the accumulated running estimate. After many batches, μ_run approximates the true dataset mean."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Ioffe & Szegedy 2015",
+      "title": "Batch Normalization: Accelerating Deep Network Training",
+      "url": "https://arxiv.org/abs/1502.03167"
+    },
+    {
+      "label": "He et al. 2016",
+      "title": "Identity Mappings in Deep Residual Networks (pre-activation BN)",
+      "url": "https://arxiv.org/abs/1603.05027"
+    }
+  ]
+}

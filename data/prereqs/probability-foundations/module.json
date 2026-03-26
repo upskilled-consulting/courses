@@ -1,0 +1,109 @@
+{
+  "id": "probability-foundations",
+  "type": "prereq",
+  "title": "Probability Foundations",
+  "description": "The probability and statistics prerequisites for modern ML — drawing on Downey's Think Bayes and Think Stats. Covers random variables, expectation, Bayes' theorem and the chain rule, key distributions (Gaussian, Bernoulli, Categorical, Dirichlet), importance sampling, and KL divergence. Directly addresses the Spinning Up background requirements for deep reinforcement learning.",
+  "level": "Foundational",
+  "estimatedHours": 7,
+  "color": "#5b4d9e",
+  "accentLight": "#b1aad1",
+  "readings": [
+    {
+      "id": "r1",
+      "title": "Random Variables and Probability Distributions",
+      "estimatedMinutes": 16,
+      "description": "Sample spaces, PMFs, PDFs, CDFs, joint distributions, marginalization, and the law of total probability.",
+      "dataPath": "data/prereqs/probability-foundations/readings/r1-random-variables.json"
+    },
+    {
+      "id": "r2",
+      "title": "Expected Value, Variance, and Standard Deviation",
+      "estimatedMinutes": 14,
+      "description": "Expectation as a weighted average, linearity of expectation, variance, standard deviation, covariance, correlation, and their roles in weight initialization and SGD.",
+      "dataPath": "data/prereqs/probability-foundations/readings/r2-expected-value.json"
+    },
+    {
+      "id": "r3",
+      "title": "Bayes' Theorem and the Chain Rule of Probability",
+      "estimatedMinutes": 15,
+      "description": "Conditional probability, the product rule, the chain rule of probability, Bayes' theorem with prior/likelihood/posterior, and sequential belief updating.",
+      "dataPath": "data/prereqs/probability-foundations/readings/r3-bayes-theorem.json"
+    },
+    {
+      "id": "r4",
+      "title": "Key Distributions for Machine Learning",
+      "estimatedMinutes": 18,
+      "description": "Bernoulli, Categorical, Gaussian, Multivariate Gaussian, Beta, and Dirichlet distributions — parameters, properties, and ML use cases.",
+      "dataPath": "data/prereqs/probability-foundations/readings/r4-key-distributions.json"
+    },
+    {
+      "id": "r5",
+      "title": "Importance Sampling",
+      "estimatedMinutes": 14,
+      "description": "The IS identity, importance weights, variance analysis, self-normalized IS, effective sample size, and applications in off-policy RL and PPO.",
+      "dataPath": "data/prereqs/probability-foundations/readings/r5-importance-sampling.json"
+    },
+    {
+      "id": "r6",
+      "title": "KL Divergence and Cross-Entropy",
+      "estimatedMinutes": 16,
+      "description": "Entropy, cross-entropy, KL divergence, non-negativity, asymmetry, forward vs. reverse KL, connection to MLE, and appearances in VAE and policy optimization.",
+      "dataPath": "data/prereqs/probability-foundations/readings/r6-kl-divergence.json"
+    }
+  ],
+  "drills": [
+    {
+      "id": "d1",
+      "title": "Probability Basics and Bayes",
+      "cardCount": 15,
+      "estimatedMinutes": 12,
+      "dataPath": "data/prereqs/probability-foundations/drills/d1-probability-basics.json"
+    },
+    {
+      "id": "d2",
+      "title": "Distributions, Sampling, and Information Theory",
+      "cardCount": 15,
+      "estimatedMinutes": 12,
+      "dataPath": "data/prereqs/probability-foundations/drills/d2-distributions-information.json"
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "q1",
+      "title": "Random Variables, Expectation, and Bayes' Theorem",
+      "estimatedMinutes": 15,
+      "description": "8 questions covering PMFs/PDFs, the law of total probability, linearity of expectation, variance, covariance, the disease-screening Bayes computation, and the chain rule of probability.",
+      "dataPath": "data/prereqs/probability-foundations/quizzes/q1-random-variables-bayes.json"
+    },
+    {
+      "id": "q2",
+      "title": "Distributions, Importance Sampling, and KL Divergence",
+      "estimatedMinutes": 18,
+      "description": "9 questions covering Categorical/Gaussian/Beta distributions, the IS validity condition, effective sample size, forward vs. reverse KL, entropy computation, cross-entropy as forward KL minimization, and a NumPy KL implementation.",
+      "dataPath": "data/prereqs/probability-foundations/quizzes/q2-distributions-is-kl.json"
+    }
+  ],
+  "labs": [
+    {
+      "id": "lab1",
+      "title": "Distributions and Bayes' Theorem",
+      "estimatedMinutes": 45,
+      "description": "Plot and verify PMFs/PDFs, compute CDFs, sample from joint distributions, confirm the law of total probability via simulation, and sweep the Bayes disease-screening posterior over a range of priors.",
+      "dataPath": "data/prereqs/probability-foundations/labs/lab1-distributions-bayes.json"
+    },
+    {
+      "id": "lab2",
+      "title": "Monte Carlo Estimation and Importance Sampling",
+      "estimatedMinutes": 50,
+      "description": "Estimate expectations via Monte Carlo, verify linearity of expectation empirically, implement importance sampling, compute ESS for mismatched proposals, and demonstrate importance weight collapse.",
+      "dataPath": "data/prereqs/probability-foundations/labs/lab2-monte-carlo-importance-sampling.json"
+    },
+    {
+      "id": "lab3",
+      "title": "Entropy, KL Divergence, and Fitting Distributions",
+      "estimatedMinutes": 45,
+      "description": "Compute entropy and KL divergence from scratch, verify the cross-entropy decomposition, fit a Gaussian to a bimodal target via forward and reverse KL to observe mean-seeking vs mode-seeking, and implement Beta posterior updates.",
+      "dataPath": "data/prereqs/probability-foundations/labs/lab3-entropy-kl-divergence.json"
+    }
+  ]
+}

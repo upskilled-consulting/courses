@@ -1,0 +1,132 @@
+{
+  "id": "r2",
+  "moduleId": "m3",
+  "title": "Improved Densification and Pruning",
+  "estimatedMinutes": 15,
+  "learningObjectives": [
+    {
+      "id": "m3r2-lo1",
+      "verb": "Explain",
+      "description": "Explain the failure modes of standard adaptive density control (scale dependence, color blindness, unbounded accumulation) and state why each leaves exploitable redundancy",
+      "skillTags": [
+        "compaction",
+        "training"
+      ]
+    },
+    {
+      "id": "m3r2-lo2",
+      "verb": "Distinguish",
+      "description": "Distinguish cloning-improvement methods (PixelGS view-count weighting, ColorCueGS color gradient) from error-attribution methods (RevisingDens, TamingGS) by their densification trigger signal",
+      "skillTags": [
+        "compaction",
+        "training"
+      ]
+    },
+    {
+      "id": "m3r2-lo3",
+      "verb": "Explain",
+      "description": "Explain SUNDAE's spectral pruning approach using the graph Laplacian and state why high-frequency Gaussians are simultaneously perceptually less important and harder to encode efficiently",
+      "skillTags": [
+        "compaction",
+        "compression"
+      ]
+    },
+    {
+      "id": "m3r2-lo4",
+      "verb": "Compare",
+      "description": "Compare deterministic threshold-based pruning with MCMC-based densification and identify when the probabilistic approach's uncertainty quantification provides a practical advantage",
+      "skillTags": [
+        "compaction",
+        "training"
+      ]
+    }
+  ],
+  "content": "## Problems with Standard ADC\n\nThe original 3DGS adaptive density control (ADC) works, but leaves significant redundancy:\n\n1. **Positional gradient is scale-dependent**: a Gaussian near the camera produces larger image-space gradients even if it reconstructs its region perfectly, causing unnecessary densification near the camera (floaters).\n2. **Color gradient ignored**: a region with high color variation but low positional gradient won't be densified, even though it needs more Gaussians.\n3. **Large Gaussians not split efficiently**: if a large Gaussian spans a region that needs fine detail in only one part, splitting along the gradient direction may not place new Gaussians where needed.\n4. **Redundant Gaussians accumulate**: standard ADC has no global budget, so scenes with easy regions accumulate many unnecessary Gaussians.\n\n## Improved Splitting/Cloning\n\n### ColorCueGS\nAdds color gradient as a criterion alongside positional gradient. Regions where adjacent pixels have high color variation (texture, edges) get densified even if the positional loss gradient is small. This improves texture detail at the same Gaussian count.\n\n### PixelGS\nTwo improvements:\n- **View-count weighting**: divides positional gradient by the number of views where the Gaussian is visible. This removes the camera-distance bias — a Gaussian visible in many views has its gradient averaged, correctly attributing reconstruction error rather than over-densifying near-camera regions.\n- **Distance scaling**: further scales by distance to camera, counteracting perspective magnification.\n\n### MiniSplat (BlurSplit)\nSplits a Gaussian if its projected 2D area in screen space exceeds a threshold — directly targeting the \"too large to be accurate\" condition. More geometrically principled than the gradient-magnitude heuristic.\n\n### LightGS\nDefines a Gaussian \"significance\" score combining:\n- Usage count (how many pixels it contributes to above a threshold)\n- Opacity\n- Scale (volume)\n\nGaussians with low significance are candidates for pruning, while high-significance under-reconstructing ones are densified.\n\n## Pixel Error–Based Densification\n\n### RevisingDens\nPropagates per-pixel rendering error back to contributing Gaussians via their alpha values:\n\n\\[e_i = \\sum_{p \\in \\text{pixels}} \\alpha_i(p) \\cdot |c(p) - \\hat{c}(p)|\\]\n\nThis measures how much Gaussian \\(i\\) contributed to the total error. The max across views is used as the split/clone criterion, ensuring consistency across viewpoints.\n\n### TamingGS\nCombines many cues into a single score:\n- Per-pixel reconstruction error\n- Edge map (dense Gaussians needed near edges)\n- Positional gradient\n- Usage count and opacity\n- Scale\n\nThis multi-cue score is claimed to significantly reduce the final Gaussian count while maintaining quality.\n\n### MCMC Densification\nFrames densification as a **Markov chain Monte Carlo** sampling process:\n1. Sample existing Gaussians with probability proportional to opacity.\n2. For each sampled Gaussian, create \\(N-1\\) new Gaussians nearby by adding noise (larger noise for lower-opacity regions).\n3. New Gaussians are initialized from \"dead\" (low-opacity, pruned) Gaussians.\n4. Adapt opacity and covariance to minimize the change in rendered images.\n\nThis replaces ad-hoc heuristics with a principled probabilistic framework.\n\n## Improved Pruning\n\n### EAGLES\nVisibility-based influence pruning: computes how many pixels a Gaussian actually influences above a threshold. Gaussians with near-zero influence (they're always occluded or too small) are pruned. This is more principled than opacity-threshold pruning because a Gaussian can have non-zero opacity yet contribute nothing to rendered images.\n\n### ImprovedADC\nCandidate selection: identify a set of low-opacity candidates, then from that set remove the subset with the lowest combined visibility across all training views. This batch pruning is more efficient than sequential removal.\n\n### SUNDAE\nGraph-based spectral pruning:\n1. Build a k-nearest-neighbor graph over all Gaussians in 3D space.\n2. Compute the spectral decomposition of the graph Laplacian.\n3. Gaussians corresponding to high-frequency eigenvectors (those that contribute high-frequency variation relative to their neighborhood) are pruned — they're likely floaters or redundant fine-scale detail that the encoding will struggle with anyway.\n\nSUNDAE is distinctive because it explicitly reasons about compressibility: high-frequency Gaussians in the spectral sense are both perceptually less important and harder to encode after sorting.",
+  "equationBreakdowns": [
+    {
+      "label": "RevisingDens — Per-Gaussian Pixel Error",
+      "terms": [
+        {
+          "symbol": "e_i",
+          "name": "Error attributed to Gaussian i",
+          "desc": "A scalar score measuring how much Gaussian i contributed to the total rendering error across all pixels. High e_i means this Gaussian is responsible for visible mistakes and is a strong split/clone candidate."
+        },
+        {
+          "symbol": "\\sum_{p \\in \\text{pixels}}",
+          "name": "Sum over all pixels",
+          "desc": "Aggregates the contribution across every pixel in the rendered image. A Gaussian that overlaps many pixels accumulates error from all of them."
+        },
+        {
+          "symbol": "\\alpha_i(p)",
+          "name": "Alpha weight at pixel p",
+          "desc": "How much Gaussian i contributes to pixel p's final colour — its blending weight in the front-to-back alpha-compositing pass. Acts as a responsibility score: the more a Gaussian contributes to a pixel, the more it 'owns' the error there."
+        },
+        {
+          "symbol": "|c(p) - \\hat{c}(p)|",
+          "name": "Per-pixel colour error",
+          "desc": "Absolute difference between the ground-truth colour c(p) and the rendered colour ĉ(p) at pixel p. Computed per channel and summed or averaged. Pixels that render correctly contribute zero to the error budget."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Bagdasarian et al. 2025",
+      "title": "3DGS.zip: A Survey on 3D Gaussian Splatting Compression Methods",
+      "url": "https://arxiv.org/abs/2407.09510"
+    },
+    {
+      "label": "Kim et al. 2024",
+      "title": "Color-cued Efficient Densification Method for 3D Gaussian Splatting (ColorCueGS)",
+      "url": "https://openaccess.thecvf.com/content/CVPR2024W/3DMV/html/Kim_Color-cued_Efficient_Densification_Method_for_3D_Gaussian_Splatting_CVPRW_2024_paper.html"
+    },
+    {
+      "label": "Zhang et al. 2024",
+      "title": "Pixel-GS: Density Control with Pixel-aware Gradient for 3D Gaussian Splatting",
+      "url": "https://arxiv.org/abs/2403.15530"
+    },
+    {
+      "label": "Fang & Wang 2024",
+      "title": "Mini-Splatting: Representing Scenes with a Constrained Number of Gaussians",
+      "url": "https://arxiv.org/abs/2403.14166"
+    },
+    {
+      "label": "Rojas et al. 2024",
+      "title": "Revising Densification in Gaussian Splatting",
+      "url": "https://arxiv.org/abs/2404.06109"
+    },
+    {
+      "label": "Mallick et al. 2024",
+      "title": "Taming 3DGS: High-Quality Radiance Fields with Limited Resources",
+      "url": "https://arxiv.org/abs/2406.15643"
+    },
+    {
+      "label": "Kheradmand et al. 2024",
+      "title": "3D Gaussian Splatting as Markov Chain Monte Carlo",
+      "url": "https://arxiv.org/abs/2404.09591"
+    },
+    {
+      "label": "Girish et al. 2023",
+      "title": "EAGLES: Efficient Accelerated 3D Gaussians with Lightweight EncodingS",
+      "url": "https://arxiv.org/abs/2312.04564"
+    },
+    {
+      "label": "Grubert et al. 2025",
+      "title": "Improving Adaptive Density Control for 3D Gaussian Splatting",
+      "url": "https://arxiv.org/abs/2503.14274"
+    },
+    {
+      "label": "Warburg et al. 2024",
+      "title": "Spectrally Pruned Gaussian Fields with Neural Compensation (SUNDAE)",
+      "url": "https://arxiv.org/abs/2405.00676"
+    }
+  ],
+  "nextItem": {
+    "type": "reading",
+    "id": "r3"
+  },
+  "prevItem": {
+    "type": "reading",
+    "id": "r1"
+  }
+}

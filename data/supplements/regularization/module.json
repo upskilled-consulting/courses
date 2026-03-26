@@ -1,0 +1,79 @@
+{
+  "id": "regularization",
+  "type": "supplement",
+  "title": "Regularization",
+  "description": "A unified treatment of regularization in deep learning — from the bias-variance tradeoff through explicit penalties (L1, L2, weight decay), dropout and its variants (DropConnect, MC Dropout, Stochastic Depth), normalization layers (BatchNorm, LayerNorm, RMSNorm), early stopping, data augmentation (Mixup, CutOut, CutMix, RandAugment), output regularizers (label smoothing, confidence penalty), and implicit regularization from initialization, SGD noise, and spectral normalization.",
+  "level": "Intermediate",
+  "estimatedHours": 6,
+  "color": "#9e4060",
+  "accentLight": "#edced3",
+  "readings": [
+    {
+      "id": "r0",
+      "title": "Overfitting and the Bias-Variance Tradeoff",
+      "estimatedMinutes": 13,
+      "description": "Underfitting vs. overfitting, bias-variance decomposition, the definition of regularization, and the double-descent phenomenon in overparameterized models.",
+      "dataPath": "data/supplements/regularization/readings/r0-overfitting.json"
+    },
+    {
+      "id": "r1",
+      "title": "L1 and L2 Weight Penalties",
+      "estimatedMinutes": 15,
+      "description": "L2 weight decay derivation, L1 sparsity geometry, elastic net, MAP estimation interpretation, and the AdamW decoupling fix.",
+      "dataPath": "data/supplements/regularization/readings/r1-weight-penalties.json"
+    },
+    {
+      "id": "r2",
+      "title": "Dropout and Stochastic Regularization",
+      "estimatedMinutes": 15,
+      "description": "Inverted dropout, ensemble interpretation, co-adaptation prevention, DropConnect, MC Dropout for uncertainty, and Stochastic Depth / DropPath.",
+      "dataPath": "data/supplements/regularization/readings/r2-dropout.json"
+    },
+    {
+      "id": "r3",
+      "title": "Normalization Layers",
+      "estimatedMinutes": 16,
+      "description": "Internal covariate shift, Batch Normalization algorithm (train vs. inference modes), implicit regularization, Layer Norm, Group Norm, Instance Norm, and RMSNorm.",
+      "dataPath": "data/supplements/regularization/readings/r3-normalization.json"
+    },
+    {
+      "id": "r4",
+      "title": "Early Stopping and Data Augmentation",
+      "estimatedMinutes": 15,
+      "description": "Early stopping algorithm, connection to L2 regularization, standard geometric augmentations, Mixup, CutOut, CutMix, and RandAugment.",
+      "dataPath": "data/supplements/regularization/readings/r4-early-stopping-augmentation.json"
+    },
+    {
+      "id": "r5",
+      "title": "Label Smoothing and Output Regularizers",
+      "estimatedMinutes": 12,
+      "description": "Label smoothing derivation, overconfidence and logit bounds, representation effects, temperature scaling, and the confidence penalty in supervised and RL settings.",
+      "dataPath": "data/supplements/regularization/readings/r5-label-smoothing-output.json"
+    },
+    {
+      "id": "r6",
+      "title": "Implicit Regularization — Initialization, SGD Noise, and Spectral Normalization",
+      "estimatedMinutes": 14,
+      "description": "Xavier and He initialization via variance preservation, flat vs. sharp minima, SGD noise as regularization, the large-batch problem, spectral normalization, and gradient clipping.",
+      "dataPath": "data/supplements/regularization/readings/r6-implicit.json"
+    }
+  ],
+  "drills": [
+    {
+      "id": "d1",
+      "title": "Weight Penalties, Dropout, and Normalization",
+      "cardCount": 15,
+      "estimatedMinutes": 12,
+      "dataPath": "data/supplements/regularization/drills/d1-penalties-dropout-normalization.json"
+    },
+    {
+      "id": "d2",
+      "title": "Augmentation, Output Regularizers, and Implicit Regularization",
+      "cardCount": 15,
+      "estimatedMinutes": 12,
+      "dataPath": "data/supplements/regularization/drills/d2-augmentation-output-implicit.json"
+    }
+  ],
+  "quizzes": [],
+  "labs": []
+}

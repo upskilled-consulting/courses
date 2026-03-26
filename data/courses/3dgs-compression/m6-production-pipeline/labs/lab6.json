@@ -1,0 +1,25 @@
+{
+  "id": "lab6",
+  "moduleId": "m6",
+  "title": "Full Pipeline: YouTube Video → GLOMAP → 3DGS → .splat",
+  "estimatedMinutes": 120,
+  "description": "## Lab 6: Full Pipeline\n\nThis lab runs the complete full pipeline demonstrated by Nicholas McCarty (Upskilled Consulting) — from a raw YouTube URL to a deployable `.splat` file viewable in any WebGL browser. You will instrument each stage with timing, inspect the intermediate artifacts, and convert the final output to both standard and simple PLY inputs.\n\n### Pipeline Overview\n\n```\nYouTube URL\n    ↓  yt-dlp (video download)\ndownloaded_video.mp4\n    ↓  ffmpeg -vf \"fps=8\"\nimages/ (~1,179 frames @ 640×272)\n    ↓  COLMAP feature_extractor + exhaustive_matcher\ndatabase.db (133,000 pairs, 6,058 pruned)\n    ↓  GLOMAP mapper (~70 min on T4)\nsparse/0/  (585 cameras, 14,452 3D points)\n    ↓  Depth-Anything-V2 (ViT-L)\ndepths/ (1,179 relative depth maps)\n    ↓  make_depth_scale.py (affine alignment)\ndepth_scale.json (per-image scale/shift)\n    ↓  gaussian-splatting train.py\n       --optimizer_type sparse_adam\n       --train_test_exp\noutput/*/point_cloud/iteration_30000/point_cloud.ply\n    ↓  process_ply_to_splat()\npoint_cloud.splat (32 bytes/Gaussian)\n```\n\n### Timing Budget (Colab A100)\n\n| Stage | Approximate Duration |\n|---|---|\n| Video download + frame extraction | ~30 seconds |\n| COLMAP feature extraction + matching | ~3 minutes |\n| GLOMAP reconstruction | ~70 minutes |\n| Depth-Anything-V2 inference | ~35 minutes |\n| 3DGS training (30k iterations) | ~8 minutes |\n| PLY → .splat conversion | ~10 seconds |\n| **Total** | **~2 hours** |\n\n### Part A: Diagnose a PLY File\n\nBefore running the full pipeline, practice schema inspection. Load the simple shipwreck PLY and the 3DGS output PLY, print their field names, and write a `detect_ply_type` dispatcher that routes each to the correct converter.\n\n### Part B: Implement the Sort Key\n\nInstead of copying the converter directly, derive the opacity-weighted volume sort key from first principles:\n\n1. Confirm that `exp(scale_0 + scale_1 + scale_2)` equals `exp(scale_0) * exp(scale_1) * exp(scale_2)` (the product of activated scales) on a sample of Gaussians.\n2. Plot the distribution of sort keys across all Gaussians — is it heavy-tailed? Log-normal?\n3. Compare the first 100 sorted Gaussians vs. the last 100: visualize their positions and sizes.\n\n### Part C: Measure the Compression\n\nCompare file sizes at each stage:\n\n- Raw float32 `.ply`: N × 59 × 4 bytes\n- `.splat` before any further compression: N × 32 bytes\n- `.splat` gzip-compressed: measure actual compressed size\n- Compare to SOG's approach: how does this differ from Module 5's encoding strategy?\n\n### Part D: Visualize the Reconstruction\n\nDrop your `.splat` file into [antimatter15's viewer](https://antimatter15.com/splat/) and compare it to Nicholas McCarty's Bamburgh Castle result at [nickmccarty.me/bamburgh-castle-splat](https://nickmccarty.me/bamburgh-castle-splat). Document any artifacts you observe and hypothesize whether they stem from:\n\n- SfM registration failures (missing cameras)\n- Insufficient 3DGS training iterations\n- Static sort approximation artifacts\n- Depth prior scale alignment errors",
+  "objectives": [
+    "Instrument each pipeline stage with wall-clock timing and produce a summary DataFrame matching the workflow table from the reference notebook.",
+    "Inspect the SfM output: count registered cameras, visualize camera positions in 3D, and plot the distribution of track lengths.",
+    "Implement a field-aware PLY dispatcher that handles both simple (x,y,z,rgb) and full 3DGS PLY schemas without errors.",
+    "Derive the opacity-weighted volume sort key from the mathematical definition and validate it against the reference implementation.",
+    "Measure the per-stage compression ratio from float32 .ply through .splat through gzip, and compare to the SOG pipeline from Module 5.",
+    "Load the .splat file in a WebGL viewer and document observable artifacts with hypotheses about their source in the pipeline."
+  ],
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/3dgs/lab6_full_pipeline.ipynb",
+  "supplementalColabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/3dgs/3DGS%20from%20YouTube%20Video%20(How-To).ipynb",
+  "prevItem": {
+    "type": "quiz",
+    "id": "q3"
+  },
+  "nextItem": {
+    "type": "lab",
+    "id": "lab6b"
+  }
+}

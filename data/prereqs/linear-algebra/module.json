@@ -1,0 +1,177 @@
+{
+  "id": "linear-algebra",
+  "type": "prereq",
+  "title": "Linear Algebra",
+  "description": "A rigorous treatment of linear algebra following Hefferon's acclaimed open textbook — from Gaussian elimination and vector spaces through linear maps, determinants, and eigendecomposition. Develops the theoretical foundations that underlie optimization, dimensionality reduction, and geometric transformations in modern ML.",
+  "level": "Foundational",
+  "estimatedHours": 6,
+  "color": "#1a3c75",
+  "accentLight": "#63aac9",
+  "readings": [
+    {
+      "id": "r0",
+      "title": "Notation Reference",
+      "estimatedMinutes": 5,
+      "description": "Symbolic conventions and Greek letter pronunciation used throughout these readings.",
+      "dataPath": "data/prereqs/linear-algebra/readings/r0-notation.json"
+    },
+    {
+      "id": "r1",
+      "title": "Linear Systems and Gauss's Method",
+      "estimatedMinutes": 18,
+      "description": "Setting up linear systems in matrix form, row operations, echelon form, and Gaussian elimination.",
+      "dataPath": "data/prereqs/linear-algebra/readings/r1-linear-systems.json"
+    },
+    {
+      "id": "r2",
+      "title": "Solution Sets and the Homogeneous Structure",
+      "estimatedMinutes": 16,
+      "description": "Parametric solution form, the General = Particular + Homogeneous decomposition, and free variables.",
+      "dataPath": "data/prereqs/linear-algebra/readings/r2-solution-sets.json"
+    },
+    {
+      "id": "r2b",
+      "title": "Norms, Dot Products, and Angles",
+      "estimatedMinutes": 15,
+      "description": "Euclidean length, dot product properties, Cauchy–Schwarz, angles and orthogonality, and ML applications including cosine similarity and distance metrics.",
+      "dataPath": "data/prereqs/linear-algebra/readings/r2b-norms-dot-products.json"
+    },
+    {
+      "id": "r3",
+      "title": "Vector Spaces and Subspaces",
+      "estimatedMinutes": 17,
+      "description": "Vector space axioms, canonical examples, subspaces, and spanning sets.",
+      "dataPath": "data/prereqs/linear-algebra/readings/r3-vector-spaces.json"
+    },
+    {
+      "id": "r4",
+      "title": "Linear Independence and Bases",
+      "estimatedMinutes": 16,
+      "description": "Independence, basis as the minimal spanning set, coordinate representation, and uniqueness.",
+      "dataPath": "data/prereqs/linear-algebra/readings/r4-independence-basis.json"
+    },
+    {
+      "id": "r5",
+      "title": "Dimension",
+      "estimatedMinutes": 14,
+      "description": "Invariance of basis size, dimensions of common spaces, rank-nullity, and combining subspaces.",
+      "dataPath": "data/prereqs/linear-algebra/readings/r5-dimension.json"
+    },
+    {
+      "id": "r6",
+      "title": "Linear Maps: Isomorphisms and Homomorphisms",
+      "estimatedMinutes": 16,
+      "description": "Structure-preserving maps, isomorphism as the right notion of sameness, range and null space.",
+      "dataPath": "data/prereqs/linear-algebra/readings/r6-linear-maps.json"
+    },
+    {
+      "id": "r7",
+      "title": "Matrix Representations and Change of Basis",
+      "estimatedMinutes": 17,
+      "description": "Encoding linear maps as matrices, matrix of a composition, similarity, and change-of-basis matrices.",
+      "dataPath": "data/prereqs/linear-algebra/readings/r7-matrix-representations.json"
+    },
+    {
+      "id": "r8",
+      "title": "Orthogonality and Projection",
+      "estimatedMinutes": 18,
+      "description": "Orthogonal projection, Gram-Schmidt orthogonalization, projection into a subspace, and least squares.",
+      "dataPath": "data/prereqs/linear-algebra/readings/r8-projection.json"
+    },
+    {
+      "id": "r9",
+      "title": "Determinants",
+      "estimatedMinutes": 15,
+      "description": "Permutation expansion, key properties, geometric interpretation as signed volume, Laplace's formula.",
+      "dataPath": "data/prereqs/linear-algebra/readings/r9-determinants.json"
+    },
+    {
+      "id": "r10",
+      "title": "Eigenvalues, Diagonalization, and Jordan Form",
+      "estimatedMinutes": 19,
+      "description": "Characteristic polynomial, diagonalizability, Jordan canonical form, and applications.",
+      "dataPath": "data/prereqs/linear-algebra/readings/r10-eigenvalues.json"
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "q1",
+      "title": "Linear Systems and Geometry",
+      "questionCount": 6,
+      "passingScore": 0.7,
+      "dataPath": "data/prereqs/linear-algebra/quizzes/q1-linear-systems-geometry.json"
+    },
+    {
+      "id": "q2",
+      "title": "Vector Spaces and Dimension",
+      "questionCount": 6,
+      "passingScore": 0.7,
+      "dataPath": "data/prereqs/linear-algebra/quizzes/q2-vector-spaces-dimension.json"
+    },
+    {
+      "id": "q3",
+      "title": "Linear Maps, Change of Basis, and Projection",
+      "questionCount": 6,
+      "passingScore": 0.7,
+      "dataPath": "data/prereqs/linear-algebra/quizzes/q3-maps-projection.json"
+    },
+    {
+      "id": "q4",
+      "title": "Determinants, Eigenvalues, and Spectral Structure",
+      "questionCount": 6,
+      "passingScore": 0.7,
+      "dataPath": "data/prereqs/linear-algebra/quizzes/q4-determinants-eigenvalues.json"
+    }
+  ],
+  "labs": [
+    {
+      "id": "lab1",
+      "title": "Geometry of Linear Transformations with Word Embeddings",
+      "estimatedMinutes": 45,
+      "dataPath": "data/prereqs/linear-algebra/labs/lab1-geometry-transformations.json"
+    },
+    {
+      "id": "lab2",
+      "title": "SVD, PCA, and the Geometry of Neural Representations",
+      "estimatedMinutes": 60,
+      "dataPath": "data/prereqs/linear-algebra/labs/lab2-svd-pca.json"
+    }
+  ],
+  "drills": [
+    {
+      "id": "d1",
+      "title": "Greek Letters & Core Notation",
+      "cardCount": 32,
+      "estimatedMinutes": 10,
+      "dataPath": "data/prereqs/linear-algebra/drills/d1-greek-notation.json"
+    },
+    {
+      "id": "d2",
+      "title": "Norms, Dot Products & Angles",
+      "cardCount": 15,
+      "estimatedMinutes": 8,
+      "dataPath": "data/prereqs/linear-algebra/drills/d2-norms-dot-products.json"
+    },
+    {
+      "id": "d3",
+      "title": "Vector Spaces & Dimension",
+      "cardCount": 14,
+      "estimatedMinutes": 8,
+      "dataPath": "data/prereqs/linear-algebra/drills/d3-vector-spaces-dimension.json"
+    },
+    {
+      "id": "d4",
+      "title": "Linear Maps & Projection",
+      "cardCount": 14,
+      "estimatedMinutes": 8,
+      "dataPath": "data/prereqs/linear-algebra/drills/d4-maps-projection.json"
+    },
+    {
+      "id": "d5",
+      "title": "Determinants, Eigenvalues & SVD",
+      "cardCount": 15,
+      "estimatedMinutes": 10,
+      "dataPath": "data/prereqs/linear-algebra/drills/d5-determinants-eigenvalues.json"
+    }
+  ]
+}

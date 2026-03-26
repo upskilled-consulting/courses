@@ -1,0 +1,167 @@
+{
+  "id": "r1",
+  "moduleId": "m5",
+  "title": "Neural Permutation Learning: From Gumbel-Sinkhorn to ShuffleSoftSort",
+  "estimatedMinutes": 15,
+  "learningObjectives": [
+    {
+      "id": "m5r1-lo1",
+      "verb": "Explain",
+      "description": "Explain why naive permutation sorting is non-differentiable (discrete argmax) and describe how Gumbel-Sinkhorn produces a differentiable soft permutation via doubly stochastic matrix relaxation",
+      "skillTags": [
+        "permutation-learning",
+        "grid-sorting"
+      ]
+    },
+    {
+      "id": "m5r1-lo2",
+      "verb": "Distinguish",
+      "description": "Distinguish SoftSort (differentiable 1D sort) from ShuffleSoftSort (high-dimensional extension) in terms of memory complexity and applicability to 59-dimensional Gaussian attribute vectors",
+      "skillTags": [
+        "permutation-learning"
+      ]
+    },
+    {
+      "id": "m5r1-lo3",
+      "verb": "Explain",
+      "description": "Explain how ShuffleSoftSort uses random projections to reduce the O(N²) Gumbel-Sinkhorn memory problem to O(N) parameters and maintain differentiability for joint training",
+      "skillTags": [
+        "permutation-learning"
+      ]
+    },
+    {
+      "id": "m5r1-lo4",
+      "verb": "Describe",
+      "description": "Describe how joint optimization of ShuffleSoftSort and 3DGS training via a differentiable grid smoothness loss improves compression results compared to sorting a pre-trained model post-hoc",
+      "skillTags": [
+        "permutation-learning",
+        "training"
+      ]
+    }
+  ],
+  "content": "## Sorting as Permutation Matrix Multiplication\n\nSorting \\(n\\) elements is equivalent to multiplying by a **permutation matrix** \\(P\\):\n\n\\[x^\\top = [5, 1, 3, 4] \\xrightarrow{P} [1, 3, 4, 5]\\]\n\n\\(P\\) is a binary matrix with exactly one 1 per row and column. For \\(n=4\\), there are \\(4! = 24\\) possible permutation matrices. For \\(n = 65536\\) Gaussians, there are \\(65536!\\) — we need gradient-based optimization to search this space.\n\n**The problem**: permutation matrices are discrete (entries are 0 or 1), so the function \\(P \\mapsto \\text{sort quality}(Px)\\) has zero gradient almost everywhere. We cannot apply backpropagation directly.\n\n## Question 1: Handling Non-Differentiability\n\n### Gumbel-Sinkhorn\n\nThe Sinkhorn operator iteratively normalizes a matrix to be doubly stochastic (rows and columns sum to 1):\n\n\\[\\text{Sinkhorn}(A) = \\lim_{k\\to\\infty} (\\text{col-normalize} \\circ \\text{row-normalize})^k (\\exp(A/\\tau))\\]\n\nThe result \\(P_{soft}\\) is a **soft permutation**: a doubly stochastic matrix that approximates a permutation matrix as temperature \\(\\tau \\to 0\\).\n\n- **Forward pass**: use \\(P_{soft}\\) with smooth entries — differentiable\n- **To get a hard permutation**: convert \\(P_{soft}\\) to hard via row-wise argmax or linear assignment\n- **Cost**: \\(O(N^2)\\) memory (the full \\(N \\times N\\) matrix), and iterative normalization is slow\n\n## Question 2: Permutation Representations\n\nHow many parameters does each representation require?\n\n| Representation | Parameters | Notes |\n|---|---|---|\n| Discrete indices | \\(N\\) | Non-differentiable |\n| Low-rank factorization | \\(2Nm\\) (\\(m \\ll N\\)) | Hard to optimize |\n| Full-rank (Gumbel-Sinkhorn) | \\(N^2\\) | Differentiable, expensive |\n| SoftSort (1D) | \\(N\\) | Differentiable but 1D only |\n| ShuffleSoftSort | \\(N\\) | Differentiable, generalizes to HD |\n\n## Question 3: Network Architecture\n\nTwo approaches:\n- **No network**: directly optimize the \\(N^2\\) weights of \\(P_{soft}\\). Flexible but quadratic memory.\n- **Transformer network**: input the data to be sorted alongside learnable parameters. The network produces permutation-like outputs conditioned on data. More parameter-efficient but adds architectural complexity.\n\n## SoftSort: Differentiable 1D Sorting\n\nSoftSort (Prillo & Eisenschlos, ICML 2020) computes a differentiable sort of a 1D vector \\(x\\):\n\n\\[P_{soft,ij} = \\text{softmax}\\!\\left(-\\frac{|x_i - \\text{sort}(x)_j|}{\\tau}\\right)\\]\n\nThis creates a soft assignment between input positions and sorted positions. For small \\(\\tau\\), \\(P_{soft}\\) approaches a hard permutation.\n\n**Limitation**: only works for 1D data. Gaussian attributes are 59-dimensional — we cannot directly apply SoftSort.\n\n## ShuffleSoftSort: High-Dimensional Extension\n\nShuffleSoftSort (Barthel et al., EUSIPCO 2025) extends SoftSort to high-dimensional data with only \\(N\\) parameters:\n\n1. **Random shuffle**: randomly permute the \\(N\\) HD data points.\n2. **Project to 1D**: apply SoftSort to a 1D projection of the shuffled data.\n3. **Reverse shuffle**: undo the shuffling on the output permutation.\n4. **Compute loss** on the resulting 2D grid arrangement.\n5. **Repeat** with different random shuffles; each iteration refines the permutation from a different angle.\n\n**Why random shuffles help**: each shuffle exposes different pairwise relationships to SoftSort. No single 1D projection can capture all structure in 59D space, but many shuffles together build up a rich understanding of the data topology.\n\n**Advantages**:\n- Only \\(N\\) parameters (one sort key per data point)\n- Differentiable end-to-end\n- No \\(N^2\\) matrix — constant memory overhead\n- Can be jointly optimized with 3DGS training (the sort is differentiable, so gradients flow back into Gaussian attributes)\n\n### Joint Optimization with 3DGS\n\nThe most powerful application: train 3DGS and the sorting permutation simultaneously. The sorting loss \\(\\mathcal{L}_{sort}\\) penalizes poorly-sorted grids, while the standard photometric loss \\(\\mathcal{L}_{render}\\) maintains rendering quality. The total loss:\n\n\\[\\mathcal{L} = \\mathcal{L}_{render} + \\lambda_{sort}\\mathcal{L}_{sort}\\]\n\nThis encourages Gaussian attributes to take values that, when sorted, produce smooth 2D grids — a form of coding-aware training that optimizes for downstream compressibility.",
+  "equationBreakdowns": [
+    {
+      "label": "Permutation as Matrix Multiplication",
+      "terms": [
+        {
+          "symbol": "x^\\top",
+          "name": "Input vector (row)",
+          "desc": "The unsorted sequence of n values written as a row vector. Each entry occupies a position index 1…n."
+        },
+        {
+          "symbol": "P",
+          "name": "Permutation matrix",
+          "desc": "A binary n×n matrix with exactly one 1 per row and per column. Multiplying x by P reorders its elements. There are n! valid permutation matrices — one per possible ordering."
+        },
+        {
+          "symbol": "\\xrightarrow{P}",
+          "name": "Apply permutation",
+          "desc": "The action of P on x. The 1 in row i of P selects which element of x moves to output position i. The result is a reordered copy of x — no values are changed, only their positions."
+        }
+      ]
+    },
+    {
+      "label": "Sinkhorn Operator (Soft Permutation)",
+      "terms": [
+        {
+          "symbol": "\\exp(A/\\tau)",
+          "name": "Temperature-scaled exponentiation",
+          "desc": "Converts the raw score matrix A into positive values. Temperature τ controls sharpness: small τ makes entries near 0 or 1 (approaching a hard permutation); large τ produces a nearly uniform doubly stochastic matrix."
+        },
+        {
+          "symbol": "\\text{row-normalize}",
+          "name": "Row normalisation",
+          "desc": "Divides each row by its sum, making every row sum to 1. Ensures each input element is 'assigned' to output positions with total weight 1."
+        },
+        {
+          "symbol": "\\text{col-normalize}",
+          "name": "Column normalisation",
+          "desc": "Divides each column by its sum, making every column sum to 1. Ensures each output position receives total assignment weight 1."
+        },
+        {
+          "symbol": "\\lim_{k\\to\\infty}(\\cdots)^k",
+          "name": "Iterative convergence",
+          "desc": "Alternating row and column normalisation is repeated until convergence. Sinkhorn's theorem guarantees this converges to a unique doubly stochastic matrix — the closest permutation-like matrix to exp(A/τ)."
+        },
+        {
+          "symbol": "P_{soft}",
+          "name": "Soft permutation matrix",
+          "desc": "The doubly stochastic output — entries are in (0,1) but rows and columns sum to 1, like a probabilistic assignment. As τ→0, P_soft approaches a hard permutation matrix and gradients vanish; as τ→∞, it approaches a uniform matrix."
+        }
+      ]
+    },
+    {
+      "label": "SoftSort — Differentiable 1D Sort",
+      "terms": [
+        {
+          "symbol": "P_{soft,ij}",
+          "name": "Soft assignment weight",
+          "desc": "How strongly input position i is assigned to sorted output position j. Sums to 1 across j for each i (softmax), making this a soft permutation row."
+        },
+        {
+          "symbol": "\\text{softmax}(\\cdots)",
+          "name": "Softmax over output positions",
+          "desc": "Converts the negative distances to a probability distribution over sorted positions. The position j whose sorted value is closest to x_i receives the highest weight."
+        },
+        {
+          "symbol": "|x_i - \\text{sort}(x)_j|",
+          "name": "Distance to sorted target",
+          "desc": "How far input value x_i is from the j-th sorted value. Small distance means x_i 'belongs' near sorted position j. The negative sign in the softmax turns this into a similarity."
+        },
+        {
+          "symbol": "\\tau",
+          "name": "Temperature",
+          "desc": "Controls how peaked the assignment is. Small τ → near-hard assignment (x_i maps almost entirely to its correct sorted position). Large τ → soft, spread-out assignment with smoother gradients but less accurate sorting."
+        }
+      ]
+    },
+    {
+      "label": "Joint Render + Sort Training Loss",
+      "terms": [
+        {
+          "symbol": "\\mathcal{L}",
+          "name": "Total training loss",
+          "desc": "The combined objective minimised during joint 3DGS + permutation training. Gradients flow simultaneously into Gaussian attributes and the sort key, so the scene is encouraged to be both visually accurate and efficiently sortable."
+        },
+        {
+          "symbol": "\\mathcal{L}_{render}",
+          "name": "Photometric rendering loss",
+          "desc": "The standard 3DGS loss — typically L1 + D-SSIM between rendered and ground-truth images. Ensures the Gaussian representation stays faithful to the training photographs."
+        },
+        {
+          "symbol": "\\lambda_{sort}",
+          "name": "Sorting loss weight",
+          "desc": "A scalar hyperparameter balancing rendering quality against grid smoothness. Too large: attributes distort to be sortable but rendering degrades. Too small: sorting quality improves little. Tuned per scene."
+        },
+        {
+          "symbol": "\\mathcal{L}_{sort}",
+          "name": "Grid smoothness loss",
+          "desc": "Penalises large differences between neighbouring cells in the 2D grid after sorting. Encourages Gaussian attributes to take values that, when arranged spatially, vary smoothly — making the resulting attribute images more compressible."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Mena et al. 2018",
+      "title": "Learning Latent Permutations with Gumbel-Sinkhorn Networks",
+      "url": "https://arxiv.org/abs/1802.08665"
+    },
+    {
+      "label": "Prillo & Eisenschlos 2020",
+      "title": "SoftSort: A Continuous Relaxation for the argsort Operator",
+      "url": "https://arxiv.org/abs/2006.16038"
+    },
+    {
+      "label": "Barthel et al. 2025",
+      "title": "Permutation Learning with Only N Parameters: From SoftSort to Self-Organizing Gaussians (ShuffleSoftSort)",
+      "url": "https://arxiv.org/abs/2503.13051"
+    }
+  ],
+  "nextItem": {
+    "type": "reading",
+    "id": "r2"
+  },
+  "prevItem": null
+}

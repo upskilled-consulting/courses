@@ -1,0 +1,20 @@
+{
+  "id": "lab2",
+  "moduleId": "linear-algebra",
+  "title": "SVD, PCA, and the Geometry of Neural Representations",
+  "estimatedMinutes": 60,
+  "description": "## Lab Overview\n\nThe singular value decomposition is arguably the most important computational tool in applied linear algebra — and it sits at the heart of PCA, matrix factorisation, dimensionality reduction, and the emerging theory of why large language models generalise. In this capstone lab you will compute SVDs on real data, perform low-rank approximation, verify the SVD–PCA equivalence, and analyse the spectral structure of a pre-trained embedding matrix.\n\n## What You Will Build\n\nA notebook that (1) reconstructs GloVe embeddings at varying ranks and measures Frobenius-norm error, (2) implements PCA from scratch via SVD and verifies it matches `sklearn`, (3) plots the singular value spectrum and identifies the effective rank, and (4) probes implicit low-rank structure in a pre-trained embedding matrix — connecting the theory of gradient descent to empirical observations in modern LLMs.",
+  "objectives": [
+    "Compute the full SVD of a GloVe embedding slice and plot the singular value spectrum",
+    "Reconstruct the embedding matrix at ranks $k = 1, 5, 10, 25, 50$ and plot Frobenius-norm error vs rank",
+    "Implement PCA from scratch via SVD: centre the data, compute SVD, project onto top-$k$ components — verify it matches `sklearn.decomposition.PCA`",
+    "Compute the effective rank (number of singular values above $1\\%$ of $\\sigma_1$) and compare to the nominal embedding dimension",
+    "In PyTorch: use `torch.linalg.svd` for decomposition; in TensorFlow: use `tf.linalg.svd` — compare outputs and timing"
+  ],
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/linear-algebra/la_lab2_svd_pca.ipynb",
+  "prevItem": {
+    "type": "quiz",
+    "id": "q4"
+  },
+  "nextItem": null
+}

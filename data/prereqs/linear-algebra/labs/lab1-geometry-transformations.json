@@ -1,0 +1,23 @@
+{
+  "id": "lab1",
+  "moduleId": "linear-algebra",
+  "title": "Geometry of Linear Transformations with Word Embeddings",
+  "estimatedMinutes": 45,
+  "description": "## Lab Overview\n\nWord embeddings are high-dimensional vectors — but most of the interesting structure lives in the *geometry*: norms, dot products, angles, and subspace projections. In this lab you will load real GloVe vectors, build intuition for vector geometry, and connect it directly to the operations that power embedding-based retrieval and attention.\n\n## What You Will Build\n\nA notebook that (1) computes norms and cosine similarities across a vocabulary slice, (2) visualises how matrix operations transform subspaces, and (3) implements orthogonal projection and verifies the General = Particular + Homogeneous decomposition on a toy linear system — all in both PyTorch and TensorFlow.",
+  "objectives": [
+    "Load GloVe-50d embeddings and compute $\\ell^1$, $\\ell^2$, and $\\ell^\\infty$ norms; interpret the distribution",
+    "Implement batch cosine similarity as a single matrix product $\\hat{X}\\hat{X}^T$ and verify against `torch.nn.functional.cosine_similarity`",
+    "Visualise what a $2\\times 2$ linear map does to the unit circle and identify the null space geometrically",
+    "Project a vector onto a subspace using $P = UU^T$ (PyTorch) and `tf.linalg.matmul` (TF); verify the residual is orthogonal to the subspace",
+    "Construct the General = Particular + Homogeneous decomposition for a rank-deficient system and verify numerically"
+  ],
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/linear-algebra/la_lab1_geometry_transformations.ipynb",
+  "prevItem": {
+    "type": "quiz",
+    "id": "q2"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r6"
+  }
+}

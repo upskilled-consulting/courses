@@ -1,0 +1,135 @@
+{
+  "id": "r5",
+  "moduleId": "matrix-algebra",
+  "title": "Eigenvalues, Eigenvectors, and Decompositions",
+  "estimatedMinutes": 18,
+  "learningObjectives": [
+    {
+      "id": "r5-lo1",
+      "verb": "Find",
+      "description": "Find the eigenvalues of a matrix by solving the characteristic equation and compute corresponding eigenvectors",
+      "skillTags": [
+        "spectral-analysis"
+      ]
+    },
+    {
+      "id": "r5-lo2",
+      "verb": "Apply",
+      "description": "Apply the spectral theorem to write a symmetric matrix as A = Q Lambda Q^T and explain why this guarantees real eigenvalues and orthogonal eigenvectors",
+      "skillTags": [
+        "spectral-analysis",
+        "coordinate-frames"
+      ]
+    },
+    {
+      "id": "r5-lo3",
+      "verb": "Interpret",
+      "description": "Interpret the SVD factors U, Sigma, V^T geometrically and identify what each does to an input vector",
+      "skillTags": [
+        "spectral-analysis",
+        "dimensionality-reduction"
+      ]
+    },
+    {
+      "id": "r5-lo4",
+      "verb": "Explain",
+      "description": "Explain PCA as eigendecomposition of the sample covariance matrix and state what the eigenvalues and eigenvectors represent",
+      "skillTags": [
+        "dimensionality-reduction",
+        "spectral-analysis"
+      ]
+    },
+    {
+      "id": "r5-lo5",
+      "verb": "Distinguish",
+      "description": "Distinguish positive definite from positive semi-definite matrices by their eigenvalues and identify which arises from covariance matrices",
+      "skillTags": [
+        "spectral-analysis",
+        "matrix-structure"
+      ]
+    }
+  ],
+  "content": "## Eigenvalues and Eigenvectors\n\nWhen a matrix \\(A\\) multiplies most vectors, both the direction and magnitude change. An **eigenvector** is a special nonzero vector whose direction is *preserved* — it is only scaled:\n\n$$A\\mathbf{q} = \\lambda \\mathbf{q}$$\n\nThe scalar \\(\\lambda\\) is the corresponding **eigenvalue**. The eigenvector gets stretched (\\(|\\lambda| > 1\\)), compressed (\\(|\\lambda| < 1\\)), reversed (\\(\\lambda < 0\\)), or left unchanged (\\(\\lambda = 1\\)) — but never rotated off its line.\n\n### Finding Eigenvalues: Characteristic Equation\n\nRearranging \\(A\\mathbf{q} = \\lambda\\mathbf{q}\\) gives \\((A - \\lambda I)\\mathbf{q} = \\mathbf{0}\\). For a nonzero solution \\(\\mathbf{q}\\) to exist, the matrix \\(A - \\lambda I\\) must be singular:\n\n$$\\det(A - \\lambda I) = 0$$\n\nThis is the **characteristic equation**. For an \\(n \\times n\\) matrix it produces a degree-\\(n\\) polynomial in \\(\\lambda\\) — the **characteristic polynomial** — whose roots are the \\(n\\) eigenvalues (counted with multiplicity, possibly complex).\n\n### Example: 2×2 matrix\n\nFor \\(A = \\begin{bmatrix} 3 & 1 \\\\ 0 & 2 \\end{bmatrix}\\):\n\n$$\\det(A - \\lambda I) = (3-\\lambda)(2-\\lambda) - 0 = \\lambda^2 - 5\\lambda + 6 = (\\lambda-2)(\\lambda-3) = 0$$\n\nEigenvalues: \\(\\lambda_1 = 2\\), \\(\\lambda_2 = 3\\). For each, substitute back to find the eigenvector by solving \\((A - \\lambda I)\\mathbf{q} = \\mathbf{0}\\).\n\n### Properties\n\n- \\(\\text{tr}(A) = \\sum_i \\lambda_i\\) — trace equals sum of eigenvalues\n- \\(\\det(A) = \\prod_i \\lambda_i\\) — determinant equals product of eigenvalues\n- If \\(\\lambda = 0\\) is an eigenvalue, \\(A\\) is singular (verifies the determinant connection)\n- Eigenvalues of \\(A^{-1}\\) are \\(1/\\lambda_i\\)\n- Eigenvalues of \\(A^k\\) are \\(\\lambda_i^k\\)\n\n## Symmetric Matrices: Spectral Theorem\n\nFor symmetric matrices (\\(A = A'\\)), the eigenstructure is especially clean. The **spectral theorem** guarantees:\n\n1. All eigenvalues are **real**\n2. Eigenvectors corresponding to *distinct* eigenvalues are **orthogonal**\n3. There exists a complete orthonormal basis of eigenvectors\n\nThis means any symmetric \\(n \\times n\\) matrix can be decomposed as:\n\n$$A = Q \\Lambda Q'$$\n\nwhere \\(Q\\) is an **orthogonal matrix** whose columns are the eigenvectors, and \\(\\Lambda = \\text{diag}(\\lambda_1, \\ldots, \\lambda_n)\\) is the diagonal matrix of eigenvalues. This is the **eigendecomposition** (or spectral decomposition).\n\nSince \\(Q\\) is orthogonal (\\(Q'Q = I\\)), this can also be written:\n\n$$A = \\sum_{i=1}^n \\lambda_i \\mathbf{q}_i \\mathbf{q}_i'$$\n\nEach term \\(\\lambda_i \\mathbf{q}_i \\mathbf{q}_i'\\) is a rank-1 matrix — a scaled outer product. The full matrix is a sum of \\(n\\) rank-1 pieces along orthogonal directions.\n\n## Positive Definite Matrices\n\nA symmetric matrix \\(A\\) is **positive definite** (PD) if:\n\n$$\\mathbf{x}'A\\mathbf{x} > 0 \\quad \\text{for all nonzero } \\mathbf{x}$$\n\nEquivalently: all eigenvalues are strictly positive. It is **positive semi-definite** (PSD) if \\(\\mathbf{x}'A\\mathbf{x} \\geq 0\\) (eigenvalues \\(\\geq 0\\)).\n\nCovariance matrices are always PSD (PD when the data has full rank). The 3DGS covariance \\(\\Sigma = RSS'R'\\) is PSD by construction — \\(S\\) is diagonal with non-negative entries, so \\(SS'\\) has non-negative eigenvalues, and orthogonal \\(R\\) preserves the sign.\n\n## Singular Value Decomposition (SVD)\n\nThe eigendecomposition requires a square matrix. The **singular value decomposition** generalizes it to any \\(n \\times K\\) matrix:\n\n$$A = U \\Sigma V'$$\n\nwhere:\n- \\(U\\) is \\(n \\times n\\) orthogonal — **left singular vectors** (columns span the column space of \\(A\\))\n- \\(\\Sigma\\) is \\(n \\times K\\) diagonal — **singular values** \\(\\sigma_1 \\geq \\sigma_2 \\geq \\cdots \\geq 0\\) on the diagonal\n- \\(V\\) is \\(K \\times K\\) orthogonal — **right singular vectors** (columns span the row space of \\(A\\))\n\nThe singular values are the square roots of the eigenvalues of \\(A'A\\) (equivalently \\(AA'\\)). The number of nonzero singular values equals the rank of \\(A\\).\n\n### Truncated SVD and Low-Rank Approximation\n\nKeeping only the top \\(r\\) singular values gives the best rank-\\(r\\) approximation of \\(A\\) in the Frobenius norm:\n\n$$A_r = \\sum_{i=1}^r \\sigma_i \\mathbf{u}_i \\mathbf{v}_i'$$\n\nThis is the mathematical foundation of PCA, latent semantic analysis, and matrix factorization methods. Throwing away small singular values discards the directions of least variance while retaining the most informative structure.\n\n## Application: PCA via Eigendecomposition\n\nGiven a data matrix \\(X\\) (\\(n\\) observations, \\(K\\) features, mean-centered), the **sample covariance matrix** is:\n\n$$S = \\frac{1}{n-1} X'X$$\n\n\\(S\\) is \\(K \\times K\\), symmetric, and positive semi-definite. Its eigendecomposition \\(S = Q\\Lambda Q'\\) gives:\n- **Principal components**: the eigenvectors \\(\\mathbf{q}_1, \\ldots, \\mathbf{q}_K\\) (columns of \\(Q\\)) — orthogonal directions of maximum variance\n- **Explained variance**: the eigenvalue \\(\\lambda_i\\) is the variance of the data projected onto \\(\\mathbf{q}_i\\)\n- **Projection**: \\(Z = XQ_r\\) (where \\(Q_r\\) keeps the top \\(r\\) eigenvectors) gives the \\(r\\)-dimensional PCA embedding\n\nIn 3DGS, each Gaussian's scale parameters \\((s_x, s_y, s_z)\\) define the square roots of the eigenvalues of the Gaussian's covariance — they directly encode the variance along the three principal axes of the ellipsoid.\n\n## Cholesky Decomposition\n\nFor a positive definite matrix \\(A\\), the **Cholesky decomposition** is:\n\n$$A = LL'$$\n\nwhere \\(L\\) is a lower triangular matrix with positive diagonal entries. It is the matrix analogue of the square root. Cholesky is numerically preferred over full eigendecomposition when you only need a factored form — it runs in \\(O(n^3/3)\\) rather than \\(O(n^3)\\) and is more numerically stable. It is used in multivariate normal sampling and as a preconditioner in optimization.",
+  "equationBreakdowns": [
+    {
+      "label": "Eigenvalue Equation",
+      "terms": [
+        {
+          "symbol": "A\\mathbf{q} = \\lambda\\mathbf{q}",
+          "name": "Eigenvector equation",
+          "desc": "The defining equation: multiplying the eigenvector q by A produces the same vector scaled by λ. Direction is preserved; only magnitude (and possibly sign) changes."
+        },
+        {
+          "symbol": "\\lambda",
+          "name": "Eigenvalue",
+          "desc": "The scalar stretch factor. λ > 1: stretches. 0 < λ < 1: compresses. λ < 0: flips direction and scales. λ = 0: maps to zero (A is singular along this direction)."
+        },
+        {
+          "symbol": "\\det(A - \\lambda I) = 0",
+          "name": "Characteristic equation",
+          "desc": "The condition for eigenvectors to exist. Setting A − λI singular ensures the homogeneous system has a nontrivial solution. Expanding the determinant gives the characteristic polynomial whose roots are the eigenvalues."
+        }
+      ]
+    },
+    {
+      "label": "Spectral Decomposition (Symmetric Matrix)",
+      "terms": [
+        {
+          "symbol": "A = Q\\Lambda Q'",
+          "name": "Eigendecomposition",
+          "desc": "Valid for any symmetric matrix. Q is orthogonal (Q'Q = I), so this decomposes A into: rotate to the eigenbasis (Q'), scale each axis by its eigenvalue (Λ), rotate back (Q)."
+        },
+        {
+          "symbol": "Q",
+          "name": "Orthogonal eigenvector matrix",
+          "desc": "Columns are the unit eigenvectors of A, arranged to match the ordering of eigenvalues in Λ. Because A is symmetric, these eigenvectors are mutually orthogonal — Q represents a pure rotation."
+        },
+        {
+          "symbol": "\\Lambda",
+          "name": "Diagonal eigenvalue matrix",
+          "desc": "Diagonal entries λ₁ ≥ λ₂ ≥ … ≥ λₙ are the eigenvalues, sorted by convention from largest to smallest. Off-diagonal entries are zero — each eigenvector is scaled independently."
+        }
+      ]
+    },
+    {
+      "label": "Singular Value Decomposition",
+      "terms": [
+        {
+          "symbol": "A = U\\Sigma V'",
+          "name": "SVD factorization",
+          "desc": "Every matrix (not just square, not just symmetric) admits this decomposition. U and V are orthogonal; Σ is diagonal with non-negative entries. Generalizes eigendecomposition to rectangular matrices."
+        },
+        {
+          "symbol": "\\sigma_i",
+          "name": "Singular values",
+          "desc": "Non-negative, sorted descending. Equal to the square roots of the eigenvalues of A'A. The number of nonzero singular values equals the rank of A."
+        },
+        {
+          "symbol": "\\sum_{i=1}^r \\sigma_i \\mathbf{u}_i \\mathbf{v}_i'",
+          "name": "Truncated (rank-r) approximation",
+          "desc": "Keeping the r largest singular values gives the closest rank-r matrix to A in any unitarily invariant norm. This is the Eckart–Young theorem — the mathematical guarantee behind PCA and related methods."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Strang 2016",
+      "title": "Introduction to Linear Algebra, 5th ed., Ch. 6–7",
+      "url": null
+    },
+    {
+      "label": "Greene 2003",
+      "title": "Econometric Analysis, 5th ed., Appendix A.6–A.8",
+      "url": null
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r4"
+  },
+  "nextItem": {
+    "type": "quiz",
+    "id": "q1"
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "id": "q2",
+  "moduleId": "probability-foundations",
+  "title": "Distributions, Importance Sampling, and KL Divergence",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "type": "reading", "id": "r6" },
+  "nextItem": { "type": "lab", "id": "lab1" },
+  "questions": [
+    {
+      "id": "q2_1",
+      "type": "multiple-choice",
+      "prompt": "Which constraint must the parameters $\\boldsymbol{\\pi} = (\\pi_1, \\ldots, \\pi_K)$ of a Categorical distribution satisfy?",
+      "options": [
+        { "id": "a", "text": "$\\pi_k = 1/K$ for all $k$ (uniform only)", "correct": false },
+        { "id": "b", "text": "$\\pi_k \\geq 0$ for all $k$ and $\\sum_{k=1}^K \\pi_k = 1$", "correct": true },
+        { "id": "c", "text": "$\\pi_k \\leq 0.5$ for all $k$", "correct": false },
+        { "id": "d", "text": "$\\pi_k > 0$ for all $k$ (no zero-probability classes allowed)", "correct": false }
+      ],
+      "explanation": "A Categorical distribution is a valid PMF over $K$ outcomes if and only if each probability is non-negative and they sum to one: $\\pi_k \\geq 0$ and $\\sum_k \\pi_k = 1$. This allows degenerate cases like $\\pi_k = 0$ for some classes (the outcome is impossible but still valid). In practice, neural networks often output logits that are passed through a softmax to enforce this constraint automatically.",
+      "hint": "These are the axioms that any discrete probability distribution must satisfy. Which option states both conditions correctly?"
+    },
+    {
+      "id": "q2_2",
+      "type": "multiple-choice",
+      "prompt": "For $X \\sim \\mathcal{N}(\\mu, \\sigma^2)$, approximately what fraction of the probability mass lies within one standard deviation of the mean — i.e., in the interval $(\\mu - \\sigma,\\; \\mu + \\sigma)$?",
+      "options": [
+        { "id": "a", "text": "50%", "correct": false },
+        { "id": "b", "text": "68%", "correct": true },
+        { "id": "c", "text": "95%", "correct": false },
+        { "id": "d", "text": "99.7%", "correct": false }
+      ],
+      "explanation": "The 68–95–99.7 rule (empirical rule) for the Gaussian:\n- $\\pm 1\\sigma$: **68%** of mass\n- $\\pm 2\\sigma$: **95%** of mass\n- $\\pm 3\\sigma$: **99.7%** of mass\n\nThis is why standard deviations are a natural unit for describing how unusual an observation is: a value more than $3\\sigma$ from the mean occurs less than 0.3% of the time under a Gaussian assumption.",
+      "hint": "The three percentages in the empirical rule are 68, 95, and 99.7 — associated with 1σ, 2σ, and 3σ respectively."
+    },
+    {
+      "id": "q2_3",
+      "type": "multiple-choice",
+      "prompt": "The Beta distribution $\\text{Beta}(\\alpha, \\beta)$ is defined on $[0,1]$ and is used as a prior over probabilities. What does $\\text{Beta}(1, 1)$ represent?",
+      "options": [
+        { "id": "a", "text": "A distribution with all mass concentrated at $p = 0.5$", "correct": false },
+        { "id": "b", "text": "The uniform distribution on $[0, 1]$", "correct": true },
+        { "id": "c", "text": "A distribution with mass concentrated near $p = 0$ and $p = 1$", "correct": false },
+        { "id": "d", "text": "An invalid parameterization ($\\alpha$ and $\\beta$ must exceed 1)", "correct": false }
+      ],
+      "explanation": "$\\text{Beta}(1, 1)$ has PDF $f(p) \\propto p^{1-1}(1-p)^{1-1} = 1$, which is constant on $[0,1]$ — the uniform distribution. As a prior, this expresses **maximum uncertainty**: every value of the probability $p$ is equally plausible before observing data. After observing $h$ heads and $t$ tails from a coin, the posterior is $\\text{Beta}(1+h, 1+t)$ — the $\\alpha$ and $\\beta$ parameters act like pseudo-counts.",
+      "hint": "Substitute $\\alpha = \\beta = 1$ into the Beta PDF $f(p) \\propto p^{\\alpha-1}(1-p)^{\\beta-1}$. What does the result simplify to?"
+    },
+    {
+      "id": "q2_4",
+      "type": "multiple-choice",
+      "prompt": "The importance sampling identity $\\mathbb{E}_p[f(x)] = \\mathbb{E}_q\\!\\left[f(x)\\,\\frac{p(x)}{q(x)}\\right]$ is valid when which condition holds?",
+      "options": [
+        { "id": "a", "text": "$p$ and $q$ must be the same distribution", "correct": false },
+        { "id": "b", "text": "Wherever $p(x) > 0$, we also require $q(x) > 0$ (absolute continuity)", "correct": true },
+        { "id": "c", "text": "$f(x)$ must be a bounded function", "correct": false },
+        { "id": "d", "text": "The importance weights $w(x) = p(x)/q(x)$ must have finite variance", "correct": false }
+      ],
+      "explanation": "The identity is derived by multiplying and dividing by $q(x)$: $\\mathbb{E}_p[f(x)] = \\int f(x)p(x)\\,dx = \\int f(x)\\frac{p(x)}{q(x)}q(x)\\,dx = \\mathbb{E}_q[f(x)w(x)]$. This manipulation requires that $q(x) \\neq 0$ wherever we divide by it — specifically wherever $p(x) > 0$. If $q(x) = 0$ at a point where $p(x) > 0$, the weight $p(x)/q(x)$ is undefined and the estimator is biased (we never sample from that region). Finite-variance weights are desirable for low-variance estimation but not strictly required for correctness.",
+      "hint": "When is the weight $w(x) = p(x)/q(x)$ undefined? What constraint on $q$ prevents that?"
+    },
+    {
+      "id": "q2_5",
+      "type": "multiple-choice",
+      "prompt": "The effective sample size (ESS) $= (\\sum_i w_i)^2 / \\sum_i w_i^2$ measures how many i.i.d. samples the weighted sample is worth. ESS is maximized (equal to $N$) when:",
+      "options": [
+        { "id": "a", "text": "The importance weights vary as much as possible across samples", "correct": false },
+        { "id": "b", "text": "All importance weights are equal — i.e., $p$ and $q$ are identical", "correct": true },
+        { "id": "c", "text": "One weight is much larger than all others (dominated by a single sample)", "correct": false },
+        { "id": "d", "text": "The proposal $q$ is broader than the target $p$", "correct": false }
+      ],
+      "explanation": "By the Cauchy-Schwarz inequality, $(\\sum_i w_i)^2 \\leq N \\sum_i w_i^2$, so ESS $\\leq N$. Equality holds when all weights are equal: $w_1 = w_2 = \\cdots = w_N$. This occurs when $p(x_i)/q(x_i)$ is constant — i.e., $p = q$. In this case sampling from $q$ is the same as sampling from $p$ and no reweighting is needed. Conversely, if one sample gets a very large weight (which happens when $q$ has lighter tails than $p$), ESS can drop to nearly 1, making the estimate unreliable.",
+      "hint": "When are all the weights $w_i = p(x_i)/q(x_i)$ equal? What does that require of $p$ and $q$?"
+    },
+    {
+      "id": "q2_6",
+      "type": "multiple-choice",
+      "prompt": "$D_{\\text{KL}}(P \\| Q) = \\sum_x P(x)\\log\\frac{P(x)}{Q(x)}$ is the **forward KL** from $P$ to $Q$. When a model $Q$ is fit by minimizing the forward KL $D_{\\text{KL}}(P_{\\text{data}} \\| Q_\\theta)$, the model tends to:",
+      "options": [
+        { "id": "a", "text": "Concentrate on one mode of $P_{\\text{data}}$ and ignore others (mode-seeking)", "correct": false },
+        { "id": "b", "text": "Spread mass to cover all modes of $P_{\\text{data}}$, even at the cost of placing mass in low-density regions (mean-seeking)", "correct": true },
+        { "id": "c", "text": "Become the uniform distribution", "correct": false },
+        { "id": "d", "text": "Exactly match $P_{\\text{data}}$ at every point", "correct": false }
+      ],
+      "explanation": "Forward KL $D_{\\text{KL}}(P\\|Q)$ is infinite wherever $P(x) > 0$ and $Q(x) = 0$ — so minimizing it forces $Q$ to cover all regions where $P$ has support. This makes $Q$ **mean-seeking** (also called zero-avoiding): it spreads mass broadly to avoid placing zero probability where $P$ has mass, sometimes putting probability in gaps between modes.\n\nReverse KL $D_{\\text{KL}}(Q\\|P)$ has no penalty for $Q(x) = 0$ where $P(x) > 0$, so the model can safely ignore modes — it is **mode-seeking**. Variational inference typically minimizes reverse KL, which is why VAEs tend to produce blurry samples that average over modes rather than commit to one.",
+      "hint": "Think about when the forward KL $\\sum P\\log(P/Q)$ becomes $+\\infty$. Which values of $Q(x)$ cause this?"
+    },
+    {
+      "id": "q2_7",
+      "type": "multiple-choice",
+      "prompt": "Compute the entropy $H(p)$ (in bits) of a fair coin: $p(\\text{heads}) = p(\\text{tails}) = 0.5$.\n\nRecall: $H(p) = -\\sum_x p(x)\\log_2 p(x)$",
+      "options": [
+        { "id": "a", "text": "0 bits", "correct": false },
+        { "id": "b", "text": "0.5 bits", "correct": false },
+        { "id": "c", "text": "1 bit", "correct": true },
+        { "id": "d", "text": "2 bits", "correct": false }
+      ],
+      "explanation": "$H(p) = -0.5\\log_2(0.5) - 0.5\\log_2(0.5) = -0.5 \\times (-1) - 0.5 \\times (-1) = 0.5 + 0.5 = 1$ bit.\n\nThis result is exact and interpretable: one fair coin flip carries **1 bit** of information — the maximum possible for a binary variable. A biased coin ($p \\neq 0.5$) would have entropy less than 1 bit. More generally, a uniform distribution over $K$ outcomes has entropy $\\log_2 K$ bits — the maximum entropy for that support.",
+      "hint": "Substitute $p = 0.5$ into $H = -p\\log_2 p - (1-p)\\log_2(1-p)$ and recall that $\\log_2(0.5) = -1$."
+    },
+    {
+      "id": "q2_8",
+      "type": "multiple-choice",
+      "prompt": "Training a neural network with cross-entropy loss $\\mathcal{L} = -\\sum_x \\hat{p}(x)\\log q_\\theta(x)$ — where $\\hat{p}$ is the empirical data distribution and $q_\\theta$ is the model — is equivalent to minimizing which quantity over $\\theta$?",
+      "options": [
+        { "id": "a", "text": "$D_{\\text{KL}}(\\hat{p} \\| q_\\theta)$ — forward KL from data to model", "correct": true },
+        { "id": "b", "text": "$D_{\\text{KL}}(q_\\theta \\| \\hat{p})$ — reverse KL from model to data", "correct": false },
+        { "id": "c", "text": "$H(\\hat{p})$ — the entropy of the data distribution", "correct": false },
+        { "id": "d", "text": "$H(q_\\theta)$ — the entropy of the model distribution", "correct": false }
+      ],
+      "explanation": "Cross-entropy decomposes as: $H(\\hat{p}, q_\\theta) = H(\\hat{p}) + D_{\\text{KL}}(\\hat{p} \\| q_\\theta)$. Since $H(\\hat{p})$ does not depend on $\\theta$, minimizing the cross-entropy over $\\theta$ is equivalent to minimizing the forward KL $D_{\\text{KL}}(\\hat{p} \\| q_\\theta)$. This is also equivalent to **maximum likelihood estimation**: maximizing $\\prod_i q_\\theta(x_i)$ over the data is the same as minimizing $-\\frac{1}{N}\\sum_i \\log q_\\theta(x_i)$, which is the cross-entropy.",
+      "hint": "Use the decomposition $H(\\hat{p}, q_\\theta) = H(\\hat{p}) + D_{\\text{KL}}(\\hat{p} \\| q_\\theta)$. Which term depends on $\\theta$?"
+    },
+    {
+      "id": "q2_9",
+      "type": "code-completion",
+      "prompt": "Complete the function that computes the KL divergence $D_{\\text{KL}}(p \\| q) = \\sum_x p(x)\\log\\frac{p(x)}{q(x)}$ for two discrete distributions. `kl_divergence(np.array([0.5, 0.5]), np.array([0.5, 0.5]))` should return `0.0`; `kl_divergence(np.array([1.0, 0.0]), np.array([0.5, 0.5]))` should return `ln(2) ≈ 0.693`.",
+      "codeTemplate": "import numpy as np\n\ndef kl_divergence(p, q):\n    \"\"\"\n    Compute D_KL(p || q) for discrete distributions.\n    p, q: 1-D NumPy arrays summing to 1, with q[i] > 0 wherever p[i] > 0.\n    \"\"\"\n    return ___BLANK___\n\n# Example: kl_divergence(np.array([0.5, 0.5]), np.array([0.5, 0.5])) → 0.0\n# Example: kl_divergence(np.array([1.0, 0.0]), np.array([0.5, 0.5])) → ln(2) ≈ 0.693",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "np.sum(p * np.log(p / q))",
+        "np.sum(p * (np.log(p) - np.log(q)))",
+        "float(np.sum(p * np.log(p / q)))",
+        "np.dot(p, np.log(p / q))",
+        "np.dot(p, np.log(p) - np.log(q))"
+      ],
+      "explanation": "$D_{\\text{KL}}(p \\| q) = \\sum_x p(x)\\log(p(x)/q(x))$, which in NumPy is `np.sum(p * np.log(p / q))`. Verification: for $p = q = [0.5, 0.5]$, each term is $0.5 \\times \\log(1) = 0$, so KL = 0. For $p = [1, 0]$, $q = [0.5, 0.5]$: the second term has $p(x)=0$ so contributes 0 (by convention $0 \\log 0 = 0$), and the first term is $1 \\times \\log(1/0.5) = \\ln 2 \\approx 0.693$. Note: this implementation assumes the support condition (no division by zero) — in practice, add a small $\\epsilon$ or use `np.where(p > 0, ...)` for robustness.",
+      "hint": "The formula is a dot product: each term is $p(x) \\times \\log(p(x)/q(x))$. How would you write $\\sum_x p(x)\\log(p(x)/q(x))$ as a NumPy operation?"
+    }
+  ]
+}

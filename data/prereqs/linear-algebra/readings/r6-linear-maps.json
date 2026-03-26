@@ -1,0 +1,95 @@
+{
+  "id": "r6",
+  "moduleId": "linear-algebra",
+  "title": "Linear Maps: Isomorphisms and Homomorphisms",
+  "estimatedMinutes": 16,
+  "learningObjectives": [
+    {
+      "id": "r6-lo1",
+      "verb": "Verify",
+      "description": "Verify whether a map is linear by checking additivity and homogeneity",
+      "skillTags": [
+        "coordinate-frames",
+        "matrix-structure"
+      ]
+    },
+    {
+      "id": "r6-lo2",
+      "verb": "Compute",
+      "description": "Compute the range space and null space of a linear map and state their dimensions",
+      "skillTags": [
+        "matrix-structure"
+      ]
+    },
+    {
+      "id": "r6-lo3",
+      "verb": "Determine",
+      "description": "Determine whether a linear map is an isomorphism and explain why all n-dimensional real spaces are structurally identical",
+      "skillTags": [
+        "coordinate-frames"
+      ]
+    },
+    {
+      "id": "r6-lo4",
+      "verb": "Connect",
+      "description": "Connect injectivity to a trivial null space and surjectivity to a full-dimensional range space",
+      "skillTags": [
+        "matrix-structure",
+        "coordinate-frames"
+      ]
+    }
+  ],
+  "content": "## Structure-Preserving Maps\n\nGiven two vector spaces $V$ and $W$, a function $h: V \\to W$ is a **homomorphism** (or **linear map**) if it preserves the vector space structure:\n\n$$h(\\vec{v}_1 + \\vec{v}_2) = h(\\vec{v}_1) + h(\\vec{v}_2) \\qquad h(c\\vec{v}) = c\\,h(\\vec{v})$$\n\nEquivalently, for any scalars $a, b$ and vectors $\\vec{v}_1, \\vec{v}_2$:\n\n$$h(a\\vec{v}_1 + b\\vec{v}_2) = a\\,h(\\vec{v}_1) + b\\,h(\\vec{v}_2)$$\n\nA linear map is completely determined by where it sends each basis vector. If $B = \\{\\vec{\\beta}_1,\\ldots,\\vec{\\beta}_n\\}$ is a basis for $V$ and you specify $h(\\vec{\\beta}_i) \\in W$ freely, then $h$ extends uniquely to all of $V$ by linearity:\n\n$$h\\!\\left(\\sum c_i \\vec{\\beta}_i\\right) = \\sum c_i\\, h(\\vec{\\beta}_i)$$\n\nThis is why matrices exist: a matrix is just a compact encoding of where a linear map sends each standard basis vector.\n\n## Examples\n\n**Zero map**: $\\vec{v} \\mapsto \\vec{0}$ for all $\\vec{v}$. Trivially linear.\n\n**Identity**: $\\text{id}_V: \\vec{v} \\mapsto \\vec{v}$. Linear.\n\n**Rotation in $\\mathbb{R}^2$**: $R_\\theta(x, y) = (x\\cos\\theta - y\\sin\\theta,\\; x\\sin\\theta + y\\cos\\theta)$. Linear — it preserves addition and scaling.\n\n**Projection**: $\\pi: \\mathbb{R}^3 \\to \\mathbb{R}^2$, $(x,y,z) \\mapsto (x,y)$. Linear.\n\n**Differentiation**: $D: \\mathcal{P}_n \\to \\mathcal{P}_{n-1}$, $p(x) \\mapsto p'(x)$. Linear — the derivative of a sum is the sum of derivatives.\n\n**Not linear**: $f(x) = x + 1$ is not linear because $f(0) = 1 \neq 0$ (a linear map must send $\\vec{0}$ to $\\vec{0}$).\n\n## Range Space and Null Space\n\nFor $h: V \\to W$:\n\n- The **range space** $\\mathcal{R}(h) = \\{h(\\vec{v}) : \\vec{v} \\in V\\}$ is the image of $h$ — the set of all vectors $W$ that $h$ can produce. It is a subspace of $W$.\n- The **null space** $\\mathcal{N}(h) = \\{\\vec{v} \\in V : h(\\vec{v}) = \\vec{0}\\}$ is the kernel — the set of all inputs that map to zero. It is a subspace of $V$.\n\nThese subspaces measure what the map *does* and what it *kills*. The rank-nullity theorem applies:\n\n$$\\dim(\\mathcal{R}(h)) + \\dim(\\mathcal{N}(h)) = \\dim(V)$$\n\n## Isomorphisms\n\nAn **isomorphism** is a linear map $f: V \\to W$ that is also a bijection (one-to-one and onto). When an isomorphism exists, $V$ and $W$ are **isomorphic**: $V \\cong W$.\n\nIsomorphic spaces are structurally identical — they differ only in the labeling of their elements. No linear-algebraic property can distinguish them.\n\n**The fundamental theorem**: *Every finite-dimensional real vector space of dimension $n$ is isomorphic to $\\mathbb{R}^n$.*\n\nThis theorem is why $\\mathbb{R}^n$ is sufficient to study all finite-dimensional vector spaces. The space of $3 \\times 3$ matrices ($\\dim = 9$) is isomorphic to $\\mathbb{R}^9$; $\\mathcal{P}_4$ ($\\dim = 5$) is isomorphic to $\\mathbb{R}^5$.\n\n### Characterizing Isomorphisms\n\nA linear map $f: V \\to W$ is an isomorphism iff:\n- **Injective** (one-to-one): $\\mathcal{N}(f) = \\{\\vec{0}\\}$ — no two vectors map to the same output\n- **Surjective** (onto): $\\mathcal{R}(f) = W$ — every output is achieved\n\nFor maps between spaces of the same dimension, injectivity and surjectivity are equivalent — checking either one suffices.\n\n## Transformations\n\nA **transformation** is a linear map from a space to itself: $t: V \\to V$. Every $n \\times n$ matrix represents a transformation of $\\mathbb{R}^n$.\n\nTransformations can be composed: $(t \\circ s)(\\vec{v}) = t(s(\\vec{v}))$, corresponding to matrix multiplication. Powers of a transformation $t^k = t \\circ \\cdots \\circ t$ correspond to matrix powers $A^k$.\n\nA transformation $t$ is invertible (an isomorphism from $V$ to $V$) iff $\\mathcal{N}(t) = \\{\\vec{0}\\}$, iff $\\det(t) \neq 0$ — connecting back to the Invertible Matrix Theorem.",
+  "equationBreakdowns": [
+    {
+      "label": "Linearity Condition",
+      "terms": [
+        {
+          "symbol": "h(a\\vec{v}_1 + b\\vec{v}_2) = a\\,h(\\vec{v}_1) + b\\,h(\\vec{v}_2)",
+          "name": "Linearity",
+          "desc": "A map is linear iff it commutes with linear combinations. Two conditions in one: it preserves addition (set a=b=1) and scalar multiplication (set v₁=v₂ and b=0)."
+        },
+        {
+          "symbol": "h(\\vec{0}_V) = \\vec{0}_W",
+          "name": "Maps zero to zero",
+          "desc": "A consequence of linearity (set a=0): any linear map must send the zero vector of V to the zero vector of W. If f(0) ≠ 0, f is not linear — check this first."
+        }
+      ]
+    },
+    {
+      "label": "Rank-Nullity for Maps",
+      "terms": [
+        {
+          "symbol": "\\dim(\\mathcal{R}(h))",
+          "name": "Rank of the map",
+          "desc": "The dimension of the range space — how many independent output directions the map can produce. Equals the rank of the matrix representation."
+        },
+        {
+          "symbol": "\\dim(\\mathcal{N}(h))",
+          "name": "Nullity of the map",
+          "desc": "The dimension of the null space — how many independent directions get sent to zero. Each free variable in Ax=0 contributes one dimension to the null space."
+        },
+        {
+          "symbol": "\\dim(V)",
+          "name": "Dimension of the domain",
+          "desc": "The total input dimension. Rank + nullity = dim(V): every input direction is either sent somewhere useful (rank) or killed to zero (nullity)."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Hefferon 2020",
+      "title": "Linear Algebra, Ch. Three §I–II: Isomorphisms, Homomorphisms",
+      "url": null
+    }
+  ],
+  "prevItem": {
+    "type": "lab",
+    "id": "lab1"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r7"
+  }
+}

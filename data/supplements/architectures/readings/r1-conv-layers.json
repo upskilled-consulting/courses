@@ -1,0 +1,81 @@
+{
+  "id": "r1",
+  "moduleId": "architectures",
+  "title": "Convolutional Layers and the Vision Inductive Bias",
+  "estimatedMinutes": 16,
+  "learningObjectives": [
+    {
+      "id": "r1-lo1",
+      "verb": "Compute",
+      "description": "Compute the output size of a convolutional layer given input size, kernel size, stride, and padding, and determine the receptive field of a neuron at a given depth",
+      "skillTags": ["architectures", "cnn"]
+    },
+    {
+      "id": "r1-lo2",
+      "verb": "Explain",
+      "description": "Explain how weight sharing makes convolutions parameter-efficient and why translation equivariance is a useful inductive bias for image tasks",
+      "skillTags": ["architectures", "cnn"]
+    },
+    {
+      "id": "r1-lo3",
+      "verb": "Distinguish",
+      "description": "Distinguish max pooling from average pooling and global average pooling, and identify what each discards and what it preserves",
+      "skillTags": ["architectures", "cnn"]
+    },
+    {
+      "id": "r1-lo4",
+      "verb": "Explain",
+      "description": "Explain what depthwise separable convolutions are, compute the parameter and multiply-accumulate reduction factor vs. standard convolutions, and name one architecture that uses them",
+      "skillTags": ["architectures", "cnn"]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r0"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r2"
+  },
+  "content": "## Why Not Just Use MLPs for Images?\n\nAn MLP applied to an image treats each pixel as an independent input feature. A $224 \\times 224 \\times 3$ RGB image has 150,528 inputs — the first hidden layer of a width-1024 MLP would have 154 million parameters. More importantly, the MLP has no notion of locality: it treats a pixel and its neighbor identically to a pixel at the opposite corner.\n\n**The visual world has structure** that we should build into the architecture:\n1. **Locality:** meaningful patterns (edges, textures, shapes) are local — they span small regions of the image\n2. **Translation invariance:** a cat in the upper left looks the same as a cat in the lower right\n3. **Compositionality:** higher-level features (eyes, ears) are built from lower-level ones (edges, curves)\n\nConvolutional layers encode these as **inductive biases** — assumptions about the problem structure built into the architecture itself.\n\n---\n\n## The Convolution Operation\n\nA **convolutional layer** slides a small **kernel** (filter) over the input and computes a dot product at each position:\n\n$$[\\mathbf{F} * \\mathbf{k}]_{i,j} = \\sum_{m=0}^{K-1} \\sum_{n=0}^{K-1} \\mathbf{F}_{i+m,\\, j+n} \\cdot \\mathbf{k}_{m,n}$$\n\nwhere $\\mathbf{F}$ is the input feature map and $\\mathbf{k}$ is a $K \\times K$ kernel.\n\n*(Technical note: deep learning frameworks compute cross-correlation, not true convolution — the kernel is not flipped. The distinction is irrelevant for learned kernels.)*\n\n### Key Parameters\n\n| Parameter | Effect |\n|---|---|\n| **Kernel size** $K$ | Receptive field per layer; $3 \\times 3$ is standard |\n| **Stride** $S$ | Step size of the sliding window; stride 2 halves spatial dimensions |\n| **Padding** $P$ | Zeros added to the border; `same` padding preserves spatial size |\n| **Channels in** $C_{\\text{in}}$ | Number of input feature maps |\n| **Channels out** $C_{\\text{out}}$ | Number of output feature maps = number of kernels |\n\n**Output size formula:**\n\n$$H_{\\text{out}} = \\left\\lfloor \\frac{H_{\\text{in}} + 2P - K}{S} \\right\\rfloor + 1$$\n\n**Example:** Input $224 \\times 224$, kernel $3 \\times 3$, stride 1, padding 1 → output $224 \\times 224$ (same padding).\n\nInput $224 \\times 224$, kernel $3 \\times 3$, stride 2, padding 1 → output $112 \\times 112$.\n\n---\n\n## Weight Sharing and Parameter Efficiency\n\nThe kernel weights are **shared across all spatial positions**. A single $3 \\times 3$ kernel with $C_{\\text{in}}$ input channels has $9 \\times C_{\\text{in}}$ parameters, regardless of the input spatial size.\n\nCompare: a fully connected layer over $224 \\times 224 \\times 3$ to produce $112 \\times 112 \\times 64$ outputs would need $\\sim 10^{10}$ parameters. A convolutional layer doing the same spatial compression needs only $3^2 \\times 3 \\times 64 = 1{,}728$ parameters.\n\n**Weight sharing encodes the prior that the same feature detector (edge, color gradient) is useful everywhere in the image.** This is translation equivariance: if the input shifts, the output feature map shifts by the same amount.\n\n---\n\n## Receptive Field\n\nThe **receptive field** of a neuron is the region of the input that influences its value. For a single $3 \\times 3$ conv layer, each output neuron sees a $3 \\times 3$ input region. After $L$ such layers (stride 1), the receptive field grows to $(2L+1) \\times (2L+1)$.\n\nStacking $3 \\times 3$ layers is equivalent to applying a single large kernel — two $3 \\times 3$ layers give a $5 \\times 5$ receptive field with fewer parameters ($2 \\times 9 = 18$ vs. $25$) and an extra non-linearity.\n\n---\n\n## Pooling\n\nPooling layers reduce spatial dimensions by summarizing a local region:\n\n**Max pooling:** takes the maximum value in each $K \\times K$ window. Preserves the strongest activation; invariant to small translations.\n\n**Average pooling:** takes the mean. Smoother; more sensitive to the overall response.\n\n**Global average pooling (GAP):** averages each entire feature map to a single scalar. Collapses $H \\times W \\times C$ to $C$. Used before the final classification head in ResNets and modern CNNs — replaces large fully connected layers, dramatically reducing parameter count.\n\n---\n\n## Depthwise Separable Convolutions\n\nStandard convolution mixes spatial filtering and channel mixing in one operation. **Depthwise separable convolution** splits them:\n\n1. **Depthwise conv:** Apply a separate $K \\times K$ kernel to each input channel independently — spatial filtering only, no channel mixing. Parameters: $K^2 \\times C_{\\text{in}}$\n2. **Pointwise conv:** Apply a $1 \\times 1$ convolution to mix channels. Parameters: $C_{\\text{in}} \\times C_{\\text{out}}$\n\n**Parameter reduction factor vs. standard conv:**\n\n$$\\frac{K^2 C_{\\text{in}} + C_{\\text{in}} C_{\\text{out}}}{K^2 C_{\\text{in}} C_{\\text{out}}} = \\frac{1}{C_{\\text{out}}} + \\frac{1}{K^2} \\approx \\frac{1}{K^2}$$\n\nFor $K=3$: roughly $8\\times$ fewer parameters. For $K=3$, $C_{\\text{out}} = 256$: $8.9\\times$ reduction.\n\n**Used in:** MobileNet, Xception, EfficientNet — architectures designed for mobile and edge deployment.\n\n---\n\n## PyTorch and TensorFlow\n\n**PyTorch** — `nn.Conv2d`, output size, pooling, depthwise separable:\n\n```python\nimport torch\nimport torch.nn as nn\n\n# Conv2d(in_channels, out_channels, kernel_size, stride=1, padding=0)\nconv = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1)\nx    = torch.randn(8, 3, 32, 32)   # (B, C_in, H, W)\nout  = conv(x)                     # (8, 64, 32, 32) — padding=1 preserves spatial size\n\n# Output size formula: H_out = floor((H_in + 2P - K) / S) + 1\n# K=3, P=1, S=1 → floor((32 + 2 - 3) / 1) + 1 = 32  ✓\n\n# Stride=2 for downsampling (replaces max pooling in modern nets)\nconv_down = nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1)\nout_down  = conv_down(out)         # (8, 128, 16, 16)\n\n# Max pooling and average pooling\nmax_pool = nn.MaxPool2d(kernel_size=2, stride=2)\navg_pool = nn.AdaptiveAvgPool2d(output_size=(1, 1))   # global average pool → (B, C, 1, 1)\n\n# Depthwise separable convolution (MobileNet style)\ndepthwise   = nn.Conv2d(64, 64, kernel_size=3, padding=1, groups=64)  # groups=C_in\npointwise   = nn.Conv2d(64, 128, kernel_size=1)\n\nclass DepthwiseSeparable(nn.Module):\n    def __init__(self, in_ch, out_ch):\n        super().__init__()\n        self.dw = nn.Conv2d(in_ch, in_ch,  3, padding=1, groups=in_ch)\n        self.pw = nn.Conv2d(in_ch, out_ch, 1)\n    def forward(self, x):\n        return self.pw(self.dw(x))\n\n# Typical CNN block: Conv → BN → ReLU\nblock = nn.Sequential(\n    nn.Conv2d(3, 64, 3, padding=1),\n    nn.BatchNorm2d(64),\n    nn.ReLU(),\n)\n```\n\n**TensorFlow / Keras:**\n\n```python\nimport tensorflow as tf\n\n# Conv2D uses channels-last by default: (B, H, W, C)\nconv = tf.keras.layers.Conv2D(filters=64, kernel_size=3, strides=1,\n                               padding='same', activation='relu')\nx    = tf.random.normal((8, 32, 32, 3))\nout  = conv(x)   # (8, 32, 32, 64) — 'same' padding preserves H, W\n\n# 'valid' padding: no padding, output shrinks\nconv_valid = tf.keras.layers.Conv2D(64, 3, padding='valid')\n# H_out = 32 - 3 + 1 = 30\n\n# Pooling\nmax_pool   = tf.keras.layers.MaxPooling2D(pool_size=2, strides=2)\nglobal_avg = tf.keras.layers.GlobalAveragePooling2D()   # (B, C)\n\n# Depthwise separable\ndws = tf.keras.layers.SeparableConv2D(filters=128, kernel_size=3, padding='same')\n```",
+  "equationBreakdowns": [
+    {
+      "label": "Output Size Formula",
+      "heading": "The Convolution Operation",
+      "terms": [
+        {
+          "symbol": "H_{\\text{out}}",
+          "name": "Output height",
+          "desc": "How tall the output feature map is. Same formula applies to width."
+        },
+        {
+          "symbol": "H_{\\text{in}} + 2P - K",
+          "name": "Effective input size",
+          "desc": "Input height plus padding on both sides, minus the kernel footprint. This is how many positions the kernel can start at."
+        },
+        {
+          "symbol": "S",
+          "name": "Stride",
+          "desc": "How many pixels the kernel jumps between positions. Stride 1 = dense output; stride 2 = downsampled by 2x. Division by S, then floor, gives the output count."
+        }
+      ]
+    },
+    {
+      "label": "2D Convolution",
+      "heading": "The Convolution Operation",
+      "terms": [
+        {
+          "symbol": "[\\mathbf{F} * \\mathbf{k}]_{i,j}",
+          "name": "Output at position (i,j)",
+          "desc": "The response of kernel k at position (i,j) in the input. One scalar value in the output feature map."
+        },
+        {
+          "symbol": "\\mathbf{k}_{m,n}",
+          "name": "Kernel weight",
+          "desc": "The learned weight at offset (m,n) within the kernel. The same weight is used at every spatial position — this is weight sharing."
+        }
+      ]
+    }
+  ],
+  "references": []
+}

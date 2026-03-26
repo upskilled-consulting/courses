@@ -1,0 +1,116 @@
+{
+  "id": "r5",
+  "moduleId": "m6",
+  "title": "Benchmarking Gaussian Splat Reconstructions: PSNR, SSIM, LPIPS & Test Protocols",
+  "estimatedMinutes": 14,
+  "learningObjectives": [
+    {
+      "id": "m6r5-lo1",
+      "verb": "Compute",
+      "description": "Compute PSNR, SSIM, and LPIPS for a rendered vs. ground-truth image pair and interpret what each value implies about reconstruction quality",
+      "skillTags": [
+        "evaluation",
+        "3dgs-fundamentals"
+      ]
+    },
+    {
+      "id": "m6r5-lo2",
+      "verb": "Apply",
+      "description": "Apply the LLFF 1/8 holdout protocol to split a multi-view capture dataset into training and test sets, and explain why using training views for evaluation inflates reported PSNR",
+      "skillTags": [
+        "evaluation",
+        "sfm-pipeline"
+      ]
+    },
+    {
+      "id": "m6r5-lo3",
+      "verb": "Interpret",
+      "description": "Interpret SOGS compression results by reading a compression ratio vs. quality table, identifying the rate-distortion operating point, and comparing against the 3DGS baseline",
+      "skillTags": [
+        "evaluation",
+        "compression"
+      ]
+    },
+    {
+      "id": "m6r5-lo4",
+      "verb": "Identify",
+      "description": "Identify common benchmarking pitfalls (training-set evaluation, dataset-specific tuning, missing baseline comparisons) and design a reproducible evaluation protocol that avoids them",
+      "skillTags": [
+        "evaluation"
+      ]
+    }
+  ],
+  "content": "## Why Held-Out Test Views Matter\n\nA reconstruction algorithm is only as good as its generalization to *unseen* viewpoints. If you evaluate novel-view synthesis on training images, any method that memorizes the training data achieves perfect scores — a trivially overfitted model would top every leaderboard. The standard protocol therefore withholds a subset of input images from both COLMAP reconstruction and 3DGS training, then evaluates the rendered output against those held-out images.\n\nThree metrics dominate the 3DGS benchmarking literature: PSNR, SSIM, and LPIPS. Each captures a different aspect of image quality, and no single metric tells the full story.\n\n## Mean Squared Error: The Foundation\n\nAll three metrics begin from the pixel-level difference between a rendered image \\(\\hat{I}\\) and a reference image \\(I\\). Mean Squared Error measures the average squared per-pixel deviation:\n\n$$\\text{MSE} = \\frac{1}{HWC}\\sum_{c=1}^{C}\\sum_{i=1}^{H}\\sum_{j=1}^{W}\\Bigl(I_{c,i,j} - \\hat{I}_{c,i,j}\\Bigr)^2$$\n\nwhere \\(H, W\\) are image height and width, \\(C = 3\\) for RGB images, and indices \\(i, j\\) range over spatial positions. MSE is simple and differentiable, making it suitable as a training loss, but it correlates poorly with human perception: a small global brightness shift produces a large MSE, while structured noise that looks terrible can have moderate MSE.\n\n## PSNR: Signal Fidelity in Decibels\n\nPSNR (Peak Signal-to-Noise Ratio) converts MSE to a logarithmic scale anchored to the maximum possible signal value:\n\n$$\\text{PSNR} = 10 \\log_{10}\\!\\left(\\frac{255^2}{\\text{MSE}}\\right)$$\n\nThe numerator \\(255^2\\) corresponds to the squared peak value for uint8 images (\\([0, 255]\\) range). Higher PSNR means smaller MSE — less difference between rendered and reference images.\n\n**Interpreting dB values**: A 3 dB increase represents a halving of MSE (since \\(10\\log_{10}(2) \\approx 3\\)). Typical 3DGS PSNR values on standard benchmarks fall in the **27–33 dB range**, with SOGS compression introducing losses of **0.2–1.0 dB** depending on compression ratio. Differences below ~1 dB are generally imperceptible to human observers.\n\nPSNR is the most widely reported metric in novel-view synthesis papers because it is simple to compute and straightforward to compare. Its main limitation: it treats all pixel errors as equally important, ignoring spatial structure and perceptual salience.\n\n## SSIM: Structural Similarity\n\nSSIM (Structural Similarity Index) measures perceptual similarity by comparing three statistics computed over local windows \\(x, y\\) of the rendered and reference images:\n\n$$\\text{SSIM}(x, y) = \\frac{(2\\mu_x\\mu_y + c_1)(2\\sigma_{xy} + c_2)}{(\\mu_x^2 + \\mu_y^2 + c_1)(\\sigma_x^2 + \\sigma_y^2 + c_2)}$$\n\nwhere \\(\\mu_x, \\mu_y\\) are local means, \\(\\sigma_x^2, \\sigma_y^2\\) are local variances, \\(\\sigma_{xy}\\) is the local covariance, and \\(c_1, c_2\\) are small stabilizing constants. The index ranges in \\([-1, 1]\\), with 1 indicating identical images and values above **0.85** generally considered visually acceptable for 3DGS outputs.\n\nSSIM is more robust than PSNR to low-frequency brightness and contrast variations, but it uses fixed 11×11 pixel windows — making it insensitive to structural differences at other scales.\n\n## LPIPS: Learned Perceptual Distance\n\nLPIPS (Learned Perceptual Image Patch Similarity) computes the \\(\\ell_2\\) distance between deep feature maps extracted by a pretrained VGG or AlexNet network. Unlike PSNR and SSIM, LPIPS is trained to match human perceptual judgements of image similarity.\n\n**Lower LPIPS is better** (it measures distance, not similarity). Typical 3DGS LPIPS values are in the **0.08–0.25** range. LPIPS is especially sensitive to ghosting, blur, and hallucinated details — failure modes that PSNR and SSIM can underestimate. For SOGS compression, LPIPS often degrades less than PSNR suggests: SOM-ordered quantization preserves structural coherence even as per-pixel MSE increases slightly.\n\n## The LLFF 1/8 Holdout Protocol\n\nThe Local Light Field Fusion (LLFF) dataset introduced the **1/8 holdout**: every 8th image is withheld as a test view, and the remaining 7/8 are used for reconstruction and training. This protocol became the standard for forward-facing scenes because:\n\n1. **Uniform coverage**: systematic sampling ensures test views are distributed across the entire camera trajectory, not clustered in any region.\n2. **Reproducibility**: the holdout set is deterministic — identical across papers, enabling fair comparison.\n3. **Interpolation vs. extrapolation balance**: every test view has training neighbors within 7 frames on either side, making evaluation neither trivially easy (direct neighbor interpolation) nor unrealistically hard (extreme viewpoint extrapolation).\n\nFor a 1,179-frame video at 8 fps, the 1/8 holdout yields approximately **147 test images** and **1,032 training images**.\n\n## Standard Benchmark Datasets\n\nThree datasets appear in virtually every 3DGS compression paper:\n\n| Dataset | Scenes | Type | Resolution | Notes |\n|---|---|---|---|---|\n| Mip-NeRF 360 | 9 | Indoor + outdoor, 360° unbounded | 1.4–7.8 MP | Gold standard for unbounded reconstruction |\n| Tanks and Temples | 2 (Train, Truck) | Outdoor, large-scale | 2 MP | Tests reconstruction under challenging lighting |\n| Deep Blending | 2 (DrJohnson, Playroom) | Indoor, high-baseline | 1.4 MP | Tests close-range reconstruction with occlusions |\n\nThe original 3DGS paper (Kerbl et al. 2023) reports results on all three. SOGS benchmarks typically focus on Tanks and Temples as a representative medium-scale outdoor scene — the same dataset used for the `SOGS_Pipeline.ipynb` reference notebook.\n\n## Interpreting SOGS vs. 3DGS Results\n\nWhen comparing SOGS to standard 3DGS at the same scene, look for:\n\n**File size reduction**: The primary SOGS benefit. Standard 3DGS `.ply` files are 200–500 MB for typical scenes. SOGS compression targets **10–30× reduction** while staying within 1 dB PSNR of the uncompressed baseline.\n\n**PSNR vs. compression tradeoff curve**: A well-behaved compressor maintains high PSNR at moderate compression and degrades gracefully as compression increases. A poor compressor loses PSNR rapidly even at modest compression ratios.\n\n**LPIPS as a quality floor**: Even if PSNR drops 0.5 dB under compression, LPIPS should remain stable if the SOM ordering has preserved structural coherence. A sudden LPIPS jump at some compression ratio signals a phase transition — the quantization has begun to destroy structure, not just add noise.\n\n**Timing**: SOGS training adds SOM+PLAS runtime on top of 3DGS training. On a T4 GPU, the SOM phase typically adds 15–30 minutes to the pipeline. This tradeoff is acceptable for deployment scenarios where storage size dominates inference cost.",
+  "equationBreakdowns": [
+    {
+      "label": "Mean Squared Error (MSE)",
+      "terms": [
+        {
+          "symbol": "\\frac{1}{HWC}",
+          "name": "Normalisation factor",
+          "desc": "Divides by the total number of scalar values in the image (height × width × channels). Ensures MSE is comparable across images of different resolutions. For a 1280×720 RGB image, HWC = 2,764,800."
+        },
+        {
+          "symbol": "\\sum_{c,i,j}",
+          "name": "Sum over all pixels and channels",
+          "desc": "Accumulates the squared error at every spatial position (i,j) and colour channel c. Each term is non-negative, so MSE can only increase as more pixels differ — there is no cancellation between positive and negative errors."
+        },
+        {
+          "symbol": "\\bigl(I_{c,i,j} - \\hat{I}_{c,i,j}\\bigr)^2",
+          "name": "Squared pixel difference",
+          "desc": "Squaring penalises large errors disproportionately (a pixel off by 10 counts 100× more than one off by 1). This makes MSE sensitive to outlier errors — a few badly reconstructed pixels dominate the metric, even if most of the image is perfect."
+        }
+      ]
+    },
+    {
+      "label": "Peak Signal-to-Noise Ratio (PSNR)",
+      "terms": [
+        {
+          "symbol": "255^2",
+          "name": "Squared peak signal value",
+          "desc": "The maximum possible squared pixel value for uint8 images. This anchors the ratio: when MSE → 0 (perfect reconstruction), PSNR → ∞. When MSE = 255² (every pixel maximally wrong), PSNR = 0 dB."
+        },
+        {
+          "symbol": "10 \\log_{10}",
+          "name": "Decibel conversion",
+          "desc": "Converts the linear ratio to a logarithmic scale in decibels. Each +3 dB corresponds to halving the MSE; each +10 dB corresponds to a 10× reduction. This scale matches human perception more closely than the linear MSE ratio."
+        },
+        {
+          "symbol": "\\text{MSE}",
+          "name": "Mean Squared Error",
+          "desc": "The denominator in the ratio. A perfect image has MSE = 0, making PSNR undefined (infinite). In practice, any two distinct images have MSE > 0. PSNR is typically measured on float images converted to uint8 range [0, 255] before comparison."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Kerbl et al. 2023",
+      "title": "3D Gaussian Splatting for Real-Time Radiance Field Rendering",
+      "url": "https://arxiv.org/abs/2308.04079"
+    },
+    {
+      "label": "Wang et al. 2004",
+      "title": "Image Quality Assessment: From Error Visibility to Structural Similarity",
+      "url": "https://doi.org/10.1109/TIP.2003.819861"
+    },
+    {
+      "label": "Zhang et al. 2018",
+      "title": "The Unreasonable Effectiveness of Deep Features as a Perceptual Metric (LPIPS)",
+      "url": "https://arxiv.org/abs/1801.03924"
+    },
+    {
+      "label": "Mildenhall et al. 2019",
+      "title": "Local Light Field Fusion (LLFF)",
+      "url": "https://arxiv.org/abs/1905.00889"
+    }
+  ],
+  "nextItem": {
+    "type": "quiz",
+    "id": "q1"
+  },
+  "prevItem": {
+    "type": "reading",
+    "id": "r4"
+  }
+}

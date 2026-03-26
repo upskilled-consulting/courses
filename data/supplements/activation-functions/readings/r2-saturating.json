@@ -1,0 +1,127 @@
+{
+  "id": "r2",
+  "moduleId": "activation-functions",
+  "title": "Saturating Activations",
+  "estimatedMinutes": 14,
+  "learningObjectives": [
+    {
+      "id": "r2-lo1",
+      "verb": "Derive",
+      "description": "Derive the sigmoid derivative as sigma(x)(1 - sigma(x)) and explain why its maximum of 0.25 causes vanishing gradients in deep networks",
+      "skillTags": [
+        "saturating",
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r2-lo2",
+      "verb": "Contrast",
+      "description": "Contrast sigmoid and tanh in terms of output range and zero-centring, and explain why zero-centred outputs reduce gradient zig-zagging",
+      "skillTags": [
+        "saturating",
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r2-lo3",
+      "verb": "Identify",
+      "description": "Identify Hardsigmoid and Hardtanh as piecewise-linear approximations and state their computational advantage for mobile inference",
+      "skillTags": [
+        "saturating"
+      ]
+    },
+    {
+      "id": "r2-lo4",
+      "verb": "Select",
+      "description": "Select among the six saturating activations given constraints on output range, computational budget, and gradient flow requirements",
+      "skillTags": [
+        "saturating"
+      ]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r1"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r3"
+  },
+  "content": "## Sigmoid\n\n$$\\sigma(x) = \\frac{1}{1 + e^{-x}}$$\n\nThe sigmoid function maps any real input to $(0, 1)$, making it ideal for binary probability outputs. Its S-shaped curve saturates at both ends: $\\sigma(x) \\to 1$ as $x \\to +\\infty$ and $\\sigma(x) \\to 0$ as $x \\to -\\infty$.\n\n**Derivative:** The sigmoid has a clean self-referential derivative:\n$$\\sigma'(x) = \\sigma(x)\\,(1 - \\sigma(x))$$\n\nThe maximum derivative is $0.25$ (at $x=0$). In a 10-layer network, 10 sigmoid gradients multiplied together can be as small as $0.25^{10} \\approx 10^{-6}$ — effectively zero. This is the vanishing gradient problem in numbers.\n\n**PyTorch:**\n```python\nx = torch.tensor([-3., -1., 0., 1., 3.])\nprint(nn.Sigmoid()(x))      # tensor([0.0474, 0.2689, 0.5000, 0.7311, 0.9526])\nprint(torch.sigmoid(x))     # identical\n```\n\n**TensorFlow:**\n```python\nx = tf.constant([-3., -1., 0., 1., 3.])\nprint(tf.nn.sigmoid(x))                    # [0.0474 0.2689 0.5000 0.7311 0.9526]\n# In a model output: tf.keras.layers.Dense(1, activation='sigmoid')\n```\n\n## Tanh — Zero-Centered Sigmoid\n\n$$\\tanh(x) = \\frac{e^x - e^{-x}}{e^x + e^{-x}} = 2\\sigma(2x) - 1$$\n\nTanh maps to $(-1, 1)$ and is zero-centered, meaning its outputs average near zero. This is advantageous because non-zero-centered activations (like Sigmoid) cause all gradients to flow in the same direction (all positive or all negative), creating zig-zag updates in weight space.\n\n**Derivative:**\n$$\\tanh'(x) = 1 - \\tanh^2(x)$$\n\nMaximum derivative is 1 at $x=0$, but still vanishes at $|x| \\gg 0$. Tanh still suffers from vanishing gradients in very deep networks.\n\n**PyTorch:**\n```python\nx = torch.tensor([-3., -1., 0., 1., 3.])\nprint(nn.Tanh()(x))     # tensor([-0.9951, -0.7616,  0.0000,  0.7616,  0.9951])\nprint(torch.tanh(x))    # identical\n```\n\n**TensorFlow:**\n```python\nx = tf.constant([-3., -1., 0., 1., 3.])\nprint(tf.nn.tanh(x))                        # [-0.9951 -0.7616  0.     0.7616  0.9951]\n# In an RNN cell: tf.keras.layers.SimpleRNN(64, activation='tanh')\n```\n\n## Hardsigmoid — Piecewise Linear Sigmoid\n\n$$f(x) = \\max\\!\\left(0,\\, \\min\\!\\left(1,\\, \\frac{x+3}{6}\\right)\\right)$$\n\nA piecewise linear approximation of Sigmoid:\n- $x \\leq -3$: output 0 (saturated low)\n- $-3 < x < 3$: linear ramp $(x+3)/6$\n- $x \\geq 3$: output 1 (saturated high)\n\nAt $x=0$: $f(0) = 0.5$, matching sigmoid. The slope in the linear region is $1/6 \\approx 0.167$, compared to sigmoid's maximum slope of $0.25$.\n\n**Note:** TensorFlow's `hard_sigmoid` uses a different formula: $\\text{clip}(0.2x + 0.5, 0, 1)$, which has slope $0.2$ and centers at $x = -2.5$.\n\n**PyTorch:**\n```python\nx = torch.tensor([-4., -3., 0., 3., 4.])\nprint(nn.Hardsigmoid()(x))   # tensor([0.0000, 0.0000, 0.5000, 1.0000, 1.0000])\n# Formula: clamp((x+3)/6, 0, 1)\n```\n\n**TensorFlow:**\n```python\nx = tf.constant([-4., -3., 0., 3., 4.])\n# TF formula: clip(0.2*x + 0.5, 0, 1) — different slope and center than PyTorch\nprint(tf.keras.activations.hard_sigmoid(x))  # [0.   0.1  0.5  1.   1. ]\n# Verify parity: PyTorch uses (x+3)/6; TensorFlow uses 0.2x+0.5\n```\n\n## Hardtanh — Piecewise Linear Tanh\n\n$$f(x) = \\max(\\text{min\\_val},\\, \\min(\\text{max\\_val},\\, x))$$\n\nSimply clips the input to $[\\text{min\\_val}, \\text{max\\_val}]$ (defaults: $[-1, 1]$). This is a piecewise linear approximation of Tanh:\n- Below $\\text{min\\_val}$: saturated at $\\text{min\\_val}$\n- In range: identity (gradient = 1)\n- Above $\\text{max\\_val}$: saturated at $\\text{max\\_val}$\n\nUsed in quantization-aware training (the clipping models fixed-point saturation) and as a fast Tanh replacement in RNNs.\n\n**PyTorch:**\n```python\nx = torch.tensor([-3., -1., 0., 1., 3.])\nprint(nn.Hardtanh()(x))   # tensor([-1., -1.,  0.,  1.,  1.])\n# Custom range: nn.Hardtanh(min_val=-2.0, max_val=2.0)\n```\n\n**TensorFlow:**\n```python\nx = tf.constant([-3., -1., 0., 1., 3.])\n# No built-in Hardtanh; clip_by_value is equivalent\nprint(tf.clip_by_value(x, -1.0, 1.0))   # [-1. -1.  0.  1.  1.]\n```\n\n## Softsign\n\n$$f(x) = \\frac{x}{1 + |x|}$$\n\nA computationally simpler alternative to Tanh with range $(-1, 1)$ and zero-centering. Where Tanh uses exponentials, Softsign uses only absolute value and division. It saturates more slowly (polynomial decay vs exponential for Tanh), meaning gradients remain non-negligible for larger inputs.\n\n**Derivative:** $f'(x) = 1/(1 + |x|)^2$\n\n**PyTorch:**\n```python\nx = torch.tensor([-3., -1., 0., 1., 3.])\nprint(nn.Softsign()(x))   # tensor([-0.7500, -0.5000,  0.0000,  0.5000,  0.7500])\nprint(F.softsign(x))      # identical\n```\n\n**TensorFlow:**\n```python\nx = tf.constant([-3., -1., 0., 1., 3.])\nprint(tf.nn.softsign(x))                    # [-0.75 -0.5   0.    0.5   0.75]\nprint(tf.keras.activations.softsign(x))     # identical\n```\n\n## LogSigmoid\n\n$$f(x) = \\log\\sigma(x) = \\log\\frac{1}{1 + e^{-x}} = -\\log(1 + e^{-x})$$\n\nOutputs $(-\\infty, 0]$ — always negative because $\\log$ of a value in $(0,1)$. PyTorch implements this in a numerically stable way using the log-sum-exp identity:\n\n$$\\log\\sigma(x) = -\\log(1 + e^{-x}) = \\begin{cases} -\\log(1 + e^{-x}) & x \\geq 0 \\\\ x - \\log(1 + e^x) & x < 0 \\end{cases}$$\n\nThis avoids computing $e^x$ for large positive $x$ (which would overflow). LogSigmoid is commonly used with `NLLLoss` for binary classification.\n\n**PyTorch:**\n```python\nx = torch.tensor([-3., -1., 0., 1., 3.])\nprint(nn.LogSigmoid()(x))   # tensor([-3.0486, -1.3133, -0.6931, -0.3133, -0.0486])\n# Use with nn.NLLLoss for binary classification\n```\n\n**TensorFlow:**\n```python\nx = tf.constant([-3., -1., 0., 1., 3.])\nprint(tf.math.log_sigmoid(x))   # [-3.0486 -1.3133 -0.6931 -0.3133 -0.0486]\n# Equivalent: -tf.math.softplus(-x)\n```\n\n## Comparison Table\n\n| Activation | Range | Zero-centered | Vanishes? | Exponentials |\n|-----------|-------|--------------|-----------|-------------|\n| Sigmoid | $(0,1)$ | No | Yes | Yes |\n| Tanh | $(-1,1)$ | Yes | Yes | Yes |\n| Hardsigmoid | $[0,1]$ | No | Yes (at ends) | No |\n| Hardtanh | $[-1,1]$ | Yes | Yes (at ends) | No |\n| Softsign | $(-1,1)$ | Yes | Slowly | No |\n| LogSigmoid | $(-\\infty, 0]$ | No | Yes | Yes (stable) |",
+  "equationBreakdowns": [
+    {
+      "label": "Sigmoid function",
+      "terms": [
+        {
+          "symbol": "\\sigma(x)",
+          "name": "Sigmoid output",
+          "desc": "Probability-like value in $(0,1)$"
+        },
+        {
+          "symbol": "e^{-x}",
+          "name": "Exponential decay",
+          "desc": "Rapidly decays for $x \\gg 0$, causing output to approach 1; grows for $x \\ll 0$, causing output to approach 0"
+        },
+        {
+          "symbol": "1 + e^{-x}",
+          "name": "Denominator",
+          "desc": "Normalizing factor ensuring output is in $(0,1)$"
+        }
+      ]
+    },
+    {
+      "label": "Sigmoid derivative",
+      "terms": [
+        {
+          "symbol": "\\sigma(x)(1 - \\sigma(x))",
+          "name": "Self-referential gradient",
+          "desc": "The derivative expressed in terms of the output itself — maximum value $0.25$ at $x=0$"
+        }
+      ]
+    },
+    {
+      "label": "Tanh function",
+      "terms": [
+        {
+          "symbol": "e^x - e^{-x}",
+          "name": "Numerator",
+          "desc": "Difference of exponentials — positive for $x>0$, negative for $x<0$"
+        },
+        {
+          "symbol": "e^x + e^{-x}",
+          "name": "Denominator",
+          "desc": "Sum of exponentials, always positive — normalizes to $(-1,1)$"
+        }
+      ]
+    },
+    {
+      "label": "Hardsigmoid formula",
+      "terms": [
+        {
+          "symbol": "(x+3)/6",
+          "name": "Linear ramp",
+          "desc": "Linear approximation of sigmoid's middle region; slope $1/6$ matches sigmoid's shape near 0"
+        },
+        {
+          "symbol": "\\max(0, \\min(1, \\cdot))",
+          "name": "Clamp",
+          "desc": "Hard saturates at 0 and 1 outside the range $[-3, 3]$"
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Bengio et al. (1994) — Learning Long-Term Dependencies",
+      "title": "Analyzed vanishing gradient problem with saturating activations in RNNs",
+      "url": null,
+      "note": "Analyzed vanishing gradient problem with saturating activations in RNNs"
+    },
+    {
+      "label": "LeCun et al. (1998) — Efficient BackProp",
+      "title": "Recommended Tanh over Sigmoid for zero-centering advantages",
+      "url": null,
+      "note": "Recommended Tanh over Sigmoid for zero-centering advantages"
+    }
+  ]
+}

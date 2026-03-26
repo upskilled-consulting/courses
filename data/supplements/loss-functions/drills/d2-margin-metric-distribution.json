@@ -1,0 +1,69 @@
+{
+  "id": "d2",
+  "moduleId": "loss-functions",
+  "title": "Margin, Metric & Distribution Losses",
+  "description": "Flashcards for margin losses, KL divergence, ranking losses, hinge/cosine embedding losses, and triplet metric learning.",
+  "estimatedMinutes": 10,
+  "cards": [
+    {
+      "id": "c01",
+      "front": "**SoftMarginLoss** — what label convention does it use?",
+      "back": "$$\\mathcal{L} = \\frac{1}{n}\\sum_i \\log(1 + e^{-y_i \\cdot z_i})$$\n\nLabels $y_i \\in \\{-1, +1\\}$ (not 0/1). Input $z_i$ is a raw score (logit).\n\nThis is binary logistic regression with the $\\pm 1$ convention.\n\n*PyTorch: `nn.SoftMarginLoss()` · equivalent to sigmoid cross-entropy with {-1,+1} labels*"
+    },
+    {
+      "id": "c02",
+      "front": "**MultiLabelSoftMarginLoss** — how does it differ from SoftMarginLoss?",
+      "back": "Applies the same soft-margin loss independently to each of $C$ output classes:\n\n$$\\mathcal{L} = -\\frac{1}{C}\\sum_j \\left[y_j \\log\\sigma(z_j) + (1-y_j)\\log(1-\\sigma(z_j))\\right]$$\n\nTarget shape $(B, C)$ with values $\\in\\{0,1\\}$.\n\n*Use when: each sample can belong to multiple classes simultaneously*"
+    },
+    {
+      "id": "c03",
+      "front": "**MultiMarginLoss** — what constraint does it enforce?",
+      "back": "$$\\mathcal{L} = \\frac{1}{n}\\sum_i \\max(0,\\; 1 - z_{y_i} + z_j)^p \\text{ for } j \\neq y_i$$\n\nPenalises any class $j \\neq y_i$ whose score comes within margin 1 of the correct class score.\n\n*Multi-class SVM hinge loss. PyTorch: `nn.MultiMarginLoss(p=1, margin=1.0)`*"
+    },
+    {
+      "id": "c04",
+      "front": "$$D_{\\text{KL}}(P \\| Q) = \\sum_x P(x) \\log \\frac{P(x)}{Q(x)}$$",
+      "back": "**KLDivLoss** (Kullback-Leibler Divergence)\n\nMeasures how much distribution $P$ (target) differs from $Q$ (model). **Asymmetric** — $D_{KL}(P\\|Q) \\neq D_{KL}(Q\\|P)$.\n\n**Warning:** PyTorch `KLDivLoss` expects **log-probabilities** as input, not raw probabilities.\n\n*Use when: distilling soft labels; VAE ELBO; teacher-student training*"
+    },
+    {
+      "id": "c05",
+      "front": "**MarginRankingLoss** — what does it enforce?",
+      "back": "$$\\mathcal{L} = \\max(0,\\; -y(z_1 - z_2) + \\text{margin})$$\n\n$y = +1$ means $z_1$ should rank higher than $z_2$; $y = -1$ means the opposite.\n\nLoss is zero when the correct item ranks above the incorrect one by at least `margin`.\n\n*Use when: ranking documents, search results, or recommendation items pairwise*"
+    },
+    {
+      "id": "c06",
+      "front": "**HingeEmbeddingLoss** — label convention and formula",
+      "back": "$$\\mathcal{L}_i = \\begin{cases} d_i & y_i = 1 \\\\ \\max(0,\\; \\text{margin} - d_i) & y_i = -1 \\end{cases}$$\n\n$d_i = \\|\\mathbf{x}_i - \\mathbf{y}_i\\|$ is a pre-computed distance. Labels $y_i \\in \\{1, -1\\}$.\n\n*Pulls similar pairs together; pushes dissimilar pairs apart. Input is already a distance — not embeddings.*"
+    },
+    {
+      "id": "c07",
+      "front": "**CosineEmbeddingLoss** — formula and when to use it",
+      "back": "$$\\mathcal{L}_i = \\begin{cases} 1 - \\cos(\\mathbf{x}_1, \\mathbf{x}_2) & y_i = 1 \\\\ \\max(0,\\; \\cos(\\mathbf{x}_1, \\mathbf{x}_2) - \\text{margin}) & y_i = -1 \\end{cases}$$\n\nOptimises **angular similarity** rather than Euclidean distance.\n\n*Use when: direction matters more than magnitude — NLP sentence similarity, face verification*"
+    },
+    {
+      "id": "c08",
+      "front": "**Triplet constraint** — state it",
+      "back": "$$d(a, p) + \\alpha < d(a, n)$$\n\nThe anchor-positive distance must be smaller than the anchor-negative distance by at least margin $\\alpha > 0$.\n\n*Anchor $a$, positive $p$ (same class), negative $n$ (different class)*"
+    },
+    {
+      "id": "c09",
+      "front": "$$\\mathcal{L}_{\\text{triplet}} = \\max(0,\\; d(a,p) - d(a,n) + \\alpha)$$",
+      "back": "**TripletMarginLoss**\n\nZero when the constraint is satisfied by margin $\\alpha$; positive otherwise.\n\n*PyTorch: `nn.TripletMarginLoss(margin=1.0, p=2)` · default $\\ell^2$ distance*\n\n*Use when: learning an embedding space where class membership defines similarity*"
+    },
+    {
+      "id": "c10",
+      "front": "**TripletMarginWithDistanceLoss** — how does it differ?",
+      "back": "Accepts a **callable distance function** instead of requiring $\\ell^p$ distance:\n\n```python\nnn.TripletMarginWithDistanceLoss(\n    distance_function=lambda a, b: 1 - F.cosine_similarity(a, b)\n)\n```\n\n*Use when: cosine distance or a learned metric is more appropriate than Euclidean distance*"
+    },
+    {
+      "id": "c11",
+      "front": "**Triplet mining** — easy, hard, and semi-hard",
+      "back": "**Easy negative:** $d(a,n) > d(a,p) + \\alpha$ — already satisfied, contributes zero loss.\n**Hard negative:** $d(a,n) < d(a,p)$ — most violated; risk of model collapse.\n**Semi-hard:** $d(a,p) < d(a,n) < d(a,p) + \\alpha$ — violated but not inverted; most informative.\n\n*Random sampling is dominated by easy negatives. Online semi-hard mining (FaceNet) trains ~10× faster.*"
+    },
+    {
+      "id": "c12",
+      "front": "Compare **Triplet**, **Contrastive**, and **NT-Xent** losses",
+      "back": "| Loss | Negatives per update | Notes |\n|---|---|---|\n| Triplet | 1 | explicit (a, p, n) triplets |\n| Contrastive | 1 | pairs; margin on distance |\n| NT-Xent (SimCLR) | $2(B-1)$ | all other batch items as negatives |\n\n*NT-Xent scales better with batch size — more signal per forward pass. Triplet needs careful mining.*"
+    }
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "id": "r4",
+  "moduleId": "architectures",
+  "title": "LSTM and GRU — Gating Solutions to Long-Range Memory",
+  "estimatedMinutes": 18,
+  "learningObjectives": [
+    {
+      "id": "r4-lo1",
+      "verb": "Trace",
+      "description": "Trace the LSTM forward pass through all four gates (forget, input, output, and cell-gate) and explain the role of each gate in controlling information flow",
+      "skillTags": ["architectures", "lstm", "gru"]
+    },
+    {
+      "id": "r4-lo2",
+      "verb": "Explain",
+      "description": "Explain why the LSTM cell state is a gradient highway: trace the gradient path through the cell state and show that the forget gate avoids the repeated matrix multiplication that causes vanishing gradients in vanilla RNNs",
+      "skillTags": ["architectures", "lstm", "training-dynamics"]
+    },
+    {
+      "id": "r4-lo3",
+      "verb": "Trace",
+      "description": "Trace the GRU forward pass, identify the two gates (reset and update), and explain how the GRU achieves similar capability to the LSTM with fewer parameters",
+      "skillTags": ["architectures", "gru"]
+    },
+    {
+      "id": "r4-lo4",
+      "verb": "Compare",
+      "description": "Compare LSTM and GRU on parameter count, training speed, and empirical performance, and state when each is typically preferred",
+      "skillTags": ["architectures", "lstm", "gru"]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r3"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r5"
+  },
+  "content": "## The Core Idea: Gating\n\nThe vanilla RNN's failure on long sequences is architectural: the hidden state must be rewritten at every step by the same transformation, allowing no way to preserve information across many timesteps without distortion.\n\nThe solution is **gating** — learned, input-dependent switches that control what information to keep, what to discard, and what to pass through. Hochreiter & Schmidhuber (1997) introduced the Long Short-Term Memory (LSTM) as the first gated RNN. Cho et al. (2014) introduced the simpler Gated Recurrent Unit (GRU).\n\n---\n\n## LSTM: Long Short-Term Memory\n\nThe LSTM maintains two state vectors at each timestep:\n- $\\mathbf{c}_t \\in \\mathbb{R}^{d_h}$ — the **cell state**: the long-term memory, updated slowly\n- $\\mathbf{h}_t \\in \\mathbb{R}^{d_h}$ — the **hidden state**: the working memory, output at each step\n\n### The Four Gates\n\nAll four gates take the same input — the concatenation $[\\mathbf{h}_{t-1}; \\mathbf{x}_t]$ — and produce a $d_h$-dimensional vector:\n\n$$\\mathbf{f}_t = \\sigma(W_f [\\mathbf{h}_{t-1}; \\mathbf{x}_t] + \\mathbf{b}_f) \\qquad \\text{forget gate}$$\n$$\\mathbf{i}_t = \\sigma(W_i [\\mathbf{h}_{t-1}; \\mathbf{x}_t] + \\mathbf{b}_i) \\qquad \\text{input gate}$$\n$$\\tilde{\\mathbf{c}}_t = \\tanh(W_c [\\mathbf{h}_{t-1}; \\mathbf{x}_t] + \\mathbf{b}_c) \\qquad \\text{cell gate (candidate)}$$\n$$\\mathbf{o}_t = \\sigma(W_o [\\mathbf{h}_{t-1}; \\mathbf{x}_t] + \\mathbf{b}_o) \\qquad \\text{output gate}$$\n\nGate vectors take values in $(0, 1)$ via sigmoid $\\sigma$. A value near 1 means \"pass through\"; near 0 means \"block\".\n\n### Cell State Update\n\n$$\\mathbf{c}_t = \\mathbf{f}_t \\odot \\mathbf{c}_{t-1} + \\mathbf{i}_t \\odot \\tilde{\\mathbf{c}}_t$$\n\n- $\\mathbf{f}_t \\odot \\mathbf{c}_{t-1}$: **forget** how much of the previous cell state to retain (element-wise multiply by forget gate)\n- $\\mathbf{i}_t \\odot \\tilde{\\mathbf{c}}_t$: **write** new candidate information, gated by how much to accept\n\n### Hidden State Update\n\n$$\\mathbf{h}_t = \\mathbf{o}_t \\odot \\tanh(\\mathbf{c}_t)$$\n\nThe output gate controls what portion of the cell state is exposed as the hidden state (the actual output of the LSTM).\n\n---\n\n## Why the Cell State Is a Gradient Highway\n\nThe cell state update is:\n\n$$\\mathbf{c}_t = \\mathbf{f}_t \\odot \\mathbf{c}_{t-1} + \\mathbf{i}_t \\odot \\tilde{\\mathbf{c}}_t$$\n\nThe gradient of the loss with respect to $\\mathbf{c}_{t-1}$ is:\n\n$$\\frac{\\partial \\mathcal{L}}{\\partial \\mathbf{c}_{t-1}} = \\frac{\\partial \\mathcal{L}}{\\partial \\mathbf{c}_t} \\odot \\mathbf{f}_t$$\n\n**No matrix multiplication.** The gradient flows through the cell state by **element-wise multiplication** with the forget gate. If the forget gate is near 1 (\"remember everything\"), $\\partial \\mathcal{L}/\\partial \\mathbf{c}_{t-1} \\approx \\partial \\mathcal{L}/\\partial \\mathbf{c}_t$ — the gradient passes through unchanged.\n\nThis is the cell state as a gradient highway — analogous to the residual connection in ResNets. Information (and gradients) can flow across hundreds of timesteps with minimal degradation.\n\n---\n\n## GRU: Gated Recurrent Unit\n\nThe GRU (Cho et al., 2014) simplifies the LSTM by merging the cell state and hidden state into a single state vector, and using only two gates:\n\n$$\\mathbf{r}_t = \\sigma(W_r [\\mathbf{h}_{t-1}; \\mathbf{x}_t] + \\mathbf{b}_r) \\qquad \\text{reset gate}$$\n$$\\mathbf{z}_t = \\sigma(W_z [\\mathbf{h}_{t-1}; \\mathbf{x}_t] + \\mathbf{b}_z) \\qquad \\text{update gate}$$\n$$\\tilde{\\mathbf{h}}_t = \\tanh(W_h [\\mathbf{r}_t \\odot \\mathbf{h}_{t-1}; \\mathbf{x}_t] + \\mathbf{b}_h) \\qquad \\text{candidate state}$$\n$$\\mathbf{h}_t = (1 - \\mathbf{z}_t) \\odot \\mathbf{h}_{t-1} + \\mathbf{z}_t \\odot \\tilde{\\mathbf{h}}_t$$\n\n### Gate Roles\n\n**Reset gate $\\mathbf{r}_t$:** Controls how much past state is used when computing the candidate. Near 0 → ignore past (write new); near 1 → condition on past (extend memory).\n\n**Update gate $\\mathbf{z}_t$:** Controls the interpolation between the old state $\\mathbf{h}_{t-1}$ and the new candidate $\\tilde{\\mathbf{h}}_t$. Near 0 → keep old state (long memory); near 1 → adopt candidate (short memory).\n\nThe final update $\\mathbf{h}_t = (1-\\mathbf{z}_t) \\odot \\mathbf{h}_{t-1} + \\mathbf{z}_t \\odot \\tilde{\\mathbf{h}}_t$ is a **linear interpolation** — the same gradient highway structure as the LSTM cell state, but without the separate cell vector.\n\n---\n\n## LSTM vs. GRU\n\n| | LSTM | GRU |\n|---|---|---|\n| State vectors | 2 (h and c) | 1 (h) |\n| Gates | 4 | 2 |\n| Parameters (hidden $d_h$) | $4 \\times 4d_h^2$ | $3 \\times 3d_h^2$ |\n| Parameter ratio | $16d_h^2$ | $9d_h^2$ (~44% fewer) |\n| Typical performance | Marginally better on long sequences | Competitive; faster to train |\n\n**When to prefer LSTM:** Long sequences where fine-grained memory control matters (language modeling, music generation, protein sequences).\n\n**When to prefer GRU:** When training speed and parameter efficiency matter more; smaller datasets where overfitting is a risk; comparable performance in practice for most tasks.\n\nIn most modern applications (2017+), both have been largely supplanted by transformers for NLP. However, they remain the preferred architecture for:\n- Time series forecasting with irregular intervals\n- Low-latency online sequence processing (streaming)\n- Structured state-space models and Mamba (which can be viewed as a selective SSM analogous to a GRU)\n\n---\n\n## PyTorch and TensorFlow\n\n**PyTorch** — `nn.LSTM` and `nn.GRU`:\n\n```python\nimport torch\nimport torch.nn as nn\n\n# LSTM: returns (output, (h_n, c_n))\nlstm = nn.LSTM(input_size=32, hidden_size=64, num_layers=2,\n               batch_first=True, dropout=0.2)\n\nx              = torch.randn(8, 20, 32)       # (B, T, input_size)\nout, (h_n, c_n) = lstm(x)\n# out:  (8, 20, 64)  — hidden state at every timestep\n# h_n:  (2, 8, 64)   — final hidden state, one per layer\n# c_n:  (2, 8, 64)   — final cell state, one per layer\n\n# Passing initial hidden/cell state (e.g. for stateful inference)\nh0 = torch.zeros(2, 8, 64)   # (num_layers, batch, hidden_size)\nc0 = torch.zeros(2, 8, 64)\nout, (h_n, c_n) = lstm(x, (h0, c0))\n\n# GRU: same interface but only returns (output, h_n) — no cell state\ngru       = nn.GRU(32, 64, num_layers=2, batch_first=True, dropout=0.2)\nout, h_n  = gru(x)            # h_n: (2, 8, 64)\n\n# Bidirectional LSTM for sequence labeling\nbi_lstm = nn.LSTM(32, 64, batch_first=True, bidirectional=True)\nout, _  = bi_lstm(x)          # out: (8, 20, 128)\n\n# Sequence classifier: take the final timestep hidden state\nclassifier = nn.Sequential(bi_lstm, )   # use h_n for fixed-length classification\nlast_hidden = out[:, -1, :]             # (8, 128) — last timestep\nlogits      = nn.Linear(128, 10)(last_hidden)\n```\n\n**TensorFlow / Keras:**\n\n```python\nimport tensorflow as tf\n\n# LSTM\nlstm = tf.keras.layers.LSTM(units=64, return_sequences=True,\n                              return_state=True, dropout=0.2)\nx             = tf.random.normal((8, 20, 32))\nout, h_n, c_n = lstm(x)      # out: (8,20,64)  h_n,c_n: (8,64)\n\n# GRU — no cell state\ngru      = tf.keras.layers.GRU(64, return_sequences=True, return_state=True)\nout, h_n = gru(x)            # out: (8,20,64)  h_n: (8,64)\n\n# Bidirectional LSTM\nbi_lstm = tf.keras.layers.Bidirectional(\n    tf.keras.layers.LSTM(64, return_sequences=True)\n)                             # output: (8, 20, 128)\n```",
+  "equationBreakdowns": [
+    {
+      "label": "LSTM Cell State Update",
+      "heading": "LSTM",
+      "terms": [
+        {
+          "symbol": "\\mathbf{f}_t \\odot \\mathbf{c}_{t-1}",
+          "name": "Forget: what to retain",
+          "desc": "Element-wise product of the forget gate and previous cell state. f_t ≈ 1 keeps the memory; f_t ≈ 0 erases it. The network learns when to forget based on context."
+        },
+        {
+          "symbol": "\\mathbf{i}_t \\odot \\tilde{\\mathbf{c}}_t",
+          "name": "Input: what to write",
+          "desc": "New candidate information scaled by the input gate. The cell gate creates a candidate; the input gate decides how much of it to actually store."
+        },
+        {
+          "symbol": "\\odot",
+          "name": "Element-wise multiplication (Hadamard)",
+          "desc": "Each gate is a vector of the same dimension as the state — different gates can be open for different memory slots simultaneously. This is what allows selective memory."
+        }
+      ]
+    },
+    {
+      "label": "GRU State Update",
+      "heading": "GRU",
+      "terms": [
+        {
+          "symbol": "(1-\\mathbf{z}_t) \\odot \\mathbf{h}_{t-1}",
+          "name": "Old state retention",
+          "desc": "When the update gate z_t is near 0, the old state passes through with weight ≈ 1. The GRU learns to copy state across timesteps — same gradient highway as LSTM cell state."
+        },
+        {
+          "symbol": "\\mathbf{z}_t \\odot \\tilde{\\mathbf{h}}_t",
+          "name": "New candidate contribution",
+          "desc": "How much of the new candidate is adopted. When z_t ≈ 1, the GRU behaves like a vanilla RNN — full replacement. When z_t ≈ 0, the GRU preserves the past."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Hochreiter & Schmidhuber 1997",
+      "title": "Long Short-Term Memory",
+      "url": "https://www.bioinf.jku.at/publications/older/2604.pdf"
+    },
+    {
+      "label": "Cho et al. 2014",
+      "title": "Learning Phrase Representations using RNN Encoder-Decoder for Statistical Machine Translation",
+      "url": "https://arxiv.org/abs/1406.1078"
+    }
+  ]
+}

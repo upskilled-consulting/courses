@@ -1,0 +1,56 @@
+{
+  "id": "m5",
+  "title": "Permutation Learning & Encoding",
+  "order": 5,
+  "color": "#8b5cf6",
+  "prereq": "m4",
+  "learningObjectives": [
+    "Formulate sorting as permutation matrix learning and explain why hard permutation matrices are non-differentiable.",
+    "Compare Gumbel-Sinkhorn, matrix factorization, SoftSort, and ShuffleSoftSort on quality, memory, and normalization cost.",
+    "Implement scalar quantization for each 3DGS attribute category and estimate achievable bit-rate reductions.",
+    "Explain vector quantization, sensitivity-aware VQ, and rate-distortion optimized VQ (RDOGaussian).",
+    "Trace the full SOG pipeline (quantize → sort → compress with image codec) and interpret the ~22× compression result."
+  ],
+  "readings": [
+    {
+      "id": "r1",
+      "title": "Neural Permutation Learning: From Gumbel-Sinkhorn to ShuffleSoftSort",
+      "estimatedMinutes": 15,
+      "dataPath": "data/courses/3dgs-compression/m5-permutation-encoding/readings/r1-permutation-learning.json"
+    },
+    {
+      "id": "r2",
+      "title": "Quantization and Vector Quantization for Gaussian Attributes",
+      "estimatedMinutes": 14,
+      "dataPath": "data/courses/3dgs-compression/m5-permutation-encoding/readings/r2-quantization-vq.json"
+    },
+    {
+      "id": "r3",
+      "title": "The SOG Encoding Pipeline and KISS-GS",
+      "estimatedMinutes": 13,
+      "dataPath": "data/courses/3dgs-compression/m5-permutation-encoding/readings/r3-sog-pipeline.json"
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "q1",
+      "title": "Neural Permutation Learning",
+      "questionCount": 5,
+      "passingScore": 0.7,
+      "dataPath": "data/courses/3dgs-compression/m5-permutation-encoding/quizzes/q1-neural-permutations.json"
+    },
+    {
+      "id": "q2",
+      "title": "Encoding Strategies and the SOG Pipeline",
+      "questionCount": 5,
+      "passingScore": 0.7,
+      "dataPath": "data/courses/3dgs-compression/m5-permutation-encoding/quizzes/q2-sog-encoding.json"
+    }
+  ],
+  "lab": {
+    "id": "lab5",
+    "title": "SOG Encoding Pipeline: Quantize, Sort, Compress",
+    "estimatedMinutes": 60,
+    "dataPath": "data/courses/3dgs-compression/m5-permutation-encoding/labs/lab5.json"
+  }
+}

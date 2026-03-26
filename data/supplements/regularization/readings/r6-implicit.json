@@ -1,0 +1,86 @@
+{
+  "id": "r6",
+  "moduleId": "regularization",
+  "title": "Implicit Regularization — Initialization, SGD Noise, and Spectral Normalization",
+  "estimatedMinutes": 14,
+  "learningObjectives": [
+    {
+      "id": "r6-lo1",
+      "verb": "Explain",
+      "description": "Explain the variance-preservation principle behind Xavier/Glorot and He/Kaiming initialization and state which is appropriate for sigmoid/tanh vs. ReLU activations",
+      "skillTags": ["regularization", "training-dynamics"]
+    },
+    {
+      "id": "r6-lo2",
+      "verb": "Explain",
+      "description": "Explain why small-batch SGD generalizes better than large-batch SGD — the implicit regularization from gradient noise — and state what the sharpness-flatness distinction means for generalization",
+      "skillTags": ["regularization", "training-dynamics"]
+    },
+    {
+      "id": "r6-lo3",
+      "verb": "Define",
+      "description": "Define the spectral norm of a weight matrix and explain how spectral normalization constrains the Lipschitz constant of a network layer to improve GAN training stability",
+      "skillTags": ["regularization"]
+    },
+    {
+      "id": "r6-lo4",
+      "verb": "Identify",
+      "description": "Identify gradient clipping as a regularizer via its effect on the loss landscape traversal, and explain why it is necessary for RNNs and very deep transformers",
+      "skillTags": ["regularization", "training-dynamics"]
+    }
+  ],
+  "prevItem": { "type": "reading", "id": "r5" },
+  "nextItem": null,
+  "content": "## Explicit vs. Implicit Regularization\n\nAll regularizers seen so far are **explicit** — they add a penalty term, drop units, or modify training data. But many regularizing effects arise from choices that seem unrelated to regularization: initialization, optimizer, batch size, and architecture.\n\n---\n\n## Weight Initialization\n\nPoor initialization is a training problem that acts like regularization failure: weights start at the wrong scale, leading to vanishing or exploding activations before a single gradient step.\n\n### The Variance Preservation Principle\n\nFor a layer $\\mathbf{h} = W\\mathbf{x}$, if $\\text{Var}(x_i) = v$ and weights are i.i.d. with variance $\\text{Var}(w_{ij}) = \\sigma^2$, then $\\text{Var}(h_j) = n_{\\text{in}} \\cdot \\sigma^2 \\cdot v$.\n\nTo preserve variance across layers ($\\text{Var}(\\mathbf{h}) = \\text{Var}(\\mathbf{x})$), set:\n\n$$\\sigma^2 = \\frac{1}{n_{\\text{in}}}$$\n\n### Xavier / Glorot Initialization (2010)\n\nFor sigmoid or tanh activations, balances the forward and backward pass variances:\n\n$$\\text{Var}(w) = \\frac{2}{n_{\\text{in}} + n_{\\text{out}}}$$\n\nEquivalent: uniform distribution $\\mathcal{U}[-a, a]$ where $a = \\sqrt{6/(n_{\\text{in}} + n_{\\text{out}})}$.\n\n**Used for:** linear layers, tanh, sigmoid — activations that are approximately linear near zero.\n\n### He / Kaiming Initialization (2015)\n\nReLU kills approximately half the variance (zeros out negative activations). He initialization compensates with a factor of 2:\n\n$$\\text{Var}(w) = \\frac{2}{n_{\\text{in}}}$$\n\nDerivation: $\\mathbb{E}[\\text{ReLU}(z)^2] = \\frac{1}{2}\\mathbb{E}[z^2]$ for zero-mean Gaussian $z$ — ReLU halves the expected squared magnitude, so we double the initial variance to compensate.\n\n**Used for:** ReLU, Leaky ReLU, GELU — any rectifying activation that clips negative values.\n\n### Why Initialization Is Regularization\n\nInitialization constrains the **initial function class**: networks initialized close to zero compute near-identity functions. Training from this point implicitly prefers solutions that remain close to initialization — an implicit prior analogous to L2 regularization toward zero weights.\n\n---\n\n## SGD Noise and Flat Minima\n\nMini-batch SGD does not follow the exact gradient — it follows a noisy estimate. This noise has a regularizing effect:\n\n**Noise temperature:** the gradient noise covariance is proportional to $\\eta/B$ where $\\eta$ is the learning rate and $B$ is the batch size. Larger $\\eta$ or smaller $B$ → more noise.\n\n**Flat vs. sharp minima:** loss landscapes have both broad, flat minima and narrow, sharp ones. Both have near-zero training loss, but they generalize differently:\n\n- **Flat minimum:** a small perturbation to the parameters changes the loss little. The function in a neighborhood of the flat minimum generalizes similarly to the minimum itself.\n- **Sharp minimum:** even tiny parameter perturbations cause large loss increases. Such solutions are sensitive to distribution shift.\n\nSGD with small batches and large learning rates tends to escape sharp minima (high gradient noise makes them unstable) and settle in flat ones. Large-batch SGD has less noise and converges to sharper minima — this is the **sharp minimum / large batch problem** and is why simply scaling up batch size does not maintain accuracy without adjusting the learning rate (linear scaling rule: $\\eta \\propto B$) or adding noise corrections.\n\n---\n\n## Spectral Normalization\n\nThe **spectral norm** of a matrix $W$ is its largest singular value $\\sigma_1(W) = \\|W\\|_2$. It bounds the Lipschitz constant of the linear map $\\mathbf{x} \\mapsto W\\mathbf{x}$:\n\n$$\\|W\\mathbf{x} - W\\mathbf{y}\\|_2 \\leq \\sigma_1(W) \\|\\mathbf{x} - \\mathbf{y}\\|_2$$\n\n**Spectral normalization** (Miyato et al., 2018) divides each weight matrix by its spectral norm at each step:\n\n$$\\hat{W} = W / \\sigma_1(W)$$\n\nThis constrains $\\sigma_1(\\hat{W}) = 1$, bounding the per-layer Lipschitz constant to 1. The network's overall Lipschitz constant is bounded by the product across layers.\n\n**Why it matters for GANs:** In WGAN and its variants, the discriminator must be a Lipschitz-1 function. Spectral normalization enforces this without the gradient penalty of WGAN-GP. It dramatically stabilizes GAN training and has become standard in image generation architectures.\n\n**Why it is regularization:** Constraining the Lipschitz constant limits how much the network output can change in response to input perturbations — the model cannot fit high-frequency noise in the training data.\n\n---\n\n## Gradient Clipping\n\nGradient clipping caps the norm of the gradient before the optimizer step:\n\n$$\\mathbf{g} \\leftarrow \\begin{cases} \\mathbf{g} & \\|\\mathbf{g}\\| \\leq \\tau \\\\ \\tau \\cdot \\mathbf{g}/\\|\\mathbf{g}\\| & \\|\\mathbf{g}\\| > \\tau \\end{cases}$$\n\n**Primary use:** prevents exploding gradients in RNNs and deep transformers. Covered in detail in the architectures supplement (RNN reading) from a stability perspective.\n\n**Regularization angle:** clipping is equivalent to limiting the step size of gradient descent at each iteration. This prevents the optimizer from jumping to extreme parameter values when encountering an unusually high-loss example — a form of robustness to outliers in the training batch.\n\n---\n\n## PyTorch and TensorFlow\n\n**PyTorch** — initialization, gradient clipping, spectral norm:\n\n```python\nimport torch\nimport torch.nn as nn\nfrom torch.nn.utils import spectral_norm\n\n# Xavier / Glorot initialization (for tanh/sigmoid activations)\nlinear = nn.Linear(128, 64)\nnn.init.xavier_uniform_(linear.weight)    # Var(w) = 2 / (fan_in + fan_out)\nnn.init.zeros_(linear.bias)\n\n# He / Kaiming initialization (for ReLU activations)\nconv = nn.Conv2d(64, 128, 3)\nnn.init.kaiming_normal_(conv.weight, mode='fan_out', nonlinearity='relu')\n# mode='fan_out' preserves variance in the forward pass\n# mode='fan_in'  preserves variance in the backward pass\n\n# PyTorch default: Kaiming uniform for Linear and Conv layers\n# Most architectures work fine without manual init\n\n# Gradient clipping: prevent exploding gradients in RNNs and deep transformers\noptimizer = torch.optim.AdamW(linear.parameters(), lr=1e-3)\nloss = linear(torch.randn(8, 128)).sum()\nloss.backward()\n\ntorch.nn.utils.clip_grad_norm_(linear.parameters(), max_norm=1.0)\n# clips the global gradient norm to 1.0 before stepping\n# use clip_grad_value_ to clip by absolute value instead\ntorch.nn.utils.clip_grad_value_(linear.parameters(), clip_value=0.5)\n\noptimizer.step()\noptimizer.zero_grad()\n\n# Spectral normalization (see Normalization supplement for full treatment)\ndisc_layer = spectral_norm(nn.Linear(512, 1))\n```\n\n**TensorFlow / Keras:**\n\n```python\nimport tensorflow as tf\n\n# Initialization via initializer argument on any layer\ndense_xavier = tf.keras.layers.Dense(\n    64, kernel_initializer='glorot_uniform'   # Xavier uniform — Keras default\n)\ndense_he = tf.keras.layers.Dense(\n    64, activation='relu',\n    kernel_initializer='he_normal'            # He normal for ReLU\n)\n\n# Gradient clipping on the optimizer\noptimizer_clip_norm  = tf.keras.optimizers.Adam(learning_rate=1e-3, clipnorm=1.0)\noptimizer_clip_value = tf.keras.optimizers.Adam(learning_rate=1e-3, clipvalue=0.5)\n# clipnorm  clips the global gradient norm to max_norm\n# clipvalue clips each gradient component independently\n\n# Spectral normalization wrapper (TF 2.6+)\nsn_layer = tf.keras.layers.SpectralNormalization(tf.keras.layers.Dense(64))\n```",
+  "equationBreakdowns": [
+    {
+      "label": "He Initialization",
+      "heading": "He / Kaiming Initialization",
+      "terms": [
+        {
+          "symbol": "\\text{Var}(w) = 2/n_{\\text{in}}",
+          "name": "He variance",
+          "desc": "The factor of 2 compensates for ReLU zeroing out half the activations. Without it, signal variance would halve with every layer — vanishing activations even before training."
+        },
+        {
+          "symbol": "n_{\\text{in}}",
+          "name": "Fan-in",
+          "desc": "The number of inputs to the layer (input dimension). Dividing by n_in ensures that the sum of n_in random weights times random inputs has variance ≈ 1, independent of layer width."
+        }
+      ]
+    },
+    {
+      "label": "Spectral Normalization",
+      "heading": "Spectral Normalization",
+      "terms": [
+        {
+          "symbol": "\\sigma_1(W)",
+          "name": "Spectral norm (largest singular value)",
+          "desc": "The maximum amount by which W can stretch any input vector. Bounds the layer's Lipschitz constant."
+        },
+        {
+          "symbol": "\\hat{W} = W / \\sigma_1(W)",
+          "name": "Spectrally normalized weight",
+          "desc": "Dividing by σ₁(W) ensures the normalized matrix stretches vectors by at most 1 — a Lipschitz-1 linear map. Applied after every gradient step."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Glorot & Bengio 2010",
+      "title": "Understanding the difficulty of training deep feedforward neural networks",
+      "url": "https://proceedings.mlr.press/v9/glorot10a.html"
+    },
+    {
+      "label": "He et al. 2015",
+      "title": "Delving Deep into Rectifiers (Kaiming initialization)",
+      "url": "https://arxiv.org/abs/1502.01852"
+    },
+    {
+      "label": "Miyato et al. 2018",
+      "title": "Spectral Normalization for Generative Adversarial Networks",
+      "url": "https://arxiv.org/abs/1802.05957"
+    }
+  ]
+}

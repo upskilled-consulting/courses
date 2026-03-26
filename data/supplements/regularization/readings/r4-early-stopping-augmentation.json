@@ -1,0 +1,91 @@
+{
+  "id": "r4",
+  "moduleId": "regularization",
+  "title": "Early Stopping and Data Augmentation",
+  "estimatedMinutes": 15,
+  "learningObjectives": [
+    {
+      "id": "r4-lo1",
+      "verb": "Explain",
+      "description": "Explain early stopping as L2 regularization in disguise — tracing the connection between stopping time and the effective regularization strength — and describe the patience hyperparameter",
+      "skillTags": ["regularization", "training-dynamics"]
+    },
+    {
+      "id": "r4-lo2",
+      "verb": "Explain",
+      "description": "Explain how data augmentation acts as a regularizer by enlarging the effective training set, and distinguish label-preserving augmentations (flips, crops) from label-mixing augmentations (Mixup, CutMix)",
+      "skillTags": ["regularization"]
+    },
+    {
+      "id": "r4-lo3",
+      "verb": "Describe",
+      "description": "Describe the Mixup interpolation scheme — the convex combination of both inputs and labels — and explain why soft labels act as regularizers",
+      "skillTags": ["regularization"]
+    },
+    {
+      "id": "r4-lo4",
+      "verb": "Distinguish",
+      "description": "Distinguish CutOut (masking a region of a single image) from CutMix (replacing the masked region with a patch from another image and blending labels proportionally) and state the intuition behind each",
+      "skillTags": ["regularization"]
+    }
+  ],
+  "prevItem": { "type": "reading", "id": "r3" },
+  "nextItem": { "type": "reading", "id": "r5" },
+  "content": "## Early Stopping\n\nThe simplest regularizer requires no change to the model or loss function: stop training when validation loss stops improving.\n\n**Algorithm:**\n1. Hold out a validation set\n2. After each epoch (or every $k$ steps), evaluate validation loss\n3. Keep the checkpoint with the lowest validation loss seen so far\n4. Stop training if validation loss has not improved for `patience` evaluations\n5. Restore the best checkpoint\n\n**Patience** is the key hyperparameter: the number of evaluations to wait before stopping. Too low → stops too early (underfitting); too high → wastes compute and may overfit. Typical values: 5–20 epochs.\n\n### Why It Works: Connection to L2 Regularization\n\nFor gradient descent on a quadratic loss near a minimum, the number of training steps $T$ and L2 regularization strength $\\lambda$ are related by $T \\approx 1/\\lambda$ — training for fewer steps is equivalent to stronger L2 regularization.\n\nIntuitively: early in training, weight updates are large and the model is far from any minimum. As training continues, parameters drift further into the high-curvature directions where the model fits noise. Stopping early constrains the effective complexity — the model stays in the low-complexity region it reaches first.\n\n### Practical Implementation\n\n```python\nbest_val_loss = float('inf')\npatience_count = 0\n\nfor epoch in range(max_epochs):\n    train_one_epoch(model, optimizer, train_loader)\n    val_loss = evaluate(model, val_loader)\n\n    if val_loss < best_val_loss:\n        best_val_loss = val_loss\n        save_checkpoint(model)  # keep best weights\n        patience_count = 0\n    else:\n        patience_count += 1\n        if patience_count >= patience:\n            break\n\nload_checkpoint(model)  # restore best\n```\n\n---\n\n## Data Augmentation: Enlarging the Training Set\n\nA model that sees many variations of the training data cannot memorize specific examples — the effective training set is much larger than the raw dataset. Data augmentation creates these variations on the fly during training.\n\n**Why it is regularization:** augmented examples are not seen again (new random transforms each epoch), and their diversity reduces the model's ability to overfit the specific pixel patterns in the original images.\n\n### Standard Geometric and Color Augmentations\n\n| Transform | What it does | Typical setting |\n|---|---|---|\n| Random horizontal flip | Mirror image left-right | p=0.5 |\n| Random crop | Sample a sub-region, resize to original | 224×224 from 256×256 |\n| Color jitter | Randomly adjust brightness, contrast, saturation, hue | Strength 0.4 |\n| Gaussian blur | Low-pass filter with random radius | Used in SimCLR contrastive pretraining |\n| Random rotation | Rotate by small angle | ±15° for natural images |\n| Random erasing | Zero out a random rectangle | Equivalent to Cutout |\n\nThese augmentations are **label-preserving** — a flipped cat is still a cat. They extend the invariances learned by the model.\n\n---\n\n## Mixup\n\nMixup (Zhang et al., 2018) interpolates between two training examples *and their labels*:\n\n$$\\tilde{x} = \\lambda x_i + (1-\\lambda) x_j$$\n$$\\tilde{y} = \\lambda y_i + (1-\\lambda) y_j$$\n\nwhere $\\lambda \\sim \\text{Beta}(\\alpha, \\alpha)$ with typical $\\alpha \\in [0.2, 0.4]$.\n\n**Key properties:**\n- The interpolated example is never exactly either training example — forces the model to have **linear behavior between training points**\n- The soft (blended) labels $\\tilde{y}$ regularize output confidence: the model cannot assign probability 1 to any class for a blended example\n- Reduces oscillation in training and improves calibration\n\n**Why soft labels regularize:** A model trained with hard labels can assign arbitrarily high logits to the correct class. Soft labels force the model to spread probability across classes proportional to the blend ratio — preventing overconfident predictions.\n\n---\n\n## CutOut\n\nCutOut (DeVries & Taylor, 2017) zeros out a randomly located square region of a training image:\n\n- **Mask size:** typically 16×16 or 32×32 pixels\n- **Labels unchanged:** the label stays a hard one-hot vector\n- **Effect:** forces the model to use context rather than relying on the most discriminative region (e.g., the face of a dog rather than the whole dog)\n\nAnalogous to **dropout on the input space** — creates robustness to occlusion.\n\n---\n\n## CutMix\n\nCutMix (Yun et al., 2019) combines CutOut and Mixup: replace the cut region with a patch from a *different* training image, then blend the labels proportionally to the area:\n\n$$\\tilde{x} = \\mathbf{M} \\odot x_i + (1-\\mathbf{M}) \\odot x_j$$\n$$\\tilde{y} = \\lambda y_i + (1-\\lambda) y_j, \\quad \\lambda = \\frac{|\\mathbf{M}|}{HW}$$\n\nwhere $\\mathbf{M}$ is a binary mask and $\\lambda$ is the fraction of the image from $x_i$.\n\nVs. Mixup: pixel values are not interpolated (no ghosting). Vs. CutOut: the masked region is filled with real image content rather than zeros. CutMix tends to outperform both on image classification benchmarks.\n\n---\n\n## RandAugment\n\nRandAugment (Cubuk et al., 2020) simplifies augmentation policy search: randomly apply $N$ augmentation operations from a fixed library (shear, translate, rotate, solarize, equalize, etc.), each at magnitude $M$:\n\n- **Two hyperparameters only:** $N$ (number of ops, typically 2) and $M$ (magnitude, 1–10)\n- Replaces AutoAugment's expensive search with a simple grid search or default values\n- Near-AutoAugment accuracy with trivial implementation\n\nNow the de facto standard for image classification augmentation in the absence of a specific domain policy.",
+  "equationBreakdowns": [
+    {
+      "label": "Mixup",
+      "heading": "Mixup",
+      "terms": [
+        {
+          "symbol": "\\lambda \\sim \\text{Beta}(\\alpha, \\alpha)",
+          "name": "Mixup coefficient",
+          "desc": "Drawn from a symmetric Beta distribution. For α = 1, this is uniform [0,1]. For α < 1, values near 0 and 1 are preferred (close to original examples). For α > 1, values near 0.5 are preferred (strong mixing)."
+        },
+        {
+          "symbol": "\\lambda x_i + (1-\\lambda) x_j",
+          "name": "Interpolated input",
+          "desc": "A convex combination of two training inputs. Not a real image — a ghostlike blend. Forces the model to output predictions that also interpolate."
+        },
+        {
+          "symbol": "\\lambda y_i + (1-\\lambda) y_j",
+          "name": "Soft blended label",
+          "desc": "Labels are mixed in the same ratio as inputs. If λ=0.7, the target is 70% class i and 30% class j. Prevents the model from being overconfident on the dominant class."
+        }
+      ]
+    },
+    {
+      "label": "CutMix",
+      "heading": "CutMix",
+      "terms": [
+        {
+          "symbol": "\\mathbf{M} \\odot x_i + (1-\\mathbf{M}) \\odot x_j",
+          "name": "Patched image",
+          "desc": "A rectangular region from x_i is replaced by the corresponding region from x_j. No pixel blending — the patched region is real image content."
+        },
+        {
+          "symbol": "\\lambda = |\\mathbf{M}|/HW",
+          "name": "Area-proportional label",
+          "desc": "The label weight for each image equals the fraction of pixels from that image. If 30% of the pixels come from image j, the label is 30% class j."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Zhang et al. 2018",
+      "title": "Mixup: Beyond Empirical Risk Minimization",
+      "url": "https://arxiv.org/abs/1710.09412"
+    },
+    {
+      "label": "Yun et al. 2019",
+      "title": "CutMix: Training Strategy that Makes Use of Sample Mixing",
+      "url": "https://arxiv.org/abs/1905.04899"
+    },
+    {
+      "label": "Cubuk et al. 2020",
+      "title": "RandAugment: Practical automated data augmentation",
+      "url": "https://arxiv.org/abs/1909.13719"
+    }
+  ]
+}

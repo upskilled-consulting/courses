@@ -1,0 +1,20 @@
+{
+  "id": "lab3",
+  "moduleId": "probability-foundations",
+  "title": "Entropy, KL Divergence, and Fitting Distributions",
+  "estimatedMinutes": 45,
+  "description": "## Lab 3: Entropy, KL Divergence, and Fitting Distributions\n\nInformation-theoretic quantities — entropy, cross-entropy, KL divergence — appear in loss functions, regularization terms, and training objectives throughout deep learning. This lab implements them from scratch, verifies their properties, and demonstrates the mode-seeking vs mean-seeking behavior that determines whether a model learns a sharp or blurry approximation to data.\n\n### What You'll Build\n\n- An **entropy calculator**: compute $H(p) = -\\sum_x p(x) \\log_2 p(x)$ for discrete distributions, verify that the uniform distribution over $K$ outcomes maximizes entropy at $\\log_2 K$ bits, and plot entropy as a function of bias $\\theta$ for a Bernoulli\n- A **KL divergence library**: implement $D_{\\text{KL}}(p \\| q)$ for discrete and continuous distributions; verify non-negativity (always $\\geq 0$), confirm $D_{\\text{KL}}(p\\|p) = 0$, and demonstrate asymmetry with a numerical example\n- A **cross-entropy decomposition**: show that $H(p, q) = H(p) + D_{\\text{KL}}(p \\| q)$ holds numerically, and confirm that minimizing cross-entropy over $q$ is equivalent to minimizing $D_{\\text{KL}}(p \\| q)$ when $p$ is fixed (i.e., training with cross-entropy loss = minimizing forward KL)\n- A **forward vs reverse KL fitting experiment**: given a bimodal target distribution $p$ (mixture of two Gaussians), fit a single Gaussian $q_\\theta$ by minimizing (a) $D_{\\text{KL}}(p \\| q_\\theta)$ (forward KL) and (b) $D_{\\text{KL}}(q_\\theta \\| p)$ (reverse KL) via gradient descent; overlay the fitted curves on $p$ and observe mean-seeking vs mode-seeking behavior\n- A **Beta–Dirichlet posterior update**: implement Bayesian updating with a Beta prior, observe how $\\text{Beta}(1,1)$ (uniform) evolves toward the MLE as data accumulates, and connect the $\\alpha$/$\\beta$ pseudo-counts to the sample mean\n\n### Key Concepts Practiced\n\nBy the end you will have seen concretely why forward KL produces blurry means and reverse KL produces sharp modes, why cross-entropy training is equivalent to MLE, and how the Beta distribution's pseudo-count interpretation makes Bayesian updates intuitive.",
+  "objectives": [
+    "Compute entropy for Bernoulli(θ) across θ ∈ (0,1) and confirm the maximum at θ = 0.5 equals 1 bit.",
+    "Implement KL divergence for discrete distributions and verify non-negativity, D_KL(p‖p)=0, and asymmetry.",
+    "Numerically verify the cross-entropy decomposition H(p,q) = H(p) + D_KL(p‖q) for several distribution pairs.",
+    "Fit a Gaussian to a bimodal mixture by minimizing forward KL and reverse KL separately; plot and compare the two fitted curves.",
+    "Implement sequential Beta posterior updates starting from Beta(1,1) and plot how the posterior concentrates as coin-flip data accumulates."
+  ],
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/probability-foundations/lab3_entropy_kl_divergence.ipynb",
+  "prevItem": {
+    "type": "lab",
+    "id": "lab2"
+  },
+  "nextItem": null
+}

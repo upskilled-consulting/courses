@@ -1,0 +1,76 @@
+{
+  "id": "r4",
+  "moduleId": "normalization",
+  "title": "Group Normalization, Instance Normalization, and Spatial Variants",
+  "estimatedMinutes": 14,
+  "learningObjectives": [
+    {
+      "id": "r4-lo1",
+      "verb": "Explain",
+      "description": "Explain why BatchNorm degrades with small per-GPU batch sizes and identify the exact failure mechanism — noisy batch statistics — that GroupNorm and InstanceNorm avoid",
+      "skillTags": ["normalization", "training-dynamics"]
+    },
+    {
+      "id": "r4-lo2",
+      "verb": "Describe",
+      "description": "Describe GroupNorm's normalization axis — computing statistics over G groups of C/G channels within each example — and state the relationship to LayerNorm (G=1) and InstanceNorm (G=C)",
+      "skillTags": ["normalization"]
+    },
+    {
+      "id": "r4-lo3",
+      "verb": "Identify",
+      "description": "Identify the domains where InstanceNorm is preferred over BatchNorm or GroupNorm — specifically style transfer and image generation — and explain why per-example per-channel statistics capture style information",
+      "skillTags": ["normalization"]
+    },
+    {
+      "id": "r4-lo4",
+      "verb": "Compare",
+      "description": "Compare BatchNorm, LayerNorm, InstanceNorm, and GroupNorm across the axes of batch-size sensitivity, spatial sensitivity, and typical use domain, and state which to reach for first in object detection, language modeling, and style transfer",
+      "skillTags": ["normalization"]
+    }
+  ],
+  "prevItem": { "type": "reading", "id": "r3" },
+  "nextItem": { "type": "reading", "id": "r5" },
+  "content": "## The Small-Batch Problem\n\nBatchNorm's performance degrades sharply when the per-device batch size drops below roughly 16–32 examples. The cause is not the batch size per se — it is that the batch statistics $\\mu_\\mathcal{B}$ and $\\sigma^2_\\mathcal{B}$ become **noisy estimates** of the true feature distribution.\n\nConsider object detection. A standard configuration is 2 images per GPU × 8 GPUs. Each GPU's BN computes statistics over 2 examples × (H × W) spatial locations per channel. Even with SyncBN, 2 × H × W may be as few as 2 × 7 × 7 = 98 samples per channel — and the feature distributions of two images can differ substantially. The normalization step introduces variance that drowns the signal.\n\nWu & He (2018) showed that GroupNorm matches or outperforms BatchNorm for batch sizes below 8 on object detection (COCO), and degrades gracefully rather than catastrophically.\n\n---\n\n## Instance Normalization\n\nInstance normalization (Ulyanov et al., 2016) normalizes over the **spatial dimensions** of each example and each channel independently.\n\nFor a feature map $x \\in \\mathbb{R}^{B \\times C \\times H \\times W}$, the statistics for example $b$, channel $c$ are:\n\n$$\\mu_{b,c} = \\frac{1}{HW}\\sum_{h,w} x_{b,c,h,w} \\qquad \\sigma^2_{b,c} = \\frac{1}{HW}\\sum_{h,w}(x_{b,c,h,w} - \\mu_{b,c})^2$$\n\n$$\\hat{x}_{b,c,h,w} = \\frac{x_{b,c,h,w} - \\mu_{b,c}}{\\sqrt{\\sigma^2_{b,c} + \\epsilon}} \\qquad y_{b,c,h,w} = \\gamma_c\\hat{x}_{b,c,h,w} + \\beta_c$$\n\nEvery $(b, c)$ pair is normalized independently. This produces $B \\times C$ separate mean-and-variance computations — one per example per channel.\n\n**Key property:** the normalization is completely independent across the batch dimension *and* across the channel dimension. InstanceNorm is as batch-size-agnostic as LayerNorm.\n\n### Why InstanceNorm Works for Style Transfer\n\nIn neural style transfer and feed-forward style networks (Johnson et al., 2016), the \"style\" of an image can be characterized by the first and second moments of feature maps — the channel means and variances encode things like color palette and texture statistics.\n\nBy normalizing to zero mean and unit variance per channel per image, InstanceNorm **removes the style** of the content image from the intermediate features, leaving a style-agnostic representation that can then be re-styled by the learned $\\gamma$ and $\\beta$. This is why InstanceNorm is the default normalization in neural style transfer, image-to-image translation (pix2pix, CycleGAN), and many image generation architectures.\n\nFor classification tasks, this per-channel-per-instance normalization destroys discriminative information (two images of the same class but different contrast would be indistinguishable after InstanceNorm). InstanceNorm is not used in supervised classification.\n\n---\n\n## Group Normalization\n\nGroup normalization (Wu & He, 2018) is a middle ground: it divides the $C$ channels into $G$ groups and normalizes over the spatial and channel dimensions **within each group, per example**.\n\nFor example $b$, group $g$ (containing channels $\\{c : \\lfloor cG/C \\rfloor = g\\}$, of size $C/G$ each), and all spatial positions:\n\n$$\\mu_{b,g} = \\frac{1}{(C/G) \\cdot HW}\\sum_{c \\in g}\\sum_{h,w} x_{b,c,h,w}$$\n\n$$\\sigma^2_{b,g} = \\frac{1}{(C/G) \\cdot HW}\\sum_{c \\in g}\\sum_{h,w}\\left(x_{b,c,h,w} - \\mu_{b,g}\\right)^2$$\n\n$$\\hat{x}_{b,c,h,w} = \\frac{x_{b,c,h,w} - \\mu_{b,g}}{\\sqrt{\\sigma^2_{b,g} + \\epsilon}} \\qquad y_{b,c,h,w} = \\gamma_c\\hat{x}_{b,c,h,w} + \\beta_c$$\n\nLearned parameters $\\gamma_c, \\beta_c$ remain per-channel (not per-group) — the grouping affects only the statistics computation, not the scale/shift.\n\n### GroupNorm as a Unifying Framework\n\nGroupNorm subsumes InstanceNorm and LayerNorm as special cases:\n\n| $G$ value | Equivalent to | Statistics computed over |\n|---|---|---|\n| $G = C$ | InstanceNorm | Spatial dims only, per channel |\n| $G = 1$ | LayerNorm | All channels + spatial dims |\n| $1 < G < C$ | GroupNorm proper | $C/G$ channels + spatial dims |\n\nBatchNorm does **not** fit this framework — it requires statistics across the batch dimension, which GroupNorm never touches.\n\n### Choosing $G$\n\nWu & He recommend $G = 32$ as a robust default for image models with large channel counts (e.g., 256 or 512 channels). For smaller channel counts, $G = C/2$ or $G = C/4$ is common. The sensitivity to $G$ is relatively low in practice — the key is that $C/G$ should be large enough (typically ≥ 8) to give stable statistics.\n\n---\n\n## Visualization: What Each Method Normalizes\n\nFor a 4D feature tensor $(B, C, H, W)$, the colored region represents the values averaged together for one normalization computation:\n\n- **BatchNorm:** one rectangle per channel = all $(B, H, W)$ values for channel $c$\n- **LayerNorm:** one rectangle per example = all $(C, H, W)$ values for example $b$\n- **InstanceNorm:** one rectangle per (example, channel) = all $(H, W)$ values for $(b, c)$\n- **GroupNorm:** one rectangle per (example, group) = all $(C/G, H, W)$ values for $(b, g)$\n\nThis makes the batch-size dependence clear: only BatchNorm's normalization region spans the batch dimension.\n\n---\n\n## Practical Comparison\n\n| Property | BatchNorm | LayerNorm | InstanceNorm | GroupNorm |\n|---|---|---|---|---|\n| Batch-size sensitive | Yes (degrades < ~16) | No | No | No |\n| Spatial-resolution sensitive | No (pools over H,W) | Pools over all dims | Yes (per H,W) | Yes (per H,W) |\n| Train/eval difference | Yes | No | No | No |\n| Works at batch size 1 | With running stats only | Yes | Yes | Yes |\n| Captures style (moments) | No (across batch) | No | Yes | Partially |\n| Object detection / segmentation | Weak (small batch) | Rarely | Rarely | **Standard** |\n| Language modeling / NLP | Rarely | **Standard** | No | Occasionally |\n| Style transfer / image synthesis | Weak | Weak | **Standard** | Used |\n| Supervised vision (large batch) | **Standard** | Occasionally | No | Alternative |\n\n---\n\n## Layer Norm in Non-Spatial Domains\n\nFor 1D sequence models (transformers, RNNs), the tensor is $(B, T, d)$ — batch, sequence length, features. In this context:\n\n- **LayerNorm** normalizes over the $d$-dimensional feature vector at each token, independently. This is the transformer default.\n- **BatchNorm** would normalize over $(B, T)$ per feature — mixing tokens from different positions and different examples, which rarely makes semantic sense for sequences.\n\nFor 3D volumetric data (e.g., medical imaging, video) with shape $(B, C, D, H, W)$, GroupNorm extends naturally — statistics are computed over the group's channels and all spatial dimensions $D, H, W$.\n\n---\n\n## PyTorch and TensorFlow\n\n**PyTorch** — `nn.GroupNorm` and `nn.InstanceNorm2d`:\n\n```python\nimport torch\nimport torch.nn as nn\n\n# GroupNorm: (num_groups, num_channels) — num_channels must be divisible by num_groups\ngn = nn.GroupNorm(num_groups=32, num_channels=256)\nx  = torch.randn(4, 256, 14, 14)   # (B, C, H, W)\nout = gn(x)                         # stats over (C/G=8 channels, H, W) per example\n\n# Special cases\nln_equiv = nn.GroupNorm(num_groups=1,   num_channels=64)  # G=1  → LayerNorm\nin_equiv = nn.GroupNorm(num_groups=64,  num_channels=64)  # G=C  → InstanceNorm\n\n# InstanceNorm2d: per-(example, channel) stats over spatial dims\nin2d = nn.InstanceNorm2d(num_features=64, affine=True)\nx    = torch.randn(2, 64, 32, 32)\nout  = in2d(x)   # stats over (H, W) for each (b, c); no batch dependence\n\n# Visualize what each method normalizes on the same (B=4, C=64, H=8, W=8) tensor\nx = torch.randn(4, 64, 8, 8)\nprint('BN  mean:', nn.BatchNorm2d(64)(x).mean().item())          # ~0 across (B,H,W)\nprint('GN  mean:', nn.GroupNorm(32, 64)(x).mean().item())        # ~0 within groups\nprint('IN  mean:', nn.InstanceNorm2d(64)(x).mean().item())       # ~0 per (b,c)\n\n# Typical GroupNorm usage in a ResNet block for detection\nclass GNResBlock(nn.Module):\n    def __init__(self, channels: int, groups: int = 32):\n        super().__init__()\n        self.conv1 = nn.Conv2d(channels, channels, 3, padding=1)\n        self.gn1   = nn.GroupNorm(groups, channels)\n        self.conv2 = nn.Conv2d(channels, channels, 3, padding=1)\n        self.gn2   = nn.GroupNorm(groups, channels)\n\n    def forward(self, x):\n        h = torch.relu(self.gn1(self.conv1(x)))\n        return torch.relu(self.gn2(self.conv2(h)) + x)\n```\n\n**TensorFlow / Keras:**\n\n```python\nimport tensorflow as tf\n\n# GroupNormalization — built-in from TF 2.11+ (channels-last format)\ngn = tf.keras.layers.GroupNormalization(groups=32, axis=-1)\nx  = tf.random.normal((4, 14, 14, 256))   # (B, H, W, C)\nout = gn(x)\n\n# InstanceNorm equivalent: LayerNormalization over spatial axes [1, 2]\nin_norm = tf.keras.layers.LayerNormalization(axis=[1, 2])\nx       = tf.random.normal((4, 32, 32, 64))\nout     = in_norm(x)   # stats over (H, W) per (batch, channel)\n\n# Or via tensorflow-addons:\n# import tensorflow_addons as tfa\n# in_norm = tfa.layers.InstanceNormalization(axis=-1)\n```",
+  "equationBreakdowns": [
+    {
+      "label": "Instance Normalization",
+      "heading": "Instance Normalization",
+      "terms": [
+        {
+          "symbol": "\\mu_{b,c} = \\frac{1}{HW}\\sum_{h,w} x_{b,c,h,w}",
+          "name": "Per-instance per-channel mean",
+          "desc": "Computed over the spatial extent of one channel in one example. Completely independent of all other examples and all other channels. If two images of the same scene have different brightness, InstanceNorm removes that brightness difference — which is why it works well for style transfer but destroys discriminative information for classification."
+        }
+      ]
+    },
+    {
+      "label": "Group Normalization",
+      "heading": "Group Normalization",
+      "terms": [
+        {
+          "symbol": "G",
+          "name": "Number of groups",
+          "desc": "Hyperparameter controlling the trade-off between InstanceNorm (G=C) and LayerNorm (G=1). G=32 is a robust default for image models. Each group contains C/G channels whose statistics are pooled together."
+        },
+        {
+          "symbol": "\\gamma_c,\\, \\beta_c",
+          "name": "Per-channel scale and shift",
+          "desc": "Despite the group-level statistics, the affine parameters remain per-channel — not per-group. This preserves full per-channel expressive capacity in the final output while using group-level statistics for normalization stability."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Ulyanov et al. 2016",
+      "title": "Instance Normalization: The Missing Ingredient for Fast Stylization",
+      "url": "https://arxiv.org/abs/1607.08022"
+    },
+    {
+      "label": "Wu & He 2018",
+      "title": "Group Normalization",
+      "url": "https://arxiv.org/abs/1803.08494"
+    }
+  ]
+}

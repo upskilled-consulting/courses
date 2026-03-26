@@ -1,0 +1,23 @@
+{
+  "id": "lab1",
+  "moduleId": "loss-functions",
+  "title": "Loss Functions in PyTorch",
+  "estimatedMinutes": 45,
+  "prevItem": {
+    "type": "quiz",
+    "id": "q2"
+  },
+  "nextItem": {
+    "type": "lab",
+    "id": "lab2"
+  },
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/supplements/loss-functions/lab_loss_functions_pytorch.ipynb",
+  "objectives": [
+    "Implement each of the 20 PyTorch loss functions from scratch using tensor operations, then verify against `nn.*` equivalents",
+    "Derive and verify the closed-form gradient of L1, MSE, and BCE losses; compare against `loss.backward()`",
+    "Build a toy training loop for each loss family and observe convergence behaviour",
+    "Implement a numerically stable cross-entropy using the log-sum-exp trick and verify against `nn.CrossEntropyLoss`",
+    "Train a Siamese network with TripletMarginLoss on MNIST embeddings and visualise the learned metric space"
+  ],
+  "description": "## Lab Overview\n\nThis notebook ties every formula from the readings to runnable code. For each loss you will:\n\n1. **Write a from-scratch implementation** using basic PyTorch tensor ops (`torch.abs`, `torch.exp`, `torch.log`, etc.)\n2. **Compare numerically** against the corresponding `torch.nn` loss\n3. **Verify the gradient** by running `.backward()` and comparing to the analytical gradient\n\nBy the end you will have built intuition for why PyTorch's built-in losses use the specific formulations they do — especially the numerically stable variants.\n\n### Sections\n\n| Section | Losses covered |\n|---------|---------------|\n| 1 | L1Loss, MSELoss, HuberLoss, SmoothL1Loss |\n| 2 | PoissonNLLLoss, GaussianNLLLoss |\n| 3 | BCELoss, BCEWithLogitsLoss (log-sum-exp derivation) |\n| 4 | CrossEntropyLoss, NLLLoss (log-softmax + NLL) |\n| 5 | SoftMarginLoss, MultiLabelSoftMarginLoss |\n| 6 | MultiMarginLoss, MultiLabelMarginLoss |\n| 7 | KLDivLoss (batchmean vs mean reduction) |\n| 8 | MarginRankingLoss, HingeEmbeddingLoss, CosineEmbeddingLoss |\n| 9 | TripletMarginLoss, TripletMarginWithDistanceLoss |\n| 10 | End-to-end: Siamese MNIST with triplet loss |"
+}

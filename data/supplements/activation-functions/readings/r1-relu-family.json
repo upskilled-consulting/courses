@@ -1,0 +1,118 @@
+{
+  "id": "r1",
+  "moduleId": "activation-functions",
+  "title": "The ReLU Family",
+  "estimatedMinutes": 15,
+  "learningObjectives": [
+    {
+      "id": "r1-lo1",
+      "verb": "State",
+      "description": "State the ReLU formula and its gradient, and explain why it avoids the vanishing gradient problem in the positive region",
+      "skillTags": [
+        "relu-family",
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r1-lo2",
+      "verb": "Explain",
+      "description": "Explain the dying ReLU problem and describe how LeakyReLU and PReLU address it with a non-zero negative slope",
+      "skillTags": [
+        "relu-family",
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r1-lo3",
+      "verb": "Distinguish",
+      "description": "Distinguish PReLU (learned slope), RReLU (randomised slope), and LeakyReLU (fixed slope) and identify when each is appropriate",
+      "skillTags": [
+        "relu-family"
+      ]
+    },
+    {
+      "id": "r1-lo4",
+      "verb": "Apply",
+      "description": "Apply ReLU6 for mobile and quantised inference and explain why bounding the output at 6 aids fixed-point representation",
+      "skillTags": [
+        "relu-family"
+      ]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r0"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r2"
+  },
+  "content": "## ReLU — Rectified Linear Unit\n\nThe most widely used activation in modern deep learning:\n\n$$f(x) = \\max(0, x)$$\n\nReLU solved the vanishing gradient problem: for $x > 0$, the gradient is exactly 1 — no shrinkage regardless of network depth. Its piecewise-linear form also makes it extremely fast to compute.\n\n**Gradient:**\n$$f'(x) = \\begin{cases} 1 & x > 0 \\\\ 0 & x < 0 \\\\ \\text{undefined} & x = 0 \\end{cases}$$\n\nIn practice, $f'(0) = 0$ (sub-gradient convention). The zero gradient at $x < 0$ is what causes the dying neuron problem: if a neuron's pre-activation is always negative, it never updates.\n\n**PyTorch:**\n```python\nimport torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nx = torch.tensor([-2., -1., 0., 1., 2.])\nprint(nn.ReLU()(x))    # tensor([0., 0., 0., 1., 2.])\nprint(F.relu(x))       # identical; use nn.ReLU() in nn.Sequential\n```\n\n**TensorFlow:**\n```python\nimport tensorflow as tf\n\nx = tf.constant([-2., -1., 0., 1., 2.])\nprint(tf.nn.relu(x))                  # [0. 0. 0. 1. 2.]\n# In a model: tf.keras.layers.Dense(64, activation='relu')\n```\n\n## LeakyReLU — A Small Leak Fixes Dead Neurons\n\n$$f(x) = \\max(\\alpha x,\\, x) = \\begin{cases} x & x \\geq 0 \\\\ \\alpha x & x < 0 \\end{cases}$$\n\nwhere $\\alpha$ is a small constant, typically $\\alpha = 0.01$. The negative slope $\\alpha$ ensures a non-zero gradient for all inputs, preventing neurons from dying.\n\n**Gradient:** $f'(x) = 1$ for $x \\geq 0$, $f'(x) = \\alpha$ for $x < 0$.\n\nNote that $\\text{ReLU}(x) = \\text{LeakyReLU}(x, \\alpha=0)$.\n\n**PyTorch:**\n```python\nx = torch.tensor([-2., -1., 0., 1., 2.])\nleaky = nn.LeakyReLU(negative_slope=0.01)\nprint(leaky(x))   # tensor([-0.0200, -0.0100,  0.0000,  1.0000,  2.0000])\n```\n\n**TensorFlow:**\n```python\nx = tf.constant([-2., -1., 0., 1., 2.])\nprint(tf.nn.leaky_relu(x, alpha=0.01))   # [-0.02 -0.01  0.    1.    2.  ]\n# In a model: tf.keras.layers.LeakyReLU(negative_slope=0.01)\n```\n\n## PReLU — Parametric ReLU\n\n$$f(x) = \\max(\\alpha x,\\, x), \\quad \\alpha \\text{ learnable}$$\n\nIdentical formula to LeakyReLU, but $\\alpha$ is a trainable parameter initialized to 0.25. The network learns the optimal negative slope from data. PyTorch supports channel-wise $\\alpha$ via `nn.PReLU(num_parameters=C)`.\n\n**Gradient w.r.t. $\\alpha$:** For $x < 0$: $\\partial f / \\partial \\alpha = x$. This gradient propagates back and updates $\\alpha$ during training.\n\n**PyTorch:**\n```python\n# num_parameters=1: one shared alpha; set to C for per-channel slopes\nprelu = nn.PReLU(num_parameters=1, init=0.25)\nx = torch.tensor([-2., -1., 0., 1., 2.])\nprint(prelu(x))   # tensor([-0.5000, -0.2500,  0.0000,  1.0000,  2.0000]) at init\n```\n\n**TensorFlow:**\n```python\n# PReLU in Keras: one learned slope per channel by default\nprelu = tf.keras.layers.PReLU(shared_axes=[1, 2])  # shared across spatial dims\n# Equivalent: tf.keras.layers.PReLU() with default per-unit slopes\n```\n\n## RReLU — Randomized Leaky ReLU\n\n$$f(x) = \\begin{cases} x & x \\geq 0 \\\\ ax & x < 0 \\end{cases}, \\quad a \\sim \\mathcal{U}(\\text{lower}, \\text{upper})$$\n\nDuring training, the negative slope $a$ is sampled uniformly from $[\\text{lower}, \\text{upper}]$ (defaults: $[1/8, 1/3]$). At evaluation time, $a$ is fixed to $(\\text{lower} + \\text{upper}) / 2$. The randomization acts as a form of regularization, similar to dropout.\n\n**PyTorch:**\n```python\n# Slope sampled from U(lower, upper) during training; fixed to mean at eval\nrrelu = nn.RReLU(lower=1./8, upper=1./3)\nx = torch.tensor([-2., -1., 0., 1., 2.])\nprint(rrelu(x))   # negative outputs vary each forward pass during training\n```\n\n**TensorFlow:**\n```python\n# No built-in RReLU in TensorFlow; implement via a custom layer\nimport tensorflow as tf\n\nclass RReLU(tf.keras.layers.Layer):\n    def __init__(self, lower=1/8, upper=1/3):\n        super().__init__()\n        self.lower, self.upper = lower, upper\n\n    def call(self, x, training=False):\n        if training:\n            alpha = tf.random.uniform(tf.shape(x), self.lower, self.upper)\n        else:\n            alpha = (self.lower + self.upper) / 2\n        return tf.where(x >= 0, x, alpha * x)\n```\n\n## ReLU6 — Bounded for Mobile\n\n$$f(x) = \\min(\\max(0, x),\\, 6) = \\text{clip}(x, 0, 6)$$\n\nReLU6 clamps activations at 6, bounding the output to $[0, 6]$. This makes it friendly for **fixed-point quantization**: when activations are bounded, you need fewer bits to represent them precisely. Used extensively in MobileNet.\n\n**Gradient:** 1 for $0 < x < 6$, 0 otherwise.\n\n**PyTorch:**\n```python\nx = torch.tensor([-1., 0., 3., 6., 8.])\nprint(nn.ReLU6()(x))   # tensor([0., 0., 3., 6., 6.])\nprint(F.relu6(x))      # identical\n```\n\n**TensorFlow:**\n```python\nx = tf.constant([-1., 0., 3., 6., 8.])\nprint(tf.nn.relu6(x))   # [0. 0. 3. 6. 6.]\n# Equivalent: tf.keras.layers.ReLU(max_value=6)\n```\n\n## Comparison Table\n\n| Activation | Formula | Range | Dying neurons? | Learnable? |\n|-----------|---------|-------|---------------|------------|\n| ReLU | $\\max(0,x)$ | $[0,\\infty)$ | Yes | No |\n| LeakyReLU | $\\max(\\alpha x, x)$ | $(-\\infty,\\infty)$ | No | No |\n| PReLU | $\\max(\\alpha x, x)$, $\\alpha$ learned | $(-\\infty,\\infty)$ | No | Yes |\n| RReLU | $\\max(ax, x)$, $a \\sim \\mathcal{U}$ | $(-\\infty,\\infty)$ | No | Stochastic |\n| ReLU6 | $\\min(\\max(0,x), 6)$ | $[0, 6]$ | Yes (above 6 too) | No |\n\n## When to Use Which\n\n- **ReLU**: Default choice — fast, simple, works well with BatchNorm\n- **LeakyReLU**: When dying neurons are a problem (e.g., GANs, deep unsupervised models)\n- **PReLU**: When you want adaptive negative slope and can afford extra parameters\n- **RReLU**: As a regularization technique; empirically helps in small datasets\n- **ReLU6**: MobileNet, quantized models, edge deployment",
+  "equationBreakdowns": [
+    {
+      "label": "ReLU formula",
+      "terms": [
+        {
+          "symbol": "f(x)",
+          "name": "Activated output",
+          "desc": "Output of the activation function applied to pre-activation $x$"
+        },
+        {
+          "symbol": "\\max(0, x)",
+          "name": "Rectification",
+          "desc": "Passes positive values unchanged; zeros out all negative values"
+        }
+      ]
+    },
+    {
+      "label": "LeakyReLU formula",
+      "terms": [
+        {
+          "symbol": "\\max(\\alpha x, x)",
+          "name": "Leaky rectification",
+          "desc": "For $x \\geq 0$: identity; for $x < 0$: scales by $\\alpha$"
+        },
+        {
+          "symbol": "\\alpha",
+          "name": "Negative slope",
+          "desc": "Small constant (default 0.01) controlling gradient magnitude for negative inputs"
+        }
+      ]
+    },
+    {
+      "label": "ReLU6 formula",
+      "terms": [
+        {
+          "symbol": "\\min(\\max(0, x), 6)",
+          "name": "Clamped ReLU",
+          "desc": "ReLU with an additional upper clamp at 6; output range is $[0,6]$"
+        },
+        {
+          "symbol": "6",
+          "name": "Upper bound",
+          "desc": "The bound of 6 is empirically chosen to work well with 8-bit quantization"
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Glorot et al. (2011) — Deep Sparse Rectifier Networks",
+      "title": "Introduced ReLU for deep networks; showed dead neurons can be beneficial for sparsity",
+      "url": null,
+      "note": "Introduced ReLU for deep networks; showed dead neurons can be beneficial for sparsity"
+    },
+    {
+      "label": "He et al. (2015) — Delving Deep into Rectifiers (PReLU)",
+      "title": "Introduced PReLU and the He initialization scheme",
+      "url": null,
+      "note": "Introduced PReLU and the He initialization scheme"
+    },
+    {
+      "label": "Howard et al. (2017) — MobileNets (ReLU6)",
+      "title": "Popularized ReLU6 for mobile-efficient architectures",
+      "url": null,
+      "note": "Popularized ReLU6 for mobile-efficient architectures"
+    }
+  ]
+}

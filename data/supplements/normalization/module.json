@@ -1,0 +1,72 @@
+{
+  "id": "normalization",
+  "type": "supplement",
+  "title": "Normalization in Deep Learning",
+  "description": "A comprehensive treatment of normalization techniques — from why they work to how to choose between them. Covers the covariate shift and loss landscape views, BatchNorm internals (running stats, train/eval modes, SyncBN), the LayerNorm family (RMSNorm, DeepNorm, pre/post-norm), weight and spectral normalization, small-batch alternatives (GroupNorm, InstanceNorm), and adaptive/conditional normalization (AdaIN, SPADE, FiLM, adaLN-Zero in DiT).",
+  "level": "intermediate",
+  "estimatedHours": 1.5,
+  "color": "#2a5757",
+  "accentLight": "#63aac9",
+  "readings": [
+    {
+      "id": "r0",
+      "title": "Why Normalization? Covariate Shift and the Loss Landscape",
+      "estimatedMinutes": 13,
+      "description": "Internal covariate shift, Santurkar et al. loss landscape smoothing, β-smoothness, and a unified taxonomy of all normalization techniques across four axes",
+      "dataPath": "data/supplements/normalization/readings/r0-why-normalization.json"
+    },
+    {
+      "id": "r1",
+      "title": "Batch Normalization — Algorithm, Placement, and Multi-GPU",
+      "estimatedMinutes": 17,
+      "description": "Full BN algorithm with running statistics, the model.eval() bug, spatial BN for CNNs, pre-activation vs. post-activation placement, and Synchronized BatchNorm",
+      "dataPath": "data/supplements/normalization/readings/r1-batch-norm.json"
+    },
+    {
+      "id": "r2",
+      "title": "Layer Norm, RMSNorm, and the Pre-Norm / Post-Norm Debate",
+      "estimatedMinutes": 15,
+      "description": "LayerNorm formula and properties, pre-norm vs. post-norm stability analysis, RMSNorm's mean-centering removal and 15–20% speedup, DeepNorm's scaled residual for 1000+ layer transformers",
+      "dataPath": "data/supplements/normalization/readings/r2-layer-norm-variants.json"
+    },
+    {
+      "id": "r3",
+      "title": "Weight Normalization and Spectral Normalization",
+      "estimatedMinutes": 15,
+      "description": "Weight norm reparameterization w = g·v/‖v‖, orthogonalized gradient updates, weight norm vs. BN comparison, spectral norm via power iteration, and WGAN Lipschitz constraint",
+      "dataPath": "data/supplements/normalization/readings/r3-weight-spectral-norm.json"
+    },
+    {
+      "id": "r4",
+      "title": "Group Normalization, Instance Normalization, and Spatial Variants",
+      "estimatedMinutes": 14,
+      "description": "Why BN degrades at small batch sizes, InstanceNorm for style transfer, GroupNorm unifying framework (GN as generalization of LN and IN), and when to use each normalization",
+      "dataPath": "data/supplements/normalization/readings/r4-group-instance-spatial.json"
+    },
+    {
+      "id": "r5",
+      "title": "Adaptive and Conditional Normalization: AdaIN, SPADE, and DiT",
+      "estimatedMinutes": 14,
+      "description": "AdaIN style transfer via channel statistics replacement, Conditional BN / FiLM for class and language conditioning, SPADE spatially-adaptive maps for semantic image synthesis, adaLN-Zero in Diffusion Transformers",
+      "dataPath": "data/supplements/normalization/readings/r5-adaptive-conditional.json"
+    }
+  ],
+  "drills": [
+    {
+      "id": "d1",
+      "title": "BatchNorm, LayerNorm, Weight Norm, and Spectral Norm",
+      "estimatedMinutes": 20,
+      "description": "Core mechanics and failure modes of the four foundational normalization techniques",
+      "dataPath": "data/supplements/normalization/drills/d1-batchnorm-layernorm-weightnorm.json"
+    },
+    {
+      "id": "d2",
+      "title": "GroupNorm, InstanceNorm, Adaptive and Conditional Normalization",
+      "estimatedMinutes": 20,
+      "description": "Small-batch alternatives and the progression from fixed to condition-predicted affine parameters",
+      "dataPath": "data/supplements/normalization/drills/d2-groupnorm-adaptive-conditional.json"
+    }
+  ],
+  "quizzes": [],
+  "labs": []
+}

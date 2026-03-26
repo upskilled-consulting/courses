@@ -1,0 +1,115 @@
+{
+  "id": "r4",
+  "moduleId": "loss-functions",
+  "title": "Multi-label & Margin Losses",
+  "estimatedMinutes": 12,
+  "learningObjectives": [
+    {
+      "id": "r4-lo1",
+      "verb": "Distinguish",
+      "description": "Distinguish the {0, 1} and {-1, +1} label conventions and select the correct margin or logistic loss for each",
+      "skillTags": [
+        "classification",
+        "ranking"
+      ]
+    },
+    {
+      "id": "r4-lo2",
+      "verb": "Apply",
+      "description": "Apply SoftMarginLoss and MultiLabelSoftMarginLoss for single-label and multi-label binary classification respectively",
+      "skillTags": [
+        "classification"
+      ]
+    },
+    {
+      "id": "r4-lo3",
+      "verb": "Use",
+      "description": "Use MultiMarginLoss as a multi-class hinge loss and explain the margin constraint it enforces between the correct and incorrect class scores",
+      "skillTags": [
+        "classification",
+        "ranking"
+      ]
+    },
+    {
+      "id": "r4-lo4",
+      "verb": "Select",
+      "description": "Select among SoftMarginLoss, MultiLabelSoftMarginLoss, MultiMarginLoss, and MultiLabelMarginLoss using the decision guide for label type and output cardinality",
+      "skillTags": [
+        "classification"
+      ]
+    }
+  ],
+  "prevItem": {
+    "type": "quiz",
+    "id": "q1"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r5"
+  },
+  "content": "## Label Conventions: {0,1} vs {−1,+1}\n\nClassification losses use two incompatible label conventions:\n\n- **{0, 1}** — used by BCE-family losses. $y = 1$ means \"positive\", $y = 0$ means \"negative\".\n- **{−1, +1}** — used by margin-based losses. $y = +1$ means \"positive\", $y = -1$ means \"negative\".\n\nMixing these up is a silent bug: the wrong convention produces valid-looking numbers but trains in the wrong direction.\n\n---\n\n## nn.SoftMarginLoss — Binary Logistic Loss with {−1,+1} Labels\n\nSoftMarginLoss implements the **logistic loss** for labels $y \\in \\{-1, +1\\}$:\n\n$$\\ell_i = \\log\\bigl(1 + e^{-y_i \\cdot x_i}\\bigr)$$\n\nThis is equivalent to BCEWithLogitsLoss under the label remapping $y_{\\{-1,+1\\}} \\to y_{\\{0,1\\}}$. When $y_i = +1$ and $x_i$ is large, $e^{-x_i} \\approx 0$ and $\\ell_i \\approx 0$ (correct and confident). When $y_i = +1$ and $x_i$ is very negative, $e^{-x_i}$ is huge and the loss is large.\n\n```python\nloss = nn.SoftMarginLoss()\nx = torch.tensor([2.0, -1.0, 0.5])\ny = torch.tensor([1.0, -1.0, 1.0])  # labels in {-1, +1}\noutput = loss(x, y)\n```\n\n**When to use:** Binary classification where labels are naturally {−1, +1} (e.g., SVM-style data); direct replacement for BCEWithLogitsLoss when switching from {0,1} to {−1,+1} labeling.\n\n---\n\n## nn.MultiLabelSoftMarginLoss — Independent Binary Classifiers\n\nFor multi-label problems where each sample can belong to any subset of $C$ classes, this loss applies SoftMarginLoss independently across all classes:\n\n$$\\ell = -\\frac{1}{C}\\sum_{j=0}^{C-1} \\left[ y_j \\log \\sigma(x_j) + (1 - y_j) \\log(1 - \\sigma(x_j)) \\right]$$\n\nThis is equivalent to averaging $C$ independent BCEWithLogitsLoss values. Labels $y \\in \\{0, 1\\}$ (not {−1, +1} despite the \"Soft Margin\" name).\n\n```python\nloss = nn.MultiLabelSoftMarginLoss()\nx = torch.randn(3, 5)                      # 3 samples, 5 classes\ny = torch.zeros(3, 5).random_(2)           # binary multi-label targets\noutput = loss(x, y)\n```\n\n**When to use:** Multi-label image classification (e.g., an image can be both \"dog\" and \"outdoor\"); tagging tasks; any setting where classes are not mutually exclusive.\n\n---\n\n## nn.MultiMarginLoss — Multi-class Hinge Loss\n\nHinge loss for single-label $C$-class classification. Encourages the correct class score to exceed all incorrect class scores by a margin $m$:\n\n$$\\ell = \\frac{1}{C} \\sum_{j \\ne c} \\max\\bigl(0,\\, m - x_c + x_j\\bigr)^p$$\n\nwhere $c$ is the correct class, $p \\in \\{1, 2\\}$ is a power exponent, and $m = 1$ by default. This is the **multi-class SVM loss** (also called \"Crammer & Singer loss\").\n\nThe loss is zero when $x_c > x_j + m$ for all wrong classes $j$ — i.e., when the correct class has a sufficient margin over all others. Otherwise it penalises proportionally.\n\n```python\nloss = nn.MultiMarginLoss(p=1, margin=1.0)\nx = torch.randn(4, 10)            # logits\ny = torch.tensor([0, 3, 7, 2])    # correct class indices\noutput = loss(x, y)\n```\n\n**When to use:** When you want an SVM-style margin objective instead of softmax cross-entropy; structured prediction where inter-class margins matter.\n\n---\n\n## nn.MultiLabelMarginLoss — Multi-label Pairwise Ranking\n\nFor multi-label problems where you have a set of correct class indices. It enforces that each positive class scores higher than each negative class by a margin of 1:\n\n$$\\ell = \\frac{1}{|\\mathcal{Y}^+|} \\sum_{i \\in \\mathcal{Y}^+} \\sum_{j \\in \\mathcal{Y}^-} \\max\\bigl(0, 1 - x_i + x_j\\bigr)$$\n\nwhere $\\mathcal{Y}^+$ is the set of positive class indices and $\\mathcal{Y}^-$ is the set of negative class indices.\n\nTarget format: a 1-D LongTensor of positive class indices, padded with $-1$ to a fixed length.\n\n```python\nloss = nn.MultiLabelMarginLoss()\nx = torch.FloatTensor([[0.1, 0.2, 0.4, 0.8]])   # 1 sample, 4 classes\ny = torch.LongTensor([[3, 0, -1, -1]])           # classes 3 and 0 are positive\noutput = loss(x, y)\n```\n\n**When to use:** Document retrieval or recommendation where you have a small set of relevant items and many irrelevant ones; ranking-oriented multi-label tasks.\n\n---\n\n## Decision Guide\n\n| Setting | Labels | Recommended Loss |\n|---------|--------|------------------|\n| Binary, one label per sample | $\\{0,1\\}$ | BCEWithLogitsLoss |\n| Binary, labels are ±1 | $\\{-1,+1\\}$ | SoftMarginLoss |\n| Multi-label, independent per class | $\\{0,1\\}^C$ | MultiLabelSoftMarginLoss |\n| Multi-class, one label, SVM-style | Integer $c$ | MultiMarginLoss |\n| Multi-label, ranking objective | Positive index list | MultiLabelMarginLoss |",
+  "equationBreakdowns": [
+    {
+      "label": "SoftMarginLoss",
+      "terms": [
+        {
+          "symbol": "\\log(1 + e^{-y_i x_i})",
+          "name": "Logistic loss for ±1 labels",
+          "desc": "When y=+1 and x is large and positive, the exponent is negative → e^{−yx} ≈ 0 → log(1+0)=0 (no loss). When y=+1 and x is negative, e^{−yx} is huge → large loss. The product y·x encodes both cases."
+        },
+        {
+          "symbol": "y_i \\in \\{-1, +1\\}",
+          "name": "Label convention",
+          "desc": "Margin losses use ±1 labels, not 0/1. Mixing up conventions trains in the wrong direction for negative examples."
+        }
+      ]
+    },
+    {
+      "label": "MultiMarginLoss",
+      "terms": [
+        {
+          "symbol": "x_c",
+          "name": "Score for correct class",
+          "desc": "The logit the model assigns to the ground-truth class c. The loss penalises whenever this score is not sufficiently larger than other class scores."
+        },
+        {
+          "symbol": "x_j",
+          "name": "Score for incorrect class j",
+          "desc": "Logit for a wrong class. The hinge max(0, m − x_c + x_j) is zero when x_c > x_j + m, i.e., when the correct class wins by more than the margin."
+        },
+        {
+          "symbol": "m",
+          "name": "Margin",
+          "desc": "The minimum required gap between correct and incorrect class scores. Default m=1. Larger margin → stricter requirement → slower convergence but potentially better generalisation."
+        },
+        {
+          "symbol": "\\max(0, \\cdot)^p",
+          "name": "Hinge function",
+          "desc": "The ReLU-like hinge is zero when the margin constraint is satisfied and grows otherwise. With p=1 the loss is linear in the violation; with p=2 it is quadratic."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "[1]",
+      "title": "nn.SoftMarginLoss — PyTorch docs",
+      "url": "https://pytorch.org/docs/stable/generated/torch.nn.SoftMarginLoss.html"
+    },
+    {
+      "label": "[2]",
+      "title": "nn.MultiLabelSoftMarginLoss — PyTorch docs",
+      "url": "https://pytorch.org/docs/stable/generated/torch.nn.MultiLabelSoftMarginLoss.html"
+    },
+    {
+      "label": "[3]",
+      "title": "nn.MultiMarginLoss — PyTorch docs",
+      "url": "https://pytorch.org/docs/stable/generated/torch.nn.MultiMarginLoss.html"
+    },
+    {
+      "label": "[4]",
+      "title": "nn.MultiLabelMarginLoss — PyTorch docs",
+      "url": "https://pytorch.org/docs/stable/generated/torch.nn.MultiLabelMarginLoss.html"
+    }
+  ]
+}

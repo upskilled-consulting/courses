@@ -1,0 +1,57 @@
+{
+  "id": "m7",
+  "title": "GPU Architecture & Kernel Optimization",
+  "order": 7,
+  "color": "#f97316",
+  "prereq": "m6",
+  "learningObjectives": [
+    "Explain the CUDA thread hierarchy (grid → block → warp → thread), derive flattened thread IDs for 1D and 2D grids, and map the 3DGS tile rasterizer launch configuration to this model.",
+    "Define the SIMT execution contract, predict the cost of warp divergence for a given conditional, and identify divergence-free kernel patterns.",
+    "Derive the CGMA ratio for the naive matrix-multiply kernel, explain why it limits achieved throughput to <6% of peak on the G80, and show how shared-memory tiling multiplies CGMA by the tile dimension.",
+    "State the memory coalescing rule for 32-thread warps, classify a memory access pattern as coalesced or uncoalesced, and estimate the transaction penalty for stride-N access.",
+    "Construct a roofline chart for a target GPU, place a kernel on it given arithmetic intensity and achieved FLOP/s, and prescribe whether compute or memory optimization should be pursued.",
+    "Instrument a PyTorch/CUDA training loop with torch.profiler and NVTX, export a Chrome/Perfetto trace, and identify the dominant kernel, CPU–GPU sync gaps, and memory transfer bottlenecks from the timeline."
+  ],
+  "readings": [
+    {
+      "id": "r1",
+      "title": "The CUDA Programming Model: Grids, Blocks, Warps & the SIMT Contract",
+      "estimatedMinutes": 18,
+      "dataPath": "data/courses/3dgs-compression/m7-gpu-kernel-optimization/readings/r1-cuda-programming-model.json"
+    },
+    {
+      "id": "r2",
+      "title": "The GPU Memory Hierarchy: CGMA Ratio, Coalescing & Shared-Memory Tiling",
+      "estimatedMinutes": 20,
+      "dataPath": "data/courses/3dgs-compression/m7-gpu-kernel-optimization/readings/r2-memory-hierarchy-cgma.json"
+    },
+    {
+      "id": "r3",
+      "title": "Kernel Profiling & Tracing: torch.profiler, NVTX & Perfetto",
+      "estimatedMinutes": 15,
+      "dataPath": "data/courses/3dgs-compression/m7-gpu-kernel-optimization/readings/r3-profiling-traces-perfetto.json"
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "q1",
+      "title": "CUDA Execution Model & Thread Divergence",
+      "questionCount": 5,
+      "passingScore": 0.7,
+      "dataPath": "data/courses/3dgs-compression/m7-gpu-kernel-optimization/quizzes/q1-cuda-model.json"
+    },
+    {
+      "id": "q2",
+      "title": "Memory Hierarchy, Roofline & Profiling",
+      "questionCount": 5,
+      "passingScore": 0.7,
+      "dataPath": "data/courses/3dgs-compression/m7-gpu-kernel-optimization/quizzes/q2-memory-profiling.json"
+    }
+  ],
+  "lab": {
+    "id": "lab7",
+    "title": "Profiling the 3DGS Rasterizer with torch.profiler & Perfetto",
+    "estimatedMinutes": 90,
+    "dataPath": "data/courses/3dgs-compression/m7-gpu-kernel-optimization/labs/lab7.json"
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "id": "d2",
+  "moduleId": "architectures",
+  "title": "RNNs, Attention, and Transformers",
+  "description": "Flashcards covering recurrent architectures, LSTM/GRU gates, scaled dot-product attention, multi-head attention, and the transformer block.",
+  "estimatedMinutes": 14,
+  "cards": [
+    {
+      "id": "c01",
+      "front": "**Vanilla RNN** — recurrence formula and what each term is",
+      "back": "$$\\mathbf{h}_t = \\phi(W_h \\mathbf{h}_{t-1} + W_x \\mathbf{x}_t + \\mathbf{b})$$\n- $\\mathbf{h}_t$ — hidden state (the \"memory\")\n- $W_h$ — recurrent weights, shared across all $t$\n- $W_x$ — input weights, shared across all $t$\n- $\\phi$ — typically tanh"
+    },
+    {
+      "id": "c02",
+      "front": "**Why tanh** is the standard RNN activation (not ReLU)",
+      "back": "Tanh outputs $[-1,1]$ — bounded. This keeps hidden states from growing unboundedly as they are recurrently multiplied.\n\nReLU can cause exploding activations in recurrence: if $W_h \\mathbf{h}_{t-1}$ grows unboundedly, it blows up across timesteps.\n\n*Trade-off: tanh saturates, which contributes to vanishing gradients — but that's addressed by LSTM/GRU, not by switching activations.*"
+    },
+    {
+      "id": "c03",
+      "front": "**Vanishing gradient in RNNs** — why does it happen?",
+      "back": "BPTT multiplies Jacobians $\\partial\\mathbf{h}_{t+1}/\\partial\\mathbf{h}_t = \\text{diag}(\\phi') \\cdot W_h$ across $T$ steps.\n\nIf $\\|W_h\\| < 1$ or $\\phi'$ is small (tanh saturated), this product shrinks exponentially with $T$.\n\n**Effect:** gradients from late timesteps don't reach early ones. RNN cannot learn correlations across many steps."
+    },
+    {
+      "id": "c04",
+      "front": "**Exploding gradients** — fix and why it doesn't fix vanishing",
+      "back": "**Fix:** gradient clipping by norm. If $\\|\\mathbf{g}\\| > \\tau$, rescale: $\\mathbf{g} \\leftarrow \\tau \\cdot \\mathbf{g}/\\|\\mathbf{g}\\|$.\n\n**Does NOT fix vanishing:** clipping *reduces* large gradients — it cannot amplify near-zero ones. Vanishing requires architectural change (LSTM, GRU, residual connections)."
+    },
+    {
+      "id": "c05",
+      "front": "**LSTM** — name the 4 gates and what each controls",
+      "back": "| Gate | Symbol | Controls |\n|---|---|---|\n| Forget | $\\mathbf{f}_t$ | What fraction of old cell state to retain |\n| Input | $\\mathbf{i}_t$ | How much new candidate to write |\n| Cell/candidate | $\\tilde{\\mathbf{c}}_t$ | The new candidate value to write |\n| Output | $\\mathbf{o}_t$ | What portion of cell state to expose as $\\mathbf{h}_t$ |"
+    },
+    {
+      "id": "c06",
+      "front": "**LSTM cell state update** — formula and gradient highway explanation",
+      "back": "$$\\mathbf{c}_t = \\mathbf{f}_t \\odot \\mathbf{c}_{t-1} + \\mathbf{i}_t \\odot \\tilde{\\mathbf{c}}_t$$\n\n**Gradient:** $\\partial\\mathcal{L}/\\partial\\mathbf{c}_{t-1} = (\\partial\\mathcal{L}/\\partial\\mathbf{c}_t) \\odot \\mathbf{f}_t$\n\n**No matrix multiply** — gradient flows via element-wise product with the forget gate. If $\\mathbf{f}_t \\approx 1$, gradient passes through unchanged → no vanishing."
+    },
+    {
+      "id": "c07",
+      "front": "**GRU** — 2 gates, state update formula",
+      "back": "**Reset gate** $\\mathbf{r}_t$: how much past state to use when computing candidate.\n**Update gate** $\\mathbf{z}_t$: interpolation between old and new state.\n\n$$\\mathbf{h}_t = (1-\\mathbf{z}_t) \\odot \\mathbf{h}_{t-1} + \\mathbf{z}_t \\odot \\tilde{\\mathbf{h}}_t$$\n\nWhen $\\mathbf{z}_t \\approx 0$: old state preserved (gradient highway). When $\\mathbf{z}_t \\approx 1$: new candidate replaces old state."
+    },
+    {
+      "id": "c08",
+      "front": "**LSTM vs. GRU** — parameter count comparison and when to prefer each",
+      "back": "**LSTM:** 4 weight matrices → $16d_h^2$ parameters\n**GRU:** 3 weight matrices → $9d_h^2$ parameters (~44% fewer)\n\n**Prefer LSTM:** very long sequences, fine-grained memory control (language modeling, protein sequences).\n**Prefer GRU:** faster training, smaller datasets, comparable performance for most tasks."
+    },
+    {
+      "id": "c09",
+      "front": "**Scaled dot-product attention** — formula and why the scaling is needed",
+      "back": "$$\\text{Attention}(Q,K,V) = \\text{Softmax}\\!\\left(\\frac{QK^\\top}{\\sqrt{d_k}}\\right)V$$\n\n**Why $\\sqrt{d_k}$:** without scaling, dot products grow with $d_k$ (variance = $d_k$). Large values push softmax into saturation → near-zero gradients. Dividing by $\\sqrt{d_k}$ keeps variance $\\approx 1$."
+    },
+    {
+      "id": "c10",
+      "front": "**Multi-head attention** — what does each head learn differently?",
+      "back": "Each head projects $Q$, $K$, $V$ into a different $d_k$-dimensional subspace via learned matrices $W_i^Q$, $W_i^K$, $W_i^V$.\n\nDifferent heads specialize: some track syntactic dependencies, some track coreference, some attend locally.\n\nOutputs are concatenated and projected: $[\\text{head}_1;\\ldots;\\text{head}_h]W^O$"
+    },
+    {
+      "id": "c11",
+      "front": "**Self-attention vs. masked self-attention vs. cross-attention** — Q/K/V sources",
+      "back": "| Variant | Q source | K, V source | Used in |\n|---|---|---|---|\n| Self-attention | Sequence $X$ | Same $X$ | Encoder (BERT) |\n| Masked self-attention | Sequence $X$ | Same $X$ (past only) | Decoder (GPT) |\n| Cross-attention | Decoder $Y$ | Encoder output $Z$ | Seq2seq decoder |"
+    },
+    {
+      "id": "c12",
+      "front": "**Transformer encoder block** — two sub-layers and what wraps each",
+      "back": "1. Multi-head **self-attention**\n2. Position-wise **feed-forward network** (2-layer MLP, $d_{\\text{ff}} = 4 \\times d_{\\text{model}}$)\n\nEach wrapped with:\n- **Residual connection:** $\\mathbf{y} = \\mathbf{x} + \\text{SubLayer}(\\mathbf{x})$\n- **LayerNorm** (pre-norm: applied before sub-layer; post-norm: after)"
+    },
+    {
+      "id": "c13",
+      "front": "**Positional encoding** — why needed, and RoPE vs. sinusoidal",
+      "back": "Self-attention is permutation-equivariant — without position info, \"cat sat mat\" = \"mat sat cat\".\n\n**Sinusoidal (original):** fixed, can generalize to unseen lengths.\n**Learned absolute (BERT/GPT-2):** trained per position; cannot generalize past training length.\n**RoPE (LLaMA):** rotates Q/K before dot product; score depends on relative position $(n-m)$. Better length generalization, now the modern standard."
+    },
+    {
+      "id": "c14",
+      "front": "**Encoder-only vs. decoder-only vs. encoder-decoder** — one example and use case for each",
+      "back": "| Family | Example | Attention | Use case |\n|---|---|---|---|\n| Encoder-only | BERT | Bidirectional self-attention | Classification, NER, embeddings |\n| Decoder-only | GPT/LLaMA | Causal (masked) self-attention | Generation, chat, code |\n| Encoder-decoder | T5, BART | Encoder full + decoder masked + cross | Translation, summarization |"
+    },
+    {
+      "id": "c15",
+      "front": "**Transformer quadratic bottleneck** — two fixes and the trade-off",
+      "back": "Attention is $O(n^2)$ in sequence length — at $n=128{,}000$ tokens this is expensive.\n\n**Grouped-Query Attention (GQA):** share K/V heads across groups of Q heads. Reduces KV cache; small quality loss. Used in LLaMA 2/3, Mistral.\n\n**FlashAttention:** no approximation — reorders computation to minimize HBM reads. Same output, 2–4× faster, sub-linear memory. Used in nearly all modern training."
+    }
+  ]
+}

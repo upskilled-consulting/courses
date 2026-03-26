@@ -1,0 +1,102 @@
+{
+  "id": "r2",
+  "moduleId": "normalization",
+  "title": "Layer Norm, RMSNorm, and the Pre-Norm / Post-Norm Debate",
+  "estimatedMinutes": 15,
+  "learningObjectives": [
+    {
+      "id": "r2-lo1",
+      "verb": "Trace",
+      "description": "Trace the LayerNorm forward pass — identifying what dimension is normalized, why no running statistics are needed, and why it works at batch size 1",
+      "skillTags": ["normalization"]
+    },
+    {
+      "id": "r2-lo2",
+      "verb": "Distinguish",
+      "description": "Distinguish pre-norm (norm before sub-layer) from post-norm (norm after residual add) placement in transformer blocks, and explain why pre-norm training is more stable for deep transformers",
+      "skillTags": ["normalization", "training-dynamics"]
+    },
+    {
+      "id": "r2-lo3",
+      "verb": "Explain",
+      "description": "Explain RMSNorm's simplification over LayerNorm — dropping mean centering — and state the speed advantage and which modern LLMs use it",
+      "skillTags": ["normalization"]
+    },
+    {
+      "id": "r2-lo4",
+      "verb": "Explain",
+      "description": "Explain DeepNorm's scaled residual connection — y = α·x + SubLayer(x) — and state why scaling the residual allows stable pre-training of very deep (1000+ layer) transformers",
+      "skillTags": ["normalization", "training-dynamics"]
+    }
+  ],
+  "prevItem": { "type": "reading", "id": "r1" },
+  "nextItem": { "type": "reading", "id": "r3" },
+  "content": "## Layer Normalization\n\nLayer normalization (Ba et al., 2016) addresses the two main limitations of BatchNorm: small-batch instability and the inability to normalize recurrent networks cleanly.\n\nThe key change: normalize over the **feature dimension** of each example independently, rather than across the batch dimension.\n\nFor a vector $\\mathbf{x} \\in \\mathbb{R}^d$ (the activations of one example at one layer):\n\n$$\\mu = \\frac{1}{d}\\sum_{j=1}^d x_j \\qquad \\sigma^2 = \\frac{1}{d}\\sum_{j=1}^d (x_j - \\mu)^2$$\n\n$$\\hat{x}_j = \\frac{x_j - \\mu}{\\sqrt{\\sigma^2 + \\epsilon}} \\qquad y_j = \\gamma_j\\hat{x}_j + \\beta_j$$\n\n**What is the same as BatchNorm:** learned scale $\\gamma$ and shift $\\beta$ per feature; $\\epsilon$ for numerical stability.\n\n**What is different:**\n- $\\mu$ and $\\sigma^2$ are computed per-example, not per-batch — they depend on nothing outside the current input\n- Train and inference are **identical** — no running statistics, no `model.eval()` switch needed\n- Works with batch size 1\n- Works inside RNNs: applied at each timestep independently\n\n---\n\n## Where LayerNorm Is Applied in Transformers\n\nEvery transformer block contains two sub-layers (self-attention and FFN), each wrapped with a residual connection and LayerNorm. The placement of LayerNorm relative to these components has a significant impact on training stability.\n\n### Post-Norm (Original Transformer, Vaswani et al. 2017)\n\n$$\\mathbf{y} = \\text{LayerNorm}(\\mathbf{x} + \\text{SubLayer}(\\mathbf{x}))$$\n\nThe residual is *added first*, then normalized. At initialization, the residual branch is near-zero (small weights), so the output $\\mathbf{x} + \\text{SubLayer}(\\mathbf{x}) \\approx \\mathbf{x}$ — LayerNorm essentially normalizes the pass-through signal.\n\nProblem: as the network depth increases, gradients must flow through many LayerNorm operations before reaching early layers. This can cause **instability at the start of training** — the network needs learning rate warmup to survive the first few thousand steps.\n\n### Pre-Norm (Most Modern Transformers)\n\n$$\\mathbf{y} = \\mathbf{x} + \\text{SubLayer}(\\text{LayerNorm}(\\mathbf{x}))$$\n\nNormalization is applied to the input *before* the sub-layer, and the raw (unnormalized) residual is added. The skip path carries the unnormalized signal directly.\n\n**Why it is more stable:** at initialization, $\\text{SubLayer}(\\text{LayerNorm}(\\mathbf{x}))$ starts near zero, so $\\mathbf{y} \\approx \\mathbf{x}$ — the block is approximately an identity. Gradients can flow freely through the residual path regardless of depth. Pre-norm networks train without warmup and are more stable for very deep stacks (24, 48, 96 layers).\n\n**Trade-off:** pre-norm networks have been observed to converge to slightly worse final accuracy than well-tuned post-norm networks on some tasks. Post-norm remains preferred when absolute final quality matters more than training stability (e.g., some academic benchmarks).\n\nAll major LLM families (GPT-3, LLaMA, Mistral, Gemma, Falcon) use pre-norm.\n\n---\n\n## RMSNorm\n\nRMSNorm (Zhang & Sennrich, 2019) simplifies LayerNorm by removing the mean-centering step:\n\n$$\\text{RMS}(\\mathbf{x}) = \\sqrt{\\frac{1}{d}\\sum_{j=1}^d x_j^2 + \\epsilon}$$\n\n$$y_j = \\frac{x_j}{\\text{RMS}(\\mathbf{x})} \\cdot \\gamma_j$$\n\n**What is removed:** the mean subtraction ($x_j - \\mu$) and the bias parameter $\\beta$.\n\n**Motivation:** the centering step in LayerNorm accounts for only a small fraction of its representational value — most of the benefit comes from scale normalization. Removing it is an approximation, but one that holds well in practice for language models.\n\n**Performance gain:** RMSNorm requires roughly 15–20% fewer floating-point operations than LayerNorm (no mean accumulation pass, no subtraction, no $\\beta$). For very large models trained on large clusters, this translates to meaningful throughput improvements.\n\n**Used in:** LLaMA (all versions), Mistral, Gemma, Falcon — essentially all modern decoder-only LLMs after 2023. It is now the default for new transformer architectures.\n\n---\n\n## DeepNorm\n\nDeepNorm (Wang et al., 2022) makes a different intervention: instead of changing what LayerNorm computes, it changes where the residual is scaled.\n\n$$\\mathbf{y} = \\text{LayerNorm}(\\alpha\\,\\mathbf{x} + \\text{SubLayer}(\\mathbf{x}))$$\n\nThe residual $\\mathbf{x}$ is scaled by $\\alpha > 1$ before LayerNorm. The sub-layer weights $W$ are also initialized at a fraction $\\beta < 1$ of their normal scale.\n\n**Why this works:** with $\\alpha > 1$, the expected magnitude of the residual is larger relative to the sub-layer output at initialization. The normalized output is dominated by the pass-through signal — the sub-layer starts as a small perturbation. This is a precisely controlled version of the pre-norm stability argument.\n\nDeepNorm enabled training transformers with over 1000 layers (DeepNet paper) without divergence, achieving stable gradients that are bounded throughout training — a formal theoretical guarantee.\n\n---\n\n## LayerNorm in Non-Transformer Architectures\n\n**RNNs and LSTMs:** apply LayerNorm to the pre-activation at each timestep: $\\mathbf{h}_t = \\text{LN}(W_h\\mathbf{h}_{t-1} + W_x\\mathbf{x}_t)$. Works naturally because each timestep is a separate example — no batch dimension needed.\n\n**Graph Neural Networks:** LayerNorm on node features, where each node is a separate example.\n\n**Vision Transformers:** LayerNorm on patch embeddings — same as language transformers.\n\n---\n\n## PyTorch and TensorFlow\n\n**PyTorch** — `nn.LayerNorm`, `nn.RMSNorm`, and a pre-norm block:\n\n```python\nimport torch\nimport torch.nn as nn\n\n# LayerNorm: normalized_shape = dimensions to normalize over (the last D dims)\nln = nn.LayerNorm(normalized_shape=512, eps=1e-5)\nx  = torch.randn(2, 10, 512)     # (batch, seq_len, d_model)\nout = ln(x)                      # normalizes over last dim\n\n# RMSNorm — built-in from PyTorch 2.4\nrms = nn.RMSNorm(512)\nout_rms = rms(x)                 # no mean centering; ~15-20% fewer ops\n\n# Custom RMSNorm for older PyTorch\nclass RMSNorm(nn.Module):\n    def __init__(self, dim: int, eps: float = 1e-6):\n        super().__init__()\n        self.eps = eps\n        self.weight = nn.Parameter(torch.ones(dim))   # learned gamma only\n\n    def forward(self, x):\n        rms = x.pow(2).mean(-1, keepdim=True).add(self.eps).sqrt()\n        return x / rms * self.weight\n\n# Pre-norm transformer block: y = x + SubLayer(LN(x))\nclass PreNormBlock(nn.Module):\n    def __init__(self, d_model: int, nhead: int, ffn_dim: int):\n        super().__init__()\n        self.norm1 = nn.LayerNorm(d_model)\n        self.norm2 = nn.LayerNorm(d_model)\n        self.attn  = nn.MultiheadAttention(d_model, nhead, batch_first=True)\n        self.ffn   = nn.Sequential(\n            nn.Linear(d_model, ffn_dim), nn.GELU(), nn.Linear(ffn_dim, d_model)\n        )\n\n    def forward(self, x):\n        n = self.norm1(x)\n        x = x + self.attn(n, n, n)[0]   # un-normalized x in the residual\n        x = x + self.ffn(self.norm2(x))\n        return x\n```\n\n**TensorFlow / Keras:**\n\n```python\nimport tensorflow as tf\n\n# LayerNorm: axis=-1 normalizes the last dimension\nln = tf.keras.layers.LayerNormalization(axis=-1, epsilon=1e-5)\nx  = tf.random.normal((2, 10, 512))\nout = ln(x)   # shape (2, 10, 512)\n\n# Custom RMSNorm (no built-in in TF/Keras)\nclass RMSNorm(tf.keras.layers.Layer):\n    def __init__(self, dim: int, eps: float = 1e-6, **kwargs):\n        super().__init__(**kwargs)\n        self.eps, self.dim = eps, dim\n\n    def build(self, input_shape):\n        self.weight = self.add_weight(\n            shape=(self.dim,), initializer='ones', trainable=True, name='weight'\n        )\n\n    def call(self, x):\n        rms = tf.sqrt(tf.reduce_mean(tf.square(x), axis=-1, keepdims=True) + self.eps)\n        return x / rms * self.weight\n```",
+  "equationBreakdowns": [
+    {
+      "label": "LayerNorm",
+      "heading": "Layer Normalization",
+      "terms": [
+        {
+          "symbol": "\\mu = \\frac{1}{d}\\sum_j x_j",
+          "name": "Per-example mean",
+          "desc": "Mean computed over the d features of one example. Completely independent of other examples in the batch — LayerNorm is a pure per-example operation."
+        },
+        {
+          "symbol": "\\gamma_j,\\, \\beta_j",
+          "name": "Per-feature learned parameters",
+          "desc": "One scalar per feature dimension. Unlike BatchNorm which has one γ/β per channel regardless of spatial size, LayerNorm has one γ/β per feature in the d-dimensional vector."
+        }
+      ]
+    },
+    {
+      "label": "RMSNorm",
+      "heading": "RMSNorm",
+      "terms": [
+        {
+          "symbol": "\\text{RMS}(\\mathbf{x}) = \\sqrt{\\frac{1}{d}\\sum_j x_j^2}",
+          "name": "Root-mean-square norm",
+          "desc": "Divides by the RMS of the activations. No mean subtraction — just scale normalization. The assumption is that the mean centering in LayerNorm provides little additional benefit for language model activations."
+        },
+        {
+          "symbol": "\\gamma_j",
+          "name": "Scale only (no shift β)",
+          "desc": "RMSNorm has only a learned scale, not a learned shift. Removing β saves parameters and computation. Most modern LLMs omit the bias β throughout (including in linear layers) — further reducing parameters and memory."
+        }
+      ]
+    },
+    {
+      "label": "Pre-Norm vs. Post-Norm",
+      "heading": "Pre-Norm",
+      "terms": [
+        {
+          "symbol": "\\mathbf{x} + \\text{SubLayer}(\\text{LN}(\\mathbf{x}))",
+          "name": "Pre-norm residual",
+          "desc": "The un-normalized x passes directly through the skip connection. At initialization, SubLayer(LN(x)) ≈ 0, so y ≈ x — the block is approximately identity. Gradient flows through the raw x without any normalization gate."
+        },
+        {
+          "symbol": "\\text{LN}(\\mathbf{x} + \\text{SubLayer}(\\mathbf{x}))",
+          "name": "Post-norm residual",
+          "desc": "Normalization is applied after the residual add. Gradients must pass through the LN Jacobian at every block — can cause instability at initialization in very deep networks. Requires careful learning rate warmup."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Ba et al. 2016",
+      "title": "Layer Normalization",
+      "url": "https://arxiv.org/abs/1607.06450"
+    },
+    {
+      "label": "Zhang & Sennrich 2019",
+      "title": "Root Mean Square Layer Normalization",
+      "url": "https://arxiv.org/abs/1910.07467"
+    },
+    {
+      "label": "Wang et al. 2022",
+      "title": "DeepNet: Scaling Transformers to 1,000 Layers",
+      "url": "https://arxiv.org/abs/2203.00555"
+    }
+  ]
+}

@@ -1,0 +1,169 @@
+{
+  "id": "d1",
+  "moduleId": "linear-algebra",
+  "title": "Greek Letters & Core Notation",
+  "description": "Flashcards for the Greek letters and symbolic conventions used throughout the linear algebra readings.",
+  "estimatedMinutes": 10,
+  "cards": [
+    {
+      "id": "c01",
+      "front": "$$\\alpha$$",
+      "back": "**alpha** (*AL-fuh*)\n\nFirst letter of the Greek alphabet.\n\n*Usage: scalar coefficient; learning rate in gradient descent $\\alpha \\nabla L$*"
+    },
+    {
+      "id": "c02",
+      "front": "$$\\beta$$",
+      "back": "**beta** (*BAY-tuh*)\n\nSecond letter of the Greek alphabet.\n\n*Usage: scalar coefficient; regression weights $\\hat{\\vec{\\beta}} = (X^TX)^{-1}X^T\\vec{y}$*"
+    },
+    {
+      "id": "c03",
+      "front": "$$\\gamma,\\;\\Gamma$$",
+      "back": "**gamma** (*GAM-muh*)\n\nLowercase and uppercase form; uppercase $\\Gamma$ is the gamma function.\n\n*Usage: discount factor in reinforcement learning; step size*"
+    },
+    {
+      "id": "c04",
+      "front": "$$\\delta,\\;\\Delta$$",
+      "back": "**delta** (*DEL-tuh*)\n\n$\\delta$ = small change or error; $\\Delta$ = finite difference operator.\n\n*Usage: $\\Delta x = x_2 - x_1$; gradient update $\\Delta W$; Kronecker delta $\\delta_{ij}$*"
+    },
+    {
+      "id": "c05",
+      "front": "$$\\delta_{ij}$$",
+      "back": "**Kronecker delta** (*DEL-tuh eye-jay*)\n\n$$\\delta_{ij} = \\begin{cases} 1 & i = j \\\\ 0 & i \\neq j \\end{cases}$$\n\n*Usage: entries of the identity matrix $I_{ij} = \\delta_{ij}$; selecting one component from a sum*"
+    },
+    {
+      "id": "c06",
+      "front": "$$\\epsilon$$",
+      "back": "**epsilon** (*EP-suh-lon*)\n\nA small positive quantity; arbitrarily close to zero.\n\n*Usage: $\\epsilon$-neighbourhood in analysis; regularisation $\\|W\\|^2 + \\epsilon$; numerical zero-tolerance*"
+    },
+    {
+      "id": "c07",
+      "front": "$$\\theta,\\;\\Theta$$",
+      "back": "**theta** (*THAY-tuh*)\n\nAngle or parameter vector.\n\n*Usage: angle between vectors $\\cos\\theta = \\frac{\\vec{u}\\cdot\\vec{v}}{\\|\\vec{u}\\|\\|\\vec{v}\\|}$; model parameters $\\Theta$ in ML*"
+    },
+    {
+      "id": "c08",
+      "front": "$$\\lambda,\\;\\Lambda$$",
+      "back": "**lambda** (*LAM-duh*)\n\nEigenvalue; regularisation strength.\n\n*Usage: $A\\vec{v} = \\lambda\\vec{v}$; $\\Lambda = \\mathrm{diag}(\\lambda_1,\\ldots,\\lambda_n)$ in eigendecomposition*"
+    },
+    {
+      "id": "c09",
+      "front": "$$\\mu$$",
+      "back": "**mu** (*MEW*)\n\nMean; measure; learning rate variant.\n\n*Usage: $\\mu = \\frac{1}{n}\\sum x_i$ (sample mean); momentum parameter in optimisers*"
+    },
+    {
+      "id": "c10",
+      "front": "$$\\nu$$",
+      "back": "**nu** (*NEW*)\n\nFrequency; degrees of freedom.\n\n*Usage: $\\nu$ degrees of freedom in a $t$-distribution; occasionally a second eigenvalue index*"
+    },
+    {
+      "id": "c11",
+      "front": "$$\\rho$$",
+      "back": "**rho** (*ROW*)\n\nCorrelation coefficient; spectral radius.\n\n*Usage: Pearson correlation $\\rho(X,Y)$; spectral radius $\\rho(A) = \\max_i|\\lambda_i|$*"
+    },
+    {
+      "id": "c12",
+      "front": "$$\\sigma,\\;\\Sigma$$",
+      "back": "**sigma** (*SIG-muh*)\n\n$\\sigma$ = singular value or standard deviation; $\\Sigma$ = diagonal singular-value matrix in SVD or covariance matrix.\n\n*Usage: $A = U\\Sigma V^T$; $\\sigma_1 \\geq \\sigma_2 \\geq \\cdots \\geq 0$*"
+    },
+    {
+      "id": "c13",
+      "front": "$$\\tau$$",
+      "back": "**tau** (*TOW, as in cow*)\n\nTemperature parameter; time constant.\n\n*Usage: softmax temperature $p_i \\propto e^{z_i/\\tau}$; time constant in exponential decay*"
+    },
+    {
+      "id": "c14",
+      "front": "$$\\phi,\\;\\Phi$$",
+      "back": "**phi** (*FEE, or FI*)\n\nFeature map; activation function.\n\n*Usage: $\\phi:\\mathbb{R}^n\\to\\mathbb{R}^d$ feature map; $\\Phi$ design matrix in kernel methods*"
+    },
+    {
+      "id": "c15",
+      "front": "$$\\psi,\\;\\Psi$$",
+      "back": "**psi** (*SIGH, or PSIGH*)\n\nState function; wave function.\n\n*Usage: latent state in state-space models; wave function in quantum computing contexts*"
+    },
+    {
+      "id": "c16",
+      "front": "$$\\omega,\\;\\Omega$$",
+      "back": "**omega** (*oh-MAY-guh*)\n\n$\\omega$ = angular frequency; $\\Omega$ = sample space or weight decay.\n\n*Usage: $\\Omega$ = sample space in probability; weight decay regularisation $\\Omega(W)$*"
+    },
+    {
+      "id": "c17",
+      "front": "$$\\mathbb{R},\\;\\mathbb{R}^+,\\;\\mathbb{R}^n$$",
+      "back": "**Real numbers, positive reals, n-tuples**\n\n$\\mathbb{R}$ = the real line; $\\mathbb{R}^+ = \\{x\\in\\mathbb{R}\\mid x>0\\}$; $\\mathbb{R}^n$ = column vectors of $n$ real numbers.\n\n*Usage: every vector space in these readings lives inside some $\\mathbb{R}^n$*"
+    },
+    {
+      "id": "c18",
+      "front": "$$\\vec{v},\\;\\vec{0}$$",
+      "back": "**Vector notation**\n\nArrow overhead distinguishes vectors from scalars; $\\vec{0}$ is the zero vector.\n\n*Usage: $\\vec{v} \\in \\mathbb{R}^n$; $\\vec{0}_V$ is the zero vector of space $V$*"
+    },
+    {
+      "id": "c19",
+      "front": "$$[S]$$",
+      "back": "**Span of a set**\n\n$[S] = \\left\\{\\sum_i c_i \\vec{s}_i \\mid c_i \\in \\mathbb{R},\\; \\vec{s}_i \\in S\\right\\}$\n\n*Usage: $[S]$ is the smallest subspace containing $S$; $[\\vec{v}_1,\\vec{v}_2]$ is a plane through the origin if linearly independent*"
+    },
+    {
+      "id": "c20",
+      "front": "$$\\mathcal{E}_n = \\langle\\vec{e}_1,\\ldots,\\vec{e}_n\\rangle$$",
+      "back": "**Standard basis for $\\mathbb{R}^n$**\n\n$\\vec{e}_i$ has a $1$ in position $i$ and $0$s elsewhere.\n\n*Usage: coordinates of $\\vec{v}$ in $\\mathcal{E}_n$ are just the components $v_1,\\ldots,v_n$; columns of $I_n$*"
+    },
+    {
+      "id": "c21",
+      "front": "$$V \\cong W$$",
+      "back": "**Isomorphic spaces**\n\nThere exists a bijective linear map (isomorphism) between $V$ and $W$.\n\n*Usage: any $n$-dimensional real vector space is isomorphic to $\\mathbb{R}^n$*"
+    },
+    {
+      "id": "c22",
+      "front": "$$M \\oplus N$$",
+      "back": "**Direct sum of subspaces**\n\n$M \\oplus N$ means $M \\cap N = \\{\\vec{0}\\}$ and every vector in $M+N$ decomposes uniquely as $\\vec{m}+\\vec{n}$.\n\n*Usage: $\\mathbb{R}^n = \\mathcal{R}(P) \\oplus \\mathcal{N}(P)$ for any projection $P$*"
+    },
+    {
+      "id": "c23",
+      "front": "$$\\mathrm{Rep}_B(\\vec{v})$$",
+      "back": "**Coordinate representation of a vector**\n\nThe column of scalars $c_1,\\ldots,c_n$ such that $\\vec{v} = c_1\\vec{\\beta}_1 + \\cdots + c_n\\vec{\\beta}_n$ relative to basis $B$.\n\n*Usage: same vector has different coordinate tuples in different bases*"
+    },
+    {
+      "id": "c24",
+      "front": "$$\\mathrm{Rep}_{B,D}(h)$$",
+      "back": "**Matrix representation of a map**\n\nThe matrix $M$ such that $\\mathrm{Rep}_D(h(\\vec{v})) = M\\,\\mathrm{Rep}_B(\\vec{v})$ for all $\\vec{v}$.\n\n*Usage: changing bases replaces $M$ with $P^{-1}MP$ (similarity transform)*"
+    },
+    {
+      "id": "c25",
+      "front": "$$|T|$$",
+      "back": "**Determinant**\n\nA scalar that encodes the signed volume scaling factor of the linear map $T$.\n\n*Usage: $|T| = 0 \\iff T$ is singular; $|AB| = |A||B|$; $|T^{-1}| = 1/|T|$*"
+    },
+    {
+      "id": "c26",
+      "front": "$$\\mathcal{R}(h),\\;\\mathcal{N}(h)$$",
+      "back": "**Range space and null space**\n\n$\\mathcal{R}(h) = \\{h(\\vec{v}) \\mid \\vec{v}\\in V\\}$ (image); $\\mathcal{N}(h) = \\{\\vec{v}\\mid h(\\vec{v})=\\vec{0}\\}$ (kernel).\n\n*Usage: $\\dim\\mathcal{R}(h) + \\dim\\mathcal{N}(h) = \\dim V$ (rank-nullity)*"
+    },
+    {
+      "id": "c27",
+      "front": "$$\\mathcal{P}_n,\\;\\mathcal{M}_{n\\times m}$$",
+      "back": "**Polynomial and matrix spaces**\n\n$\\mathcal{P}_n$ = polynomials of degree $\\leq n$ (dimension $n+1$); $\\mathcal{M}_{n\\times m}$ = real $n\\times m$ matrices (dimension $nm$).\n\n*Usage: standard examples showing vector spaces arise beyond column vectors*"
+    },
+    {
+      "id": "c28",
+      "front": "$h_{i,j}$",
+      "back": "**Matrix entry notation**\n\n$h_{i,j}$ denotes the entry in row $i$, column $j$ of matrix $H$.\n\n*Usage: $(AB)_{ij} = \\sum_k a_{ik}b_{kj}$; $(A^T)_{ij} = a_{ji}$*"
+    },
+    {
+      "id": "c29",
+      "front": "$\\langle B, D\\rangle$",
+      "back": "**Basis pair notation**\n\nDenotes a pair of bases — domain basis $B$ and codomain basis $D$ — used when representing a linear map as a matrix.\n\n*Usage: $\\mathrm{Rep}_{B,D}(h)$ is the $|D|\\times|B|$ matrix of $h$ w.r.t. these bases*"
+    },
+    {
+      "id": "c30",
+      "front": "$$Z_{n\\times m},\\;I_{n\\times n}$$",
+      "back": "**Zero matrix and identity matrix**\n\n$Z$ has all entries 0; $I$ has 1s on the diagonal and 0s elsewhere.\n\n*Usage: $AI = IA = A$; $AZ = ZA = Z$; $I_{ij} = \\delta_{ij}$*"
+    },
+    {
+      "id": "c31",
+      "front": "$$\\langle\\,\\ldots\\,\\rangle \\text{ (sequence)}$$",
+      "back": "**Ordered sequence notation**\n\nAngle brackets $\\langle a_1, a_2, \\ldots \\rangle$ denote an ordered list (order matters, repetition allowed).\n\n*Usage: a basis is an ordered sequence of vectors; $\\langle\\vec{e}_1,\\vec{e}_2\\rangle \\neq \\langle\\vec{e}_2,\\vec{e}_1\\rangle$ as bases*"
+    },
+    {
+      "id": "c32",
+      "front": "$$\\mathcal{R}_\\infty(h),\\;\\mathcal{N}_\\infty(h)$$",
+      "back": "**Generalised range and null space**\n\n$\\mathcal{N}_\\infty(h) = \\bigcup_{k\\geq 1}\\mathcal{N}(h^k)$; $\\mathcal{R}_\\infty(h) = \\bigcap_{k\\geq 1}\\mathcal{R}(h^k)$.\n\n*Usage: appear in Jordan canonical form — $\\mathbb{R}^n = \\mathcal{R}_\\infty(h)\\oplus\\mathcal{N}_\\infty(h)$*"
+    }
+  ]
+}

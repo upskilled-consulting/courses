@@ -1,0 +1,79 @@
+{
+  "id": "d3",
+  "moduleId": "linear-algebra",
+  "title": "Vector Spaces & Dimension",
+  "description": "Flashcards for subspace tests, span, linear independence, basis, rank-nullity, and the dimension theorem.",
+  "estimatedMinutes": 8,
+  "cards": [
+    {
+      "id": "c01",
+      "front": "**Subspace test** — when is $S \\subseteq V$ a subspace?",
+      "back": "**Three-condition subspace test**\n\n1. $\\vec{0} \\in S$\n2. $\\vec{u},\\vec{v}\\in S \\Rightarrow \\vec{u}+\\vec{v}\\in S$ (closed under addition)\n3. $\\vec{v}\\in S,\\;c\\in\\mathbb{R} \\Rightarrow c\\vec{v}\\in S$ (closed under scaling)\n\n*Usage: verify column space, null space, row space are all subspaces*"
+    },
+    {
+      "id": "c02",
+      "front": "$$[\\vec{v}_1,\\ldots,\\vec{v}_k] = ?$$",
+      "back": "**Span**\n\n$$[\\vec{v}_1,\\ldots,\\vec{v}_k] = \\left\\{c_1\\vec{v}_1+\\cdots+c_k\\vec{v}_k \\mid c_i\\in\\mathbb{R}\\right\\}$$\n\nThis is always a subspace (the smallest one containing all $\\vec{v}_i$).\n\n*Usage: the column space of $A$ is the span of its columns*"
+    },
+    {
+      "id": "c03",
+      "front": "When is $\\{\\vec{v}_1,\\ldots,\\vec{v}_k\\}$ **linearly independent**?",
+      "back": "**Linear independence**\n\n$$c_1\\vec{v}_1 + \\cdots + c_k\\vec{v}_k = \\vec{0} \\implies c_1 = \\cdots = c_k = 0$$\n\nEquivalently: no vector in the set is a linear combination of the others.\n\n*Usage: a set is linearly dependent iff the matrix formed from the vectors has a non-trivial null space*"
+    },
+    {
+      "id": "c04",
+      "front": "What is a **basis** for a vector space $V$?",
+      "back": "**Basis = linearly independent spanning set**\n\n$B = \\{\\vec{\\beta}_1,\\ldots,\\vec{\\beta}_n\\}$ is a basis for $V$ iff:\n1. $[B] = V$ (spanning)\n2. $B$ is linearly independent\n\n*Equivalently: every $\\vec{v}\\in V$ has a unique representation $\\vec{v}=\\sum c_i\\vec{\\beta}_i$*"
+    },
+    {
+      "id": "c05",
+      "front": "What do the **coordinates** of $\\vec{v}$ w.r.t. basis $B$ mean?",
+      "back": "**Coordinate representation**\n\n$\\mathrm{Rep}_B(\\vec{v}) = (c_1,\\ldots,c_n)^T$ where $\\vec{v} = c_1\\vec{\\beta}_1 + \\cdots + c_n\\vec{\\beta}_n$.\n\nCoordinates are unique because $B$ is linearly independent.\n\n*Usage: change of basis replaces the coordinate tuple, not the vector itself*"
+    },
+    {
+      "id": "c06",
+      "front": "**Dimension** of a vector space",
+      "back": "**dim $V$ = number of vectors in any basis**\n\nAll bases of a finite-dimensional space have the same size — this is the **Dimension Theorem**.\n\n$\\dim\\mathbb{R}^n = n$;\\; $\\dim\\mathcal{P}_n = n+1$;\\; $\\dim\\mathcal{M}_{n\\times m} = nm$\n\n*Usage: dimension determines the degrees of freedom in the space*"
+    },
+    {
+      "id": "c07",
+      "front": "**Rank-Nullity Theorem**",
+      "back": "For a linear map $h: V \\to W$:\n\n$$\\dim\\mathcal{R}(h) + \\dim\\mathcal{N}(h) = \\dim V$$\n$$\\mathrm{rank}(h) + \\mathrm{nullity}(h) = \\dim V$$\n\n*Usage: if a matrix $A\\in\\mathbb{R}^{m\\times n}$ has rank $r$, then its null space has dimension $n-r$*"
+    },
+    {
+      "id": "c08",
+      "front": "**Rank** of a matrix $A$",
+      "back": "**Rank = dimension of column space = dimension of row space**\n\n$$\\mathrm{rank}(A) = \\dim\\mathcal{R}(A) = \\dim\\mathrm{rowspace}(A)$$\n\nRow rank always equals column rank — a non-obvious fact.\n\n*Usage: $A$ is invertible $\\iff$ $\\mathrm{rank}(A)=n$; rank equals number of non-zero singular values*"
+    },
+    {
+      "id": "c09",
+      "front": "**Nullity** of a matrix $A \\in \\mathbb{R}^{m\\times n}$",
+      "back": "**Nullity = dimension of null space**\n\n$$\\mathrm{nullity}(A) = \\dim\\{\\vec{x}\\mid A\\vec{x}=\\vec{0}\\} = n - \\mathrm{rank}(A)$$\n\n*Usage: nullity $> 0$ means the system $A\\vec{x}=\\vec{b}$ either has no solution or infinitely many*"
+    },
+    {
+      "id": "c10",
+      "front": "**Invertible Matrix Theorem** — equivalent conditions",
+      "back": "For $A \\in \\mathbb{R}^{n\\times n}$, the following are equivalent:\n\n- $A$ is invertible\n- $\\mathrm{rank}(A) = n$\n- $\\mathcal{N}(A) = \\{\\vec{0}\\}$ (nullity = 0)\n- $|A| \\neq 0$\n- $A\\vec{x}=\\vec{b}$ has a unique solution for every $\\vec{b}$\n- The columns of $A$ form a basis for $\\mathbb{R}^n$"
+    },
+    {
+      "id": "c11",
+      "front": "**Dimension formula for a sum of subspaces**",
+      "back": "$$\\dim(M + N) = \\dim M + \\dim N - \\dim(M \\cap N)$$\n\nInclusion–exclusion for subspaces.\n\n*Usage: $M\\oplus N$ (direct sum) iff $M\\cap N=\\{\\vec{0}\\}$, giving $\\dim(M\\oplus N)=\\dim M+\\dim N$*"
+    },
+    {
+      "id": "c12",
+      "front": "**Null space** of $A$ — definition and structure",
+      "back": "**Null space (kernel)**\n\n$$\\mathcal{N}(A) = \\{\\vec{x}\\in\\mathbb{R}^n \\mid A\\vec{x} = \\vec{0}\\}$$\n\nAlways a subspace of $\\mathbb{R}^n$. Its dimension is the nullity of $A$.\n\n*Usage: null space = set of all homogeneous solutions; dimension tells number of free variables*"
+    },
+    {
+      "id": "c13",
+      "front": "**General = Particular + Homogeneous** decomposition",
+      "back": "If $A\\vec{x}=\\vec{b}$ has a particular solution $\\vec{x}_p$, then every solution is:\n\n$$\\vec{x} = \\vec{x}_p + \\vec{x}_h, \\quad \\vec{x}_h \\in \\mathcal{N}(A)$$\n\n*Usage: $\\vec{x}_p$ is any specific solution; $\\vec{x}_h$ ranges over the entire null space*"
+    },
+    {
+      "id": "c14",
+      "front": "**Basis shortcut**: when does a set of $n$ vectors automatically form a basis for $\\mathbb{R}^n$?",
+      "back": "In an $n$-dimensional space, any set of $n$ vectors that satisfies **either** condition is automatically a basis:\n\n- $n$ linearly independent vectors, OR\n- $n$ vectors that span $\\mathbb{R}^n$\n\n*Usage: checking one condition is enough — independence implies no redundancy, spanning implies no gaps; for square matrices: full rank iff invertible*"
+    }
+  ]
+}

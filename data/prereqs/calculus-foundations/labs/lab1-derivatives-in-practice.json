@@ -1,0 +1,23 @@
+{
+  "id": "lab1",
+  "moduleId": "calculus-foundations",
+  "title": "Derivatives in Practice",
+  "estimatedMinutes": 45,
+  "description": "## Lab 1: Derivatives in Practice\n\nYou have seen the limit definition of the derivative and the rules for computing it analytically. This lab grounds those ideas in code: you will implement derivative approximations from first principles, verify the differentiation rules numerically, and use PyTorch's autograd to see what a framework actually computes under the hood.\n\n### What You'll Build\n\n- A **finite difference** function that approximates $f'(x)$ using $[f(x+h) - f(x)] / h$ for decreasing values of $h$, and a plot showing how accuracy improves then degrades with floating-point noise\n- A **rule verifier** that checks the power rule, product rule, and chain rule by comparing your analytic derivative to the numerical estimate\n- A **tangent line visualizer** that animates the secant line converging to the tangent as $h \\to 0$\n- A **sigmoid derivative explorer** that plots $\\sigma(x)$ and $\\sigma'(x) = \\sigma(x)(1-\\sigma(x))$ side-by-side, highlighting the vanishing gradient zones\n- A **PyTorch autograd checker** that confirms all your analytic results match `.backward()` to machine precision\n\n### Key Concepts Practiced\n\nBy the end you will understand why the limit definition is useful conceptually but numerical differentiation is impractical at scale; why autograd computes symbolic (not numerical) derivatives; and how the vanishing gradient problem appears directly from the sigmoid's derivative formula.",
+  "objectives": [
+    "Implement a finite difference approximation and observe the tradeoff between step size h and numerical accuracy.",
+    "Verify the power, product, and chain rules by comparing analytic derivatives to numerical estimates for several functions.",
+    "Visualize the secant line converging to the tangent line as h → 0 for f(x) = x².",
+    "Plot σ(x) and σ'(x) = σ(x)(1−σ(x)) and identify the x-range where the gradient is effectively zero.",
+    "Confirm all analytic derivatives against PyTorch autograd, observing that autograd computes exact symbolic derivatives rather than finite differences."
+  ],
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/calculus-foundations/lab1_derivatives_in_practice.ipynb",
+  "prevItem": {
+    "type": "quiz",
+    "id": "q2"
+  },
+  "nextItem": {
+    "type": "lab",
+    "id": "lab2"
+  }
+}

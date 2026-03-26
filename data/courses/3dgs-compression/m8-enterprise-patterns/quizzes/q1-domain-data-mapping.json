@@ -1,0 +1,75 @@
+{
+  "id": "q1",
+  "moduleId": "m8",
+  "title": "Domain Logic & Data Mapping",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "questions": [
+    {
+      "id": "q8_q1_1",
+      "type": "multiple-choice",
+      "prompt": "A 3DGS inference codebase has a `compress_scene()` function that: (1) parses the HTTP request body, (2) runs Gaussian pruning based on opacity thresholds, (3) quantizes SH coefficients, and (4) formats the compressed result as JSON. Which architectural principle does this violate, and what is the correct fix?",
+      "options": [
+        { "id": "a", "text": "It violates the Single Responsibility Principle; fix by splitting into four separate functions within the same module.", "correct": false },
+        { "id": "b", "text": "It violates the dependency rule: presentation logic (HTTP parsing, JSON formatting) is mixed with domain logic (pruning, quantization). Fix by moving HTTP/JSON concerns to a controller, and leaving only domain operations in the domain layer.", "correct": true },
+        { "id": "c", "text": "It violates DRY; fix by extracting the JSON formatting into a shared utility module.", "correct": false },
+        { "id": "d", "text": "No violation exists — combining all steps in one function is the Transaction Script pattern and is architecturally valid.", "correct": false }
+      ],
+      "explanation": "The dependency rule states that the domain layer must never depend on the presentation layer. HTTP request parsing and JSON formatting are presentation concerns; Gaussian pruning and SH quantization are domain concerns. Mixing them in a single function means any change to the API schema (e.g., switching from JSON to MessagePack) requires modifying compression logic — a clear violation. The fix is a three-layer decomposition: controller parses the request → calls domain service → domain service calls repository → controller serializes domain result to response.",
+      "hint": "Which concerns belong to 'how we receive/return data' vs. 'what we compute'?"
+    },
+    {
+      "id": "q8_q1_2",
+      "type": "multiple-choice",
+      "prompt": "A team has a 3DGS compression pipeline with 12 distinct compression strategies (VQ, SH reduction at 3 different degrees, structural pruning, 4 quantization levels, 2 hybrid approaches). The current implementation uses a large `if/elif` chain that selects the correct algorithm. New strategies are added every two weeks. Which domain logic pattern should they migrate to, and why?",
+      "options": [
+        { "id": "a", "text": "Table Module — process all Gaussians as a single dataset transformation for maximum throughput.", "correct": false },
+        { "id": "b", "text": "Transaction Script — add more elif branches as needed; it is the simplest approach and avoids over-engineering.", "correct": false },
+        { "id": "c", "text": "Domain Model with Strategy pattern — each compression strategy becomes a class implementing a common interface, eliminating the if/elif chain and allowing new strategies to be added without modifying existing code.", "correct": true },
+        { "id": "d", "text": "Service Layer — move the if/elif chain into the service layer so the domain objects remain simple.", "correct": false }
+      ],
+      "explanation": "With 12+ strategies and new ones every two weeks, Transaction Script's if/elif chain will become the primary source of bugs and merge conflicts. Every addition touches the same function, increasing regression risk. Domain Model with Strategy pattern resolves this via the Open-Closed Principle: each strategy is a separate class, new strategies are new classes, and the dispatcher simply looks up the strategy by name. The Service Layer option doesn't solve the problem — it just moves the conditional logic to a different layer, still requiring the same modifications for each new strategy. Table Module doesn't address dispatch complexity.",
+      "hint": "Which pattern eliminates the need to modify existing code when adding a new algorithm?"
+    },
+    {
+      "id": "q8_q1_3",
+      "type": "code-completion",
+      "prompt": "Complete the Unit of Work `commit()` method that batches all dirty-object updates into a single SQL transaction. The method should execute all inserts, then all updates, then all deletes, in that order to respect referential integrity:",
+      "codeTemplate": "class UnitOfWork:\n    def __init__(self):\n        self._new     = []   # objects to INSERT\n        self._dirty   = []   # objects to UPDATE\n        self._removed = []   # objects to DELETE\n\n    def register_new(self, obj):     self._new.append(obj)\n    def register_dirty(self, obj):   self._dirty.append(obj)\n    def register_removed(self, obj): self._removed.append(obj)\n\n    def commit(self, mapper):\n        with mapper.transaction():            # single DB transaction\n            for obj in ___BLANK___:           # insert new objects first\n                mapper.insert(obj)\n            for obj in self._dirty:           # then update modified objects\n                mapper.update(obj)\n            for obj in self._removed:         # then delete removed objects\n                mapper.delete(obj)",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "self._new",
+        "self._new:"
+      ],
+      "explanation": "The correct order is INSERT → UPDATE → DELETE. Inserting first ensures that any foreign key references to new objects exist before updates or deletes run. Deleting last ensures that objects being referenced by dirty objects are not removed before the update writes their new foreign key values. This ordering mirrors how databases enforce referential integrity constraints during a transaction. The `with mapper.transaction()` context manager ensures all three phases are atomic — if any operation fails, all are rolled back.",
+      "hint": "What order respects foreign key constraints: insert new parents before updating children that reference them."
+    },
+    {
+      "id": "q8_q1_4",
+      "type": "multiple-choice",
+      "prompt": "A developer loads 500 `GaussianScene` objects from a database, then iterates over them to print `scene.tile_count` for each. Each `scene.tile_count` access triggers a separate SQL query. The total operation takes 4.2 seconds despite the data fitting in memory. What is this problem called, and which two solutions should be considered?",
+      "options": [
+        { "id": "a", "text": "Cache miss storm — solve by adding more RAM to the database server and enabling query result caching.", "correct": false },
+        { "id": "b", "text": "The N+1 problem — solve by (1) eager-loading tile counts via a JOIN when fetching scenes, or (2) batch-loading all 500 scenes' tile counts in a single IN-clause query after the initial fetch.", "correct": true },
+        { "id": "c", "text": "Lock contention — solve by switching from Pessimistic to Optimistic Offline Lock to reduce blocking.", "correct": false },
+        { "id": "d", "text": "Impedance mismatch — solve by switching from a relational database to a document store that can return the tile count with the scene document.", "correct": false }
+      ],
+      "explanation": "This is the classic N+1 problem: 1 query for the 500 scenes + 500 individual queries for tile counts = 501 total queries. The N+1 problem occurs when lazy-loaded associations are accessed in a loop. Two standard solutions: (1) Eager loading — rewrite the initial query to JOIN the tile count in the same query, returning all data in one round-trip; (2) Batch loading — after fetching scenes, collect all scene IDs and execute one query with `WHERE scene_id IN (id1, id2, ..., id500)` to retrieve all tile counts at once. Changing the database technology doesn't eliminate the N+1 pattern; it just changes the query language.",
+      "hint": "Count the queries: one to fetch the list, then how many for the attribute access?"
+    },
+    {
+      "id": "q8_q1_5",
+      "type": "multiple-choice",
+      "prompt": "A `GaussianScene` class inherits from `BaseScene`, and `CompressedScene` inherits from `GaussianScene`. You need to store these in a relational database. A DBA requires that every Gaussian-specific attribute be nullable only when the row represents a `BaseScene`, and every compressed-specific attribute be nullable only when the row represents a non-`CompressedScene`. Which inheritance mapping strategy satisfies this constraint, and what is its main performance cost?",
+      "options": [
+        { "id": "a", "text": "Single Table Inheritance — one table, discriminator column. Satisfies the constraint because all columns are present. Performance cost: wasted space from nullable columns.", "correct": false },
+        { "id": "b", "text": "Class Table Inheritance — one table per class in the hierarchy, joined by foreign key. Satisfies the nullability constraint because each table only contains columns for that class. Performance cost: queries for a full object require two or three JOIN operations.", "correct": true },
+        { "id": "c", "text": "Concrete Table Inheritance — one complete table per concrete class. Satisfies the constraint and has no nullability issues. Performance cost: querying across all scene types requires a UNION of all tables.", "correct": false },
+        { "id": "d", "text": "No relational strategy can satisfy this nullability constraint; use a document store instead.", "correct": false }
+      ],
+      "explanation": "Class Table Inheritance places base class attributes in the `base_scenes` table, Gaussian-specific attributes in `gaussian_scenes` (FK → base), and compression-specific attributes in `compressed_scenes` (FK → gaussian). This enforces the nullability requirement at the database level: a row in `gaussian_scenes` only exists if the scene is a GaussianScene. The cost is JOIN overhead: loading a CompressedScene requires joining three tables. Single Table Inheritance cannot enforce the nullability constraint (all columns are in one table, and non-applicable columns are nullable by construction). Concrete Table Inheritance eliminates joins but duplicates base class columns in each concrete table.",
+      "hint": "Which strategy puts each class's attributes in its own dedicated table?"
+    }
+  ]
+}

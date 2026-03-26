@@ -1,0 +1,106 @@
+{
+  "id": "r0",
+  "moduleId": "probability-foundations",
+  "title": "Random Variables and Probability Distributions",
+  "estimatedMinutes": 16,
+  "learningObjectives": [
+    {
+      "id": "r1-lo1",
+      "verb": "Define",
+      "description": "Define a random variable as a function from a sample space to the reals and distinguish discrete random variables (PMFs) from continuous random variables (PDFs)",
+      "skillTags": [
+        "probability-foundations",
+        "distributions"
+      ]
+    },
+    {
+      "id": "r1-lo2",
+      "verb": "Compute",
+      "description": "Compute probabilities using a PMF, a PDF via integration, and a CDF, and state the normalization condition each must satisfy",
+      "skillTags": [
+        "probability-foundations",
+        "distributions"
+      ]
+    },
+    {
+      "id": "r1-lo3",
+      "verb": "Apply",
+      "description": "Apply the law of total probability to marginalize over a nuisance variable, and state the conditions under which two random variables are independent",
+      "skillTags": [
+        "probability-foundations"
+      ]
+    },
+    {
+      "id": "r1-lo4",
+      "verb": "Explain",
+      "description": "Explain what a joint distribution encodes and how marginal and conditional distributions are derived from it",
+      "skillTags": [
+        "probability-foundations",
+        "distributions"
+      ]
+    }
+  ],
+  "prevItem": null,
+  "nextItem": {
+    "type": "reading",
+    "id": "r1"
+  },
+  "content": "## What Is Probability?\n\nBefore defining random variables, we need a precise notion of probability. A **probability space** has three components:\n\n- **Sample space** $\\Omega$ — the set of all possible outcomes. For a fair die: $\\Omega = \\{1,2,3,4,5,6\\}$.\n- **Event space** $\\mathcal{F}$ — a collection of subsets of $\\Omega$ (the things we can assign probabilities to).\n- **Probability measure** $P$ — a function assigning each event a number in $[0,1]$ satisfying the **Kolmogorov axioms**:\n  1. $P(A) \\geq 0$ for all events $A$\n  2. $P(\\Omega) = 1$ (something always happens)\n  3. $P(A \\cup B) = P(A) + P(B)$ when $A$ and $B$ are mutually exclusive\n\nFrom these three axioms alone, all of classical probability follows — including complement rule $P(A^c) = 1 - P(A)$, union formula $P(A \\cup B) = P(A) + P(B) - P(A \\cap B)$, and more.\n\n---\n\n## Random Variables\n\nA **random variable** $X$ is a function $X: \\Omega \\to \\mathbb{R}$ that assigns a real number to each outcome. For example, if $\\Omega$ is all possible sequences of 10 coin flips, $X$ could be the number of heads.\n\nRandom variables let us work with numbers instead of abstract outcomes. The probability that $X$ takes a particular value or range of values is determined by $P$ acting on the corresponding events in $\\Omega$.\n\n---\n\n## Discrete Random Variables and PMFs\n\nA random variable is **discrete** if it takes values in a countable set (integers, categories, etc.).\n\nThe **probability mass function (PMF)** specifies the probability of each value:\n\n$$p(x) = P(X = x)$$\n\n**Normalization:** $\\sum_x p(x) = 1$\n\n**Example — rolling a fair die:**\n\n$$p(x) = \\frac{1}{6} \\quad \\text{for } x \\in \\{1,2,3,4,5,6\\}$$\n\n**Example — Bernoulli($\\theta$):** a binary outcome (heads/tails, success/failure)\n\n$$p(x) = \\theta^x (1-\\theta)^{1-x} \\quad x \\in \\{0,1\\}$$\n\nThe parameter $\\theta \\in [0,1]$ is the probability of $X=1$.\n\n---\n\n## Continuous Random Variables and PDFs\n\nA random variable is **continuous** if it can take any value in an interval. For continuous RVs, $P(X = x) = 0$ for any specific value — probability is defined only over intervals.\n\nThe **probability density function (PDF)** $f(x)$ satisfies:\n\n$$P(a \\leq X \\leq b) = \\int_a^b f(x)\\, dx$$\n\n**Normalization:** $\\int_{-\\infty}^{\\infty} f(x)\\, dx = 1$\n\nNote that $f(x)$ itself is not a probability — it is a *density*, so it can exceed 1.\n\n**Example — Uniform($a$, $b$):**\n\n$$f(x) = \\frac{1}{b-a} \\quad \\text{for } x \\in [a,b]$$\n\n**Example — Gaussian($\\mu$, $\\sigma^2$):**\n\n$$f(x) = \\frac{1}{\\sigma\\sqrt{2\\pi}} \\exp\\!\\left(-\\frac{(x-\\mu)^2}{2\\sigma^2}\\right)$$\n\n---\n\n## Cumulative Distribution Functions\n\nThe **cumulative distribution function (CDF)** works for both discrete and continuous RVs:\n\n$$F(x) = P(X \\leq x)$$\n\nFor discrete RVs: $F(x) = \\sum_{t \\leq x} p(t)$\n\nFor continuous RVs: $F(x) = \\int_{-\\infty}^x f(t)\\, dt$\n\n**Key properties:**\n- $F(x)$ is non-decreasing\n- $\\lim_{x \\to -\\infty} F(x) = 0$, $\\lim_{x \\to +\\infty} F(x) = 1$\n- For continuous RVs: $f(x) = F'(x)$ (differentiating the CDF gives the PDF)\n\nThe CDF is useful for computing probabilities over ranges: $P(a < X \\leq b) = F(b) - F(a)$.\n\n---\n\n## Joint Distributions\n\nWhen working with multiple random variables $X$ and $Y$, the **joint distribution** $p(x, y)$ (or $f(x,y)$ for continuous) encodes all the probabilistic information about both variables simultaneously.\n\n### Marginal Distributions\n\nTo recover the distribution of one variable alone, **sum (or integrate) out** the other:\n\n$$p(x) = \\sum_y p(x, y) \\qquad \\text{(discrete)}$$\n\n$$f(x) = \\int_{-\\infty}^{\\infty} f(x, y)\\, dy \\qquad \\text{(continuous)}$$\n\nThis is called **marginalizing** over $y$.\n\n### Conditional Distributions\n\nThe **conditional distribution** of $X$ given $Y = y$ is:\n\n$$p(x \\mid y) = \\frac{p(x, y)}{p(y)}$$\n\nConditioning restricts attention to outcomes where $Y = y$ and renormalizes.\n\n### Independence\n\nTwo random variables are **independent** (written $X \\perp Y$) if and only if:\n\n$$p(x, y) = p(x)\\, p(y) \\quad \\text{for all } x, y$$\n\nEquivalently, $p(x \\mid y) = p(x)$ — knowing $Y$ tells you nothing about $X$.\n\n---\n\n## The Law of Total Probability\n\nIf events $\\{B_1, B_2, \\ldots, B_n\\}$ partition the sample space (mutually exclusive, collectively exhaustive), then for any event $A$:\n\n$$P(A) = \\sum_{i=1}^n P(A \\mid B_i)\\, P(B_i)$$\n\nIn terms of random variables: to compute the marginal distribution of $X$, you can condition on any other variable $Y$ and average out:\n\n$$p(x) = \\sum_y p(x \\mid y)\\, p(y)$$\n\nThis identity appears constantly in probabilistic ML — it is how you compute the likelihood in a latent variable model by marginalizing over the latent variable $z$:\n\n$$p(x) = \\sum_z p(x \\mid z)\\, p(z)$$\n\n---\n\n## Why This Matters for ML\n\nThe language of random variables is the language in which every probabilistic model is written:\n\n- A neural network classifier defines a conditional distribution $p(y \\mid x; \\theta)$ — the PMF over class labels given input $x$.\n- A generative model defines a joint distribution $p(x, z)$ over observations $x$ and latent variables $z$.\n- Training by maximum likelihood chooses $\\theta$ to maximize $\\prod_i p(x_i; \\theta)$ — a product of PMF or PDF values.\n\nUnderstanding distributions precisely — what they are, how they relate, how to manipulate them — is the entry point to every technique covered in the Spinning Up curriculum and beyond.",
+  "equationBreakdowns": [
+    {
+      "label": "Probability Mass Function",
+      "heading": "Discrete Random Variables",
+      "terms": [
+        {
+          "symbol": "p(x)",
+          "name": "PMF value at x",
+          "desc": "The probability that the random variable X equals x exactly. Valid only for discrete RVs; for continuous ones this would always be 0."
+        },
+        {
+          "symbol": "\\sum_x p(x) = 1",
+          "name": "Normalization",
+          "desc": "The probabilities over all possible values must sum to exactly 1 — something must happen."
+        }
+      ]
+    },
+    {
+      "label": "Probability Density Function",
+      "heading": "Continuous Random Variables",
+      "terms": [
+        {
+          "symbol": "f(x)",
+          "name": "Density at x",
+          "desc": "Not a probability — it is a rate of probability per unit of x. Multiply by a small interval width dx to get the probability of X falling in [x, x+dx]."
+        },
+        {
+          "symbol": "\\int_a^b f(x)\\,dx",
+          "name": "Probability of interval",
+          "desc": "The probability that X falls between a and b. Integrating the density over a region gives the probability of that region."
+        }
+      ]
+    },
+    {
+      "label": "Marginalization",
+      "heading": "Joint Distributions",
+      "terms": [
+        {
+          "symbol": "p(x) = \\sum_y p(x,y)",
+          "name": "Marginal distribution",
+          "desc": "Summing the joint distribution over all values of y recovers the distribution of x alone. The y variable is 'marginalized out' — eliminated by averaging over all its possible values."
+        },
+        {
+          "symbol": "p(x \\mid y) = p(x,y)/p(y)",
+          "name": "Conditional distribution",
+          "desc": "The distribution of x when y is known. Divides the joint by the marginal to renormalize — we now know y, so we restrict to that slice and ask what x looks like there."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Downey — Think Stats 2e, Ch. 2–4",
+      "title": "Distributions, PMFs, and CDFs",
+      "url": "https://greenteapress.com/thinkstats2/html/index.html"
+    }
+  ]
+}

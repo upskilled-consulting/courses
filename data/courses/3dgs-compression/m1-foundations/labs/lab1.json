@@ -1,0 +1,20 @@
+{
+  "id": "lab1",
+  "moduleId": "m1",
+  "title": "3DGS Attribute Exploration",
+  "estimatedMinutes": 45,
+  "description": "## Lab 1: Exploring 3DGS Attributes\n\nIn this lab you will work with a synthetic 3DGS dataset (50,000 Gaussians with realistic attribute distributions), explore the full 59-parameter structure, and implement the key mathematical operations from the reading.\n\n### What You'll Build\n\n- A `.ply`-style attribute parser that understands 3DGS binary layout\n- Quaternion-to-rotation-matrix conversion from scratch\n- Covariance reconstruction: \\(\\Sigma = RSS^\\top R^\\top\\)\n- Distribution visualizations for all attribute categories\n- Analytical file-size estimator\n\n### Key Concepts Practiced\n\nBy the end you will be able to look at a real 3DGS `.ply` file and immediately understand every attribute column, compute covariance from stored rotation/scale parameters, and reason quantitatively about where the bits are going.",
+  "objectives": [
+    "Load and parse the attribute structure of a 3DGS representation (synthetic or real .ply).",
+    "Implement quaternion-to-rotation-matrix conversion and verify it produces an orthogonal matrix.",
+    "Reconstruct the 3×3 covariance matrix \\(\\Sigma = RSS^\\top R^\\top\\) and visualize its eigenvalues.",
+    "Plot attribute distributions (opacity, scale, position) and identify which attributes are most compressible.",
+    "Compute the exact uncompressed storage cost and verify the 59-param × 4-byte formula."
+  ],
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/3dgs/lab1_3dgs_attributes.ipynb",
+  "prevItem": {
+    "type": "quiz",
+    "id": "q2"
+  },
+  "nextItem": null
+}

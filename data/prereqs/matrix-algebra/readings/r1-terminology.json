@@ -1,0 +1,76 @@
+{
+  "id": "r1",
+  "moduleId": "matrix-algebra",
+  "title": "Matrices and Vectors",
+  "estimatedMinutes": 14,
+  "learningObjectives": [
+    {
+      "id": "r1-lo1",
+      "verb": "Identify",
+      "description": "Identify the dimensions of a matrix, locate any element using row-column subscript notation, and distinguish row vectors from column vectors",
+      "skillTags": [
+        "matrix-structure"
+      ]
+    },
+    {
+      "id": "r1-lo2",
+      "verb": "Recognise",
+      "description": "Recognise symmetric, diagonal, triangular, identity, and zero matrices on sight and state a key property of each",
+      "skillTags": [
+        "matrix-structure"
+      ]
+    },
+    {
+      "id": "r1-lo3",
+      "verb": "Explain",
+      "description": "Explain the convention that a vector is assumed to be a column vector unless otherwise stated, and apply the subscript notation for rows and columns of a data matrix",
+      "skillTags": [
+        "matrix-structure",
+        "embedding-geometry"
+      ]
+    }
+  ],
+  "content": "## What Is a Matrix?\n\nA **matrix** is a rectangular array of numbers arranged in rows and columns. We denote a matrix by a bold capital letter, and its typical element by a subscripted lowercase:\n\n$$A = [a_{ij}] = \\begin{bmatrix} a_{11} & a_{12} & \\cdots & a_{1K} \\\\ a_{21} & a_{22} & \\cdots & a_{2K} \\\\ \\vdots & & \\ddots & \\vdots \\\\ a_{n1} & a_{n2} & \\cdots & a_{nK} \\end{bmatrix}$$\n\nThe subscript always reads **row, then column** — so \\(a_{ij}\\) is the element in row \\(i\\), column \\(j\\). This convention is universal and worth internalizing early.\n\n### Dimensions\n\nThe **dimensions** of a matrix are its row count and column count, written \\(n \\times K\\) (read \"n by K\"). We say \\(A\\) is an \\(n \\times K\\) matrix if it has \\(n\\) rows and \\(K\\) columns.\n\n- When \\(n = K\\), the matrix is **square**.\n- When \\(n = 1\\), the matrix is a **row vector**.\n- When \\(K = 1\\), the matrix is a **column vector**.\n\n## Special Matrix Types\n\nSeveral structured matrices appear constantly in ML and statistics. Recognizing them on sight saves significant algebra.\n\n### Symmetric Matrix\n\nA matrix is **symmetric** if it equals its own transpose:\n\n$$A \\text{ is symmetric} \\iff a_{ij} = a_{ji} \\text{ for all } i, j$$\n\nCovariance matrices and kernel matrices are always symmetric. This makes them diagonalizable with real eigenvalues — a key fact for PCA and Gaussian geometry.\n\n### Diagonal Matrix\n\nA **diagonal matrix** is a square matrix whose only nonzero entries lie on the main diagonal (top-left to bottom-right):\n\n$$D = \\begin{bmatrix} d_1 & 0 & \\cdots & 0 \\\\ 0 & d_2 & \\cdots & 0 \\\\ \\vdots & & \\ddots & \\vdots \\\\ 0 & 0 & \\cdots & d_n \\end{bmatrix}$$\n\nDiagonal matrices represent **independent scaling** along each coordinate axis. In 3D Gaussian Splatting, isotropic Gaussians use diagonal scale matrices.\n\n### Scalar Matrix\n\nA **scalar matrix** is a diagonal matrix with the same value \\(c\\) in every diagonal position: \\(D = cI\\). It scales all directions equally.\n\n### Identity Matrix\n\nThe **identity matrix** \\(I\\) (or \\(I_n\\) to specify order \\(n\\)) is a scalar matrix with ones on the diagonal:\n\n$$I_3 = \\begin{bmatrix} 1 & 0 & 0 \\\\ 0 & 1 & 0 \\\\ 0 & 0 & 1 \\end{bmatrix}$$\n\nIt is the multiplicative identity for matrices: \\(AI = IA = A\\) for any conformable \\(A\\).\n\n### Triangular Matrices\n\nA **lower triangular** matrix has zeros everywhere above the main diagonal; an **upper triangular** matrix has zeros below it:\n\n$$L = \\begin{bmatrix} l_{11} & 0 & 0 \\\\ l_{21} & l_{22} & 0 \\\\ l_{31} & l_{32} & l_{33} \\end{bmatrix} \\qquad U = \\begin{bmatrix} u_{11} & u_{12} & u_{13} \\\\ 0 & u_{22} & u_{23} \\\\ 0 & 0 & u_{33} \\end{bmatrix}$$\n\nTriangular matrices are important in LU decomposition and Cholesky factorization of covariance matrices.\n\n### Zero (Null) Matrix\n\nThe **zero matrix** \\(\\mathbf{0}\\) has every element equal to zero. It is the additive identity: \\(A + \\mathbf{0} = A\\).\n\n## Vectors\n\nA **vector** is a matrix with exactly one row or one column.\n\n- A **column vector** \\(\\mathbf{a}\\) is \\(n \\times 1\\). Unless otherwise stated, *a vector is assumed to be a column vector*.\n- A **row vector** \\(\\mathbf{a}'\\) is \\(1 \\times n\\) — the transpose of the column vector.\n\n$$\\mathbf{a} = \\begin{bmatrix} a_1 \\\\ a_2 \\\\ \\vdots \\\\ a_n \\end{bmatrix}, \\qquad \\mathbf{a}' = \\begin{bmatrix} a_1 & a_2 & \\cdots & a_n \\end{bmatrix}$$\n\nVectors carry geometric meaning: you can think of \\(\\mathbf{a}\\) as a point in \\(n\\)-dimensional space, or as an arrow from the origin to that point.\n\n## Indexing Conventions for Rows and Columns\n\nWe need consistent notation to refer to individual rows and columns of a matrix \\(A\\):\n\n- \\(\\mathbf{a}_{\\cdot k}\\) or \\(\\mathbf{a}_k\\) denotes **column \\(k\\)** of \\(A\\) (a column vector)\n- \\(\\mathbf{a}_{i \\cdot}\\) or \\(\\mathbf{a}_i'\\) denotes the column vector formed by **transposing row \\(i\\)** of \\(A\\)\n\nSo when we write \\(\\mathbf{x}_i\\), we typically mean the \\(i\\)-th observation as a column vector — the transpose of the \\(i\\)-th row of the data matrix \\(X\\). This subscript-based convention eliminates most ambiguity in econometric and ML notation.",
+  "equationBreakdowns": [
+    {
+      "label": "Matrix Element Notation",
+      "terms": [
+        {
+          "symbol": "A",
+          "name": "Matrix",
+          "desc": "A bold capital letter denotes the full matrix. The same letter lowercase and subscripted denotes a single element."
+        },
+        {
+          "symbol": "a_{ij}",
+          "name": "Element at row i, column j",
+          "desc": "The subscript always reads row first, then column. So a₁₂ is in row 1, column 2 — not row 2, column 1. This ordering matches standard mathematical convention and is enforced throughout."
+        },
+        {
+          "symbol": "n \\times K",
+          "name": "Dimensions",
+          "desc": "n is the number of rows, K the number of columns. The order matters: 3×2 and 2×3 are different matrices. For matrix multiplication to be valid, the inner dimensions must match."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Greene 2003",
+      "title": "Econometric Analysis, 5th ed., Appendix A: Matrix Algebra",
+      "url": null
+    },
+    {
+      "label": "Strang 2016",
+      "title": "Introduction to Linear Algebra, 5th ed.",
+      "url": null
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r0"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r2"
+  }
+}

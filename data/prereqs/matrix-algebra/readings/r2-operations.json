@@ -1,0 +1,112 @@
+{
+  "id": "r2",
+  "moduleId": "matrix-algebra",
+  "title": "Matrix Operations",
+  "estimatedMinutes": 16,
+  "learningObjectives": [
+    {
+      "id": "r2-lo1",
+      "verb": "Compute",
+      "description": "Compute the transpose of a matrix and apply the property (AB)^T = B^T A^T",
+      "skillTags": [
+        "matrix-structure"
+      ]
+    },
+    {
+      "id": "r2-lo2",
+      "verb": "Execute",
+      "description": "Execute matrix addition, scalar multiplication, and matrix multiplication, checking conformability before each product",
+      "skillTags": [
+        "matrix-structure"
+      ]
+    },
+    {
+      "id": "r2-lo3",
+      "verb": "Calculate",
+      "description": "Calculate an inner product as a dot product and interpret the result geometrically as a similarity score",
+      "skillTags": [
+        "embedding-geometry"
+      ]
+    },
+    {
+      "id": "r2-lo4",
+      "verb": "Explain",
+      "description": "Explain why matrix multiplication is not commutative and give a concrete counterexample",
+      "skillTags": [
+        "matrix-structure"
+      ]
+    },
+    {
+      "id": "r2-lo5",
+      "verb": "Interpret",
+      "description": "Interpret a matrix-vector product as a linear combination of the matrix columns, and connect this view to how a neural network layer transforms its input",
+      "skillTags": [
+        "matrix-structure",
+        "coordinate-frames"
+      ]
+    }
+  ],
+  "content": "## Equality\n\nTwo matrices \\(A\\) and \\(B\\) are **equal** if and only if they have the same dimensions *and* every corresponding element is equal:\n\n$$A = B \\iff a_{ij} = b_{ij} \\text{ for all } i, j$$\n\nDimension mismatch means not-equal regardless of element values. This seems obvious but matters when checking whether a transformation preserves matrix structure.\n\n## Transposition\n\nThe **transpose** of \\(A\\), written \\(A'\\) or \\(A^\\top\\), is formed by swapping rows and columns — the \\(k\\)-th row of \\(A\\) becomes the \\(k\\)-th column of \\(A'\\):\n\n$$B = A' \\iff b_{ij} = a_{ji}$$\n\nIf \\(A\\) is \\(n \\times K\\), then \\(A'\\) is \\(K \\times n\\).\n\n### Properties of the Transpose\n\n- \\((A')' = A\\) — transposing twice recovers the original\n- \\((A + B)' = A' + B'\\) — transpose distributes over addition\n- \\((AB)' = B'A'\\) — transpose reverses the order of multiplication\n- \\((ABC)' = C'B'A'\\) — reversal extends to any product length\n- \\(A\\) is symmetric \\(\\iff A = A'\\)\n\nThe reversal rule \\((AB)' = B'A'\\) catches many beginners off guard. It arises from the way inner products work: transposing a product swaps which matrix is pre- and post-multiplied.\n\n## Matrix Addition and Subtraction\n\nAddition and subtraction are **element-wise operations**:\n\n$$C = A + B = [a_{ij} + b_{ij}] \\qquad C = A - B = [a_{ij} - b_{ij}]$$\n\nMatrices must have **identical dimensions** to be added — they are then said to be *conformable for addition*.\n\n### Properties\n\n- **Commutative**: \\(A + B = B + A\\)\n- **Associative**: \\((A + B) + C = A + (B + C)\\)\n- **Additive identity**: \\(A + \\mathbf{0} = A\\)\n\n## Scalar Multiplication\n\nMultiplying a matrix by a **scalar** \\(c\\) scales every element:\n\n$$cA = [c \\cdot a_{ij}]$$\n\nScalar multiplication commutes: \\(cA = Ac\\). It distributes over addition: \\(c(A+B) = cA + cB\\).\n\n## Vector Inner Product\n\nThe **inner product** (dot product) of two column vectors \\(\\mathbf{a}\\) and \\(\\mathbf{b}\\) of the same length is a scalar:\n\n$$\\mathbf{a}'\\mathbf{b} = a_1 b_1 + a_2 b_2 + \\cdots + a_n b_n = \\sum_{i=1}^n a_i b_i$$\n\nNote the form: \\(\\mathbf{a}'\\mathbf{b}\\) is a row vector times a column vector, yielding a \\(1 \\times 1\\) scalar. Since each term \\(a_i b_i = b_i a_i\\), the inner product is symmetric:\n\n$$\\mathbf{a}'\\mathbf{b} = \\mathbf{b}'\\mathbf{a}$$\n\nGeometrically, \\(\\mathbf{a}'\\mathbf{b} = \\|\\mathbf{a}\\|\\,\\|\\mathbf{b}\\|\\cos\\theta\\) where \\(\\theta\\) is the angle between the vectors. The inner product is zero when vectors are **orthogonal** — a fundamental concept in least squares and PCA.\n\n## Matrix Multiplication\n\nFor an \\(n \\times K\\) matrix \\(A\\) and a \\(K \\times M\\) matrix \\(B\\), the **product** \\(C = AB\\) is \\(n \\times M\\), where element \\(c_{ik}\\) is the inner product of row \\(i\\) of \\(A\\) with column \\(k\\) of \\(B\\):\n\n$$C = AB, \\qquad c_{ik} = \\mathbf{a}_i' \\mathbf{b}_{\\cdot k} = \\sum_{j=1}^K a_{ij}\\, b_{jk}$$\n\n### Conformability\n\nThe matrices must be **conformable for multiplication**: the number of columns in \\(A\\) must equal the number of rows in \\(B\\). A useful check: write the dimensions in sequence — \\((n \\times K)(K \\times M)\\) — the inner dimensions must match, and the outer dimensions give the result.\n\n### Non-Commutativity\n\nMatrix multiplication is generally **not commutative**:\n\n$$AB \\neq BA \\text{ in general}$$\n\nIn fact, \\(BA\\) may not even be defined (if dimensions don't conform), or it may have different dimensions than \\(AB\\), or it may be defined with the same dimensions but unequal to \\(AB\\). This is why we distinguish *pre-multiplication* (\\(B\\) is premultiplied by \\(A\\)) from *post-multiplication*.\n\n### Properties\n\n- **Associative**: \\((AB)C = A(BC)\\)\n- **Distributive**: \\(A(B + C) = AB + AC\\)\n- **Identity**: \\(AI = IA = A\\)\n- **Zero matrix**: \\(A\\mathbf{0} = \\mathbf{0}\\)\n- **Transpose of product**: \\((AB)' = B'A'\\)\n\n### Column Interpretation\n\nEach column of \\(C = AB\\) is a **linear combination of the columns of \\(A\\)**, with coefficients drawn from the corresponding column of \\(B\\):\n\n$$\\mathbf{c}_{\\cdot k} = A\\, \\mathbf{b}_{\\cdot k} = b_{1k}\\,\\mathbf{a}_{\\cdot 1} + b_{2k}\\,\\mathbf{a}_{\\cdot 2} + \\cdots + b_{Kk}\\,\\mathbf{a}_{\\cdot K}$$\n\nThis column interpretation is one of the most useful ways to think about what a matrix multiplication *does*: it expresses the columns of the result as combinations of the columns of the left factor.\n\n## Sums via Vectors\n\nA column of ones \\(\\mathbf{i} = [1, 1, \\ldots, 1]'\\) (length \\(n\\)) provides compact notation for sums:\n\n$$\\sum_{i=1}^n x_i = \\mathbf{i}'\\mathbf{x}$$\n\nThe arithmetic mean follows immediately:\n\n$$\\bar{x} = \\frac{1}{n}\\mathbf{i}'\\mathbf{x} = \\frac{\\mathbf{i}'\\mathbf{x}}{n}$$\n\nThe sum of squares and cross-products of a data matrix \\(X\\) (\\(n \\times K\\)) take the matrix form \\(X'X\\), where element \\([X'X]_{jk}\\) is the inner product of columns \\(j\\) and \\(k\\) of \\(X\\). This \\(K \\times K\\) matrix is the workhorse of ordinary least squares.",
+  "equationBreakdowns": [
+    {
+      "label": "Matrix Product Element",
+      "terms": [
+        {
+          "symbol": "c_{ik}",
+          "name": "Element of product matrix",
+          "desc": "The element in row i, column k of C = AB. It is the inner product of the i-th row of A with the k-th column of B — a sum of K products."
+        },
+        {
+          "symbol": "\\mathbf{a}_i'",
+          "name": "i-th row of A (as row vector)",
+          "desc": "Row i of A, written as a transposed column vector. The prime notation is important: rows are treated as transposed column vectors throughout this course."
+        },
+        {
+          "symbol": "\\mathbf{b}_{\\cdot k}",
+          "name": "k-th column of B",
+          "desc": "Column k of B as a column vector. Conformability requires this to have the same number of elements as row i of A — both have length K."
+        },
+        {
+          "symbol": "\\sum_{j=1}^K a_{ij}\\, b_{jk}",
+          "name": "Expanded inner product",
+          "desc": "Each of the K terms multiplies one element from row i of A by one element from column k of B. This is the computation that makes matrix multiplication O(n·K·m) — cubic in the dimension for square matrices."
+        }
+      ]
+    },
+    {
+      "label": "Inner Product of Vectors",
+      "terms": [
+        {
+          "symbol": "\\mathbf{a}'\\mathbf{b}",
+          "name": "Inner product (dot product)",
+          "desc": "A scalar formed by transposing a into a row vector and multiplying by column vector b. The result is a single number, not a matrix."
+        },
+        {
+          "symbol": "\\sum_{i=1}^n a_i b_i",
+          "name": "Element-wise sum",
+          "desc": "Each element of a is multiplied by the corresponding element of b, and all n products are summed. Requires a and b to have the same length."
+        },
+        {
+          "symbol": "\\|\\mathbf{a}\\|\\,\\|\\mathbf{b}\\|\\cos\\theta",
+          "name": "Geometric interpretation",
+          "desc": "The inner product equals the product of the two vector norms times the cosine of the angle between them. When this equals zero the vectors are orthogonal — they point in perpendicular directions."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Greene 2003",
+      "title": "Econometric Analysis, 5th ed., Appendix A.2",
+      "url": null
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r1"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r3"
+  }
+}

@@ -1,0 +1,127 @@
+{
+  "id": "r2",
+  "moduleId": "m5",
+  "title": "Quantization and Vector Quantization for Gaussian Attributes",
+  "estimatedMinutes": 14,
+  "learningObjectives": [
+    {
+      "id": "m5r2-lo1",
+      "verb": "Apply",
+      "description": "Apply scalar quantization to 3DGS attributes, selecting appropriate bit depths for position (14–24 bit), SH AC coefficients (5–8 bit), and opacity (8 bit) based on attribute sensitivity analysis",
+      "skillTags": [
+        "quantization",
+        "compression"
+      ]
+    },
+    {
+      "id": "m5r2-lo2",
+      "verb": "Explain",
+      "description": "Explain how entropy coding exploits non-uniform distributions in quantized Gaussian attributes for additional compression beyond scalar quantization alone",
+      "skillTags": [
+        "quantization",
+        "compression"
+      ]
+    },
+    {
+      "id": "m5r2-lo3",
+      "verb": "Distinguish",
+      "description": "Distinguish scalar quantization from vector quantization and identify when VQ's exploitation of inter-attribute correlations justifies its codebook memory and training overhead",
+      "skillTags": [
+        "quantization",
+        "compression"
+      ]
+    },
+    {
+      "id": "m5r2-lo4",
+      "verb": "Explain",
+      "description": "Explain RDO-VQ's entropy-penalized training objective and state how minimizing the code length of VQ indices differs from minimizing reconstruction error alone",
+      "skillTags": [
+        "quantization",
+        "compression"
+      ]
+    }
+  ],
+  "content": "## Source Coding Basics\n\n3DGS attributes are stored as float32 (32-bit IEEE 754). This precision is almost certainly excessive for most attributes. The core question: **how many bits does each attribute actually need?**\n\n## Scalar Quantization\n\nScalar quantization maps a continuous value \\(x\\) to a discrete code:\n\n\\[\\hat{x} = \\Delta \\cdot \\text{round}(x / \\Delta)\\]\n\nwhere \\(\\Delta\\) is the quantization step size. With \\(B\\) bits, you can represent \\(2^B\\) distinct values.\n\n**Per-attribute analysis** for the Truck scene (2.54M Gaussians):\n\n| Attribute | Float32 bits | Bits needed | Reduction |\n|---|---|---|---|\n| Position xyz | 32 | 24 (with contraction: 14) | 1.3–2.3× |\n| SH DC color | 32 | 8 | 4× |\n| Scale | 32 | 6 | 5.3× |\n| Opacity | 32 | 6 | 5.3× |\n| Rotation | 32 | 6 | 5.3× |\n| SH AC coeffs | 32 | 5 | 6.4× |\n\nWeighted average across all 59 attributes: approximately **5.94× size reduction** from quantization alone (SOG paper). Starting from ~630 MB for the Truck scene, quantization brings it to ~106 MB.\n\n### Non-Linear Positional Quantization\n\nGaussians in unbounded scenes (Mip-NeRF 360 style) are spatially contracted: most Gaussians cluster near the scene center, with very few in the far background. Uniform quantization wastes most of its precision on the empty far field.\n\nSOG and MipNeRF360 apply a non-linear spatial contraction \\(f: \\mathbb{R}^3 \\to [-1,1]^3\\) before quantization, giving denser quantization levels near the scene center where most Gaussians actually are.\n\n## Entropy Coding\n\nQuantized values are rarely uniformly distributed. Most attributes cluster around specific values (e.g., opacity near 1.0 for visible surfaces, near 0 for transparent regions). **Entropy coding** exploits this:\n\n- **Huffman coding**: assign shorter codes to more frequent symbols. Theoretically optimal for symbol-by-symbol coding.\n- **Arithmetic coding**: encode the full sequence at once; achieves the entropy lower bound \\(H = -\\sum_i p_i \\log_2 p_i\\) bits/symbol.\n- **Prediction + residual coding**: predict the next value from context (e.g., neighboring Gaussians in a sorted grid), then entropy-code only the small residual.\n\nTypical entropy coding gains for 3DGS attributes: **1.15–1.4× additional reduction** on top of quantization.\n\n## Vector Quantization (VQ)\n\nScalar quantization treats each attribute independently. **VQ** exploits correlations between attributes of the same Gaussian by clustering full attribute vectors:\n\n1. **Learn a codebook** \\(\\{e_k\\}_{k=1}^K\\) of \\(K\\) representative vectors.\n2. **Encode** each Gaussian by its nearest codebook index: \\(\\text{idx}_i = \\arg\\min_k \\|a_i - e_k\\|\\).\n3. **Decode** by table lookup: \\(\\hat{a}_i = e_{\\text{idx}_i}\\).\n\nStorage: instead of 59 × 4 = 236 bytes per Gaussian, you store \\(\\lceil \\log_2 K \\rceil\\) bits per Gaussian plus the codebook of size \\(K \\times 59 \\times 4\\) bytes.\n\n### Sensitivity-Aware VQ (Compressed3D)\n\nNot all attributes contribute equally to rendered image quality. Opacity errors are perceptually more damaging than SH AC coefficient errors. Compressed3D weights the quantization error by per-attribute **sensitivity** (the gradient of rendered image quality w.r.t. each attribute), allocating more codebook precision to high-sensitivity attributes.\n\n### Rate-Distortion Optimized VQ (RDOGaussian)\n\nRDOGaussian formulates VQ as an entropy-constrained optimization:\n\n\\[\\min_{\\{e_k\\}, \\{\\text{idx}_i\\}} \\sum_i \\|a_i - e_{\\text{idx}_i}\\|^2 + \\lambda H(\\{\\text{idx}_i\\})\\]\n\nwhere \\(H\\) is the entropy of the index sequence. Minimizing \\(H\\) pushes indices toward a non-uniform distribution (some codes used frequently, most used rarely), which compresses well with entropy coding. The \\(\\lambda\\) parameter controls the rate-distortion tradeoff.\n\n### Residual VQ (Compact3D, Lee et al.)\n\nMulti-stage codebooks refine the approximation iteratively:\n1. Stage 1: encode \\(a_i\\) with codebook \\(C_1\\). Residual: \\(r_i^{(1)} = a_i - \\hat{a}_i^{(1)}\\).\n2. Stage 2: encode \\(r_i^{(1)}\\) with codebook \\(C_2\\). Residual: \\(r_i^{(2)} = r_i^{(1)} - \\hat{r}_i^{(1)}\\).\n3. Continue for \\(L\\) stages.\n\nEach stage reduces the residual. With \\(L\\) stages and \\(K\\) codebook entries each, total storage is \\(L \\log_2 K\\) bits per Gaussian, which can be traded against reconstruction quality.",
+  "equationBreakdowns": [
+    {
+      "label": "Scalar Quantization",
+      "terms": [
+        {
+          "symbol": "\\hat{x}",
+          "name": "Quantized value",
+          "desc": "The discrete approximation of the original continuous value x. It lives on a regular grid of allowed values spaced Δ apart. Reconstruction error is at most Δ/2."
+        },
+        {
+          "symbol": "\\Delta",
+          "name": "Step size (quantization interval)",
+          "desc": "The spacing between adjacent quantization levels. Smaller Δ means finer precision and lower error, but requires more bits to index the levels. With B bits you get 2^B levels, so Δ = range / 2^B."
+        },
+        {
+          "symbol": "\\text{round}(x / \\Delta)",
+          "name": "Round to nearest level index",
+          "desc": "Divides x by Δ to get a fractional index, then rounds to the nearest integer. This integer is the codebook index stored in the file — not the value itself."
+        }
+      ]
+    },
+    {
+      "label": "RDOGaussian — Rate-Distortion VQ Objective",
+      "terms": [
+        {
+          "symbol": "\\min_{\\{e_k\\}, \\{\\text{idx}_i\\}}",
+          "name": "Joint optimisation over codebook and assignments",
+          "desc": "Simultaneously optimises the K codebook vectors e_k and the per-Gaussian index assignments idx_i. This is harder than standard k-means (which only optimises assignments given fixed centres) but finds better rate-distortion tradeoffs."
+        },
+        {
+          "symbol": "\\sum_i \\|a_i - e_{\\text{idx}_i}\\|^2",
+          "name": "Reconstruction distortion",
+          "desc": "Mean squared error between each Gaussian's true attribute vector a_i and its codebook reconstruction. This is the quality loss — minimising it alone gives standard VQ."
+        },
+        {
+          "symbol": "\\lambda",
+          "name": "Rate-distortion tradeoff weight",
+          "desc": "Controls the balance between compression (small H) and quality (small distortion). Large λ prioritises small file size at the cost of accuracy; small λ prioritises quality. Sweeping λ traces out the rate-distortion curve."
+        },
+        {
+          "symbol": "H(\\{\\text{idx}_i\\})",
+          "name": "Entropy of the index sequence",
+          "desc": "The theoretical minimum bits needed to store all N Gaussian indices, given their empirical frequency distribution. Minimising H pushes the assignment toward a skewed distribution — a few codes used very often, most used rarely — which compresses well with arithmetic coding."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Morgenstern et al. 2024",
+      "title": "Compact 3D Scene Representation via Self-Organizing Gaussian Grids",
+      "url": "https://arxiv.org/abs/2312.13299"
+    },
+    {
+      "label": "Niedermayr et al. 2024",
+      "title": "Compressed 3D Gaussian Splatting for Accelerated Novel View Synthesis (Compressed3D / C3DGS)",
+      "url": "https://arxiv.org/abs/2401.02436"
+    },
+    {
+      "label": "Wang et al. 2024",
+      "title": "End-to-End Rate-Distortion Optimized 3D Gaussian Representation (RDOGaussian)",
+      "url": "https://arxiv.org/abs/2406.01597"
+    },
+    {
+      "label": "Lee et al. 2024",
+      "title": "Compact 3D Gaussian Splatting for Static and Dynamic Radiance Fields",
+      "url": "https://arxiv.org/abs/2408.03822"
+    },
+    {
+      "label": "Bagdasarian et al. 2025",
+      "title": "3DGS.zip: A Survey on 3D Gaussian Splatting Compression Methods",
+      "url": "https://arxiv.org/abs/2407.09510"
+    }
+  ],
+  "nextItem": {
+    "type": "reading",
+    "id": "r3"
+  },
+  "prevItem": {
+    "type": "reading",
+    "id": "r1"
+  }
+}

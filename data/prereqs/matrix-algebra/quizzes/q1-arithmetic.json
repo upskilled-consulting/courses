@@ -1,0 +1,92 @@
+{
+  "id": "q1",
+  "moduleId": "matrix-algebra",
+  "title": "Matrix Arithmetic",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "type": "reading", "id": "r5" },
+  "nextItem": { "type": "lab", "id": "lab1" },
+  "questions": [
+    {
+      "id": "q1_1",
+      "type": "multiple-choice",
+      "prompt": "Let $A = \\begin{pmatrix}1&2\\\\3&4\\end{pmatrix}$ and $B = \\begin{pmatrix}4&-3\\\\-2&1\\end{pmatrix}$. What is the $(2,2)$ entry of $AB$?",
+      "options": [
+        { "id": "a", "text": "$4$", "correct": false },
+        { "id": "b", "text": "$-5$", "correct": true },
+        { "id": "c", "text": "$-1$", "correct": false },
+        { "id": "d", "text": "$1$", "correct": false }
+      ],
+      "explanation": "The $(2,2)$ entry is the product of row 2 of $A$ and column 2 of $B$: $3(-3)+4(1) = -9+4 = -5$.",
+      "hint": "Multiply row 2 of $A = [3,4]$ by column 2 of $B = [-3,1]'$ and sum the products."
+    },
+    {
+      "id": "q1_2",
+      "type": "multiple-choice",
+      "prompt": "With $A$ and $B$ as above, compute $BA$. What is the $(1,1)$ entry of $BA$?\n\n*(This question also checks whether $AB = BA$.)*",
+      "options": [
+        { "id": "a", "text": "$0$ — same as $(AB)_{11}$, so $AB = BA$ here", "correct": false },
+        { "id": "b", "text": "$-5$", "correct": true },
+        { "id": "c", "text": "$16$", "correct": false },
+        { "id": "d", "text": "$4$", "correct": false }
+      ],
+      "explanation": "Row 1 of $B = [4,-3]$, column 1 of $A = [1,3]'$. Product: $4(1)+(-3)(3)=4-9=-5$. Comparing with $(AB)_{11}=0$ confirms $AB \\neq BA$ — matrix multiplication is not commutative.",
+      "hint": "Compute row 1 of $B$ times column 1 of $A$. Then compare the result to $(AB)_{11}=0$."
+    },
+    {
+      "id": "q1_3",
+      "type": "multiple-choice",
+      "prompt": "For which pair of dimensions is the product $AB$ **defined**?",
+      "options": [
+        { "id": "a", "text": "$A$ is $3\\times 2$, $B$ is $3\\times 4$", "correct": false },
+        { "id": "b", "text": "$A$ is $2\\times 3$, $B$ is $3\\times 4$", "correct": true },
+        { "id": "c", "text": "$A$ is $2\\times 4$, $B$ is $2\\times 3$", "correct": false },
+        { "id": "d", "text": "$A$ is $3\\times 3$, $B$ is $2\\times 3$", "correct": false }
+      ],
+      "explanation": "For $AB$ to exist, the number of **columns** of $A$ must equal the number of **rows** of $B$ (the inner dimensions). Only $(2\\times 3)(3\\times 4)$ satisfies this: inner dimension is 3 in both cases, giving a $2\\times 4$ result.",
+      "hint": "Write the dimensions side by side: $(m\\times p)(p\\times n)$. The inner pair must match."
+    },
+    {
+      "id": "q1_4",
+      "type": "multiple-choice",
+      "prompt": "Let $A = \\begin{pmatrix}2&3\\\\-1&2\\end{pmatrix}$ and $B = \\begin{pmatrix}-1&2\\\\6&-2\\end{pmatrix}$. What is the $(1,2)$ entry of $2A - 3B$?",
+      "options": [
+        { "id": "a", "text": "$6$", "correct": false },
+        { "id": "b", "text": "$0$", "correct": true },
+        { "id": "c", "text": "$-6$", "correct": false },
+        { "id": "d", "text": "$3$", "correct": false }
+      ],
+      "explanation": "$2A = \\begin{pmatrix}4&6\\\\-2&4\\end{pmatrix}$, $3B = \\begin{pmatrix}-3&6\\\\18&-6\\end{pmatrix}$. Subtracting: $(2A-3B)_{12} = 6 - 6 = 0$.",
+      "hint": "Compute $2A$ and $3B$ entry-wise first, then subtract. Focus on row 1, column 2."
+    },
+    {
+      "id": "q1_5",
+      "type": "multiple-choice",
+      "prompt": "Which of the following is **not** a valid property of matrix multiplication for general matrices of compatible sizes?",
+      "options": [
+        { "id": "a", "text": "$A(BC) = (AB)C$ &nbsp;&nbsp;(associativity)", "correct": false },
+        { "id": "b", "text": "$A(B+C) = AB + AC$ &nbsp;&nbsp;(left distributivity)", "correct": false },
+        { "id": "c", "text": "$AB = BA$ &nbsp;&nbsp;(commutativity)", "correct": true },
+        { "id": "d", "text": "$AI = IA = A$ &nbsp;&nbsp;(identity)", "correct": false }
+      ],
+      "explanation": "Matrix multiplication is **not** commutative in general. As shown above, $AB \\neq BA$ even for $2\\times 2$ matrices of the same size. It is possible that $AB = BA$ for specific pairs (e.g., diagonal matrices, or $A$ and $I$), but it doesn't hold universally.",
+      "hint": "Think back to the example where we computed both $AB$ and $BA$ and got different matrices."
+    },
+    {
+      "id": "q1_6",
+      "type": "code-completion",
+      "prompt": "Complete the function that checks whether two NumPy arrays `A` and `B` can be multiplied as `A @ B` (i.e., are conformable for matrix multiplication):",
+      "codeTemplate": "import numpy as np\n\ndef can_multiply(A, B):\n    \"\"\"\n    Returns True if A @ B is a valid matrix product.\n    A.shape = (m, p), B.shape = (q, n)\n    Requires p == q.\n    \"\"\"\n    return ___BLANK___",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "A.shape[1] == B.shape[0]",
+        "A.shape[1]==B.shape[0]",
+        "A.shape[-1] == B.shape[0]",
+        "A.shape[-1]==B.shape[0]"
+      ],
+      "explanation": "Conformability requires that the number of columns of $A$ (index 1 of `A.shape`) equals the number of rows of $B$ (index 0 of `B.shape`). For a $(m\\times p)$ matrix and a $(p\\times n)$ matrix, the inner dimension $p$ must match.",
+      "hint": "A matrix's shape is `(rows, cols)`. You need the column count of A to equal the row count of B."
+    }
+  ]
+}

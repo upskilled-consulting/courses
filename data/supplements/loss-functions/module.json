@@ -1,0 +1,109 @@
+{
+  "id": "loss-functions",
+  "type": "supplement",
+  "title": "Loss Functions",
+  "description": "A ground-up tour of all 20 PyTorch loss functions — regression, classification, distribution, ranking, embedding, and metric learning — with equation breakdowns, derivations from probability theory, and side-by-side PyTorch and TensorFlow implementations.",
+  "level": "Intermediate",
+  "estimatedHours": 3,
+  "color": "#7c5c9e",
+  "accentLight": "#d9c2d6",
+  "readings": [
+    {
+      "id": "r0",
+      "title": "What Is a Loss Function?",
+      "estimatedMinutes": 10,
+      "description": "Training objectives, reduction modes, and how gradients flow from loss to weights.",
+      "dataPath": "data/supplements/loss-functions/readings/r0-what-is-a-loss.json"
+    },
+    {
+      "id": "r1",
+      "title": "Regression Losses: L1, MSE, Huber, SmoothL1",
+      "estimatedMinutes": 15,
+      "description": "Point-estimate regression losses — their formulas, gradient shapes, and robustness to outliers.",
+      "dataPath": "data/supplements/loss-functions/readings/r1-regression-losses.json"
+    },
+    {
+      "id": "r2",
+      "title": "Probabilistic Regression: Poisson & Gaussian NLL",
+      "estimatedMinutes": 12,
+      "description": "Deriving loss functions from negative log-likelihood when the target follows a Poisson or Gaussian distribution.",
+      "dataPath": "data/supplements/loss-functions/readings/r2-probabilistic-regression.json"
+    },
+    {
+      "id": "r3",
+      "title": "Classification Losses: BCE, CrossEntropy, NLL",
+      "estimatedMinutes": 18,
+      "description": "Binary and multi-class classification losses derived from information theory and maximum likelihood estimation.",
+      "dataPath": "data/supplements/loss-functions/readings/r3-classification-losses.json"
+    },
+    {
+      "id": "r4",
+      "title": "Multi-label & Margin Losses",
+      "estimatedMinutes": 12,
+      "description": "Hinge-based and multi-label losses: SoftMargin, MultiLabelSoftMargin, MultiMarginLoss, and MultiLabelMarginLoss.",
+      "dataPath": "data/supplements/loss-functions/readings/r4-multilabel-margin.json"
+    },
+    {
+      "id": "r5",
+      "title": "Distribution & Similarity Losses",
+      "estimatedMinutes": 12,
+      "description": "KL divergence, margin ranking, hinge embedding, and cosine embedding losses.",
+      "dataPath": "data/supplements/loss-functions/readings/r5-distribution-similarity.json"
+    },
+    {
+      "id": "r6",
+      "title": "Metric Learning: Triplet Losses",
+      "estimatedMinutes": 10,
+      "description": "TripletMarginLoss and TripletMarginWithDistanceLoss — learning embedding spaces where similar inputs cluster together.",
+      "dataPath": "data/supplements/loss-functions/readings/r6-metric-learning.json"
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "q1",
+      "title": "Regression & Probabilistic Losses",
+      "questionCount": 6,
+      "passingScore": 0.7,
+      "dataPath": "data/supplements/loss-functions/quizzes/q1-regression.json"
+    },
+    {
+      "id": "q2",
+      "title": "Classification & Metric Losses",
+      "questionCount": 6,
+      "passingScore": 0.7,
+      "dataPath": "data/supplements/loss-functions/quizzes/q2-classification.json"
+    }
+  ],
+  "drills": [
+    {
+      "id": "d1",
+      "title": "Regression & Classification Losses",
+      "cardCount": 12,
+      "estimatedMinutes": 10,
+      "dataPath": "data/supplements/loss-functions/drills/d1-regression-classification.json"
+    },
+    {
+      "id": "d2",
+      "title": "Margin, Metric & Distribution Losses",
+      "cardCount": 12,
+      "estimatedMinutes": 10,
+      "dataPath": "data/supplements/loss-functions/drills/d2-margin-metric-distribution.json"
+    }
+  ],
+  "labs": [
+    {
+      "id": "lab1",
+      "title": "Loss Functions in PyTorch",
+      "estimatedMinutes": 45,
+      "description": "Implement, verify, and compare all major PyTorch loss functions from scratch.",
+      "dataPath": "data/supplements/loss-functions/labs/lab1-pytorch.json"
+    },
+    {
+      "id": "lab2",
+      "title": "Loss Functions in TensorFlow",
+      "estimatedMinutes": 40,
+      "description": "Implement the same loss functions using TensorFlow/Keras, with custom training loops and GradientTape.",
+      "dataPath": "data/supplements/loss-functions/labs/lab2-tensorflow.json"
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "id": "r1",
+  "moduleId": "m3",
+  "title": "Compaction vs. Compression and Attribute Reduction",
+  "estimatedMinutes": 13,
+  "learningObjectives": [
+    {
+      "id": "m3r1-lo1",
+      "verb": "Distinguish",
+      "description": "Distinguish compaction (modifying the representation before coding) from compression (encoding more efficiently), and explain why they must be co-designed rather than applied independently",
+      "skillTags": [
+        "compaction",
+        "compression"
+      ]
+    },
+    {
+      "id": "m3r1-lo2",
+      "verb": "Compute",
+      "description": "Compute the parameter-count reduction from SH degree reduction (degree 3 → 1 → 0) and explain why SH degree reduction is typically the highest-leverage first compaction step",
+      "skillTags": [
+        "compaction",
+        "gaussian-math"
+      ]
+    },
+    {
+      "id": "m3r1-lo3",
+      "verb": "Identify",
+      "description": "Identify the conditions under which spherical (isotropic) Gaussians are appropriate and state the quality tradeoff when anisotropy is removed from small splats",
+      "skillTags": [
+        "compaction",
+        "gaussian-math"
+      ]
+    },
+    {
+      "id": "m3r1-lo4",
+      "verb": "Compare",
+      "description": "Compare rotation parameterization choices (4-parameter quaternion vs. 3-parameter representations) and explain the implications for gradient stability and storage cost",
+      "skillTags": [
+        "compaction",
+        "gaussian-math"
+      ]
+    }
+  ],
+  "content": "## Two Complementary Strategies\n\nReducing 3DGS file sizes requires two conceptually distinct operations that must be optimized jointly:\n\n- **Compression**: encode a given representation more efficiently (quantization, entropy coding, vector quantization). The representation itself doesn't change — only how it's stored.\n- **Compaction**: modify the representation *before* coding to make it inherently smaller. This includes reducing the number of Gaussians or the number of parameters per Gaussian.\n\nThinking of them as independent pipelines is a mistake. The effectiveness of compression depends on the distribution of values, which compaction changes. And the optimal compaction strategy depends on downstream coding constraints. They must be co-optimized — this is the rate–distortion optimization perspective.\n\n## The 59-Parameter Budget: Where to Cut\n\nRecall the per-Gaussian parameter breakdown:\n\n| Attribute | Params | % of total |\n|---|---|---|\n| SH AC (orders 1–3) | 45 | 76.3% |\n| Position \\(\\mu\\) | 3 | 5.1% |\n| Scale \\(s\\) | 3 | 5.1% |\n| Rotation \\(q\\) | 4 | 6.8% |\n| Opacity \\(\\sigma_\\alpha\\) | 1 | 1.7% |\n| DC color | 3 | 5.1% |\n\nSpherical harmonics dominate. Any compaction strategy that ignores SH is leaving 76% of the budget untouched.\n\n## SH Degree Reduction\n\nThe simplest and most impactful compaction strategy is reducing the SH degree. The number of AC coefficients per channel scales as \\((l+1)^2 - 1\\):\n\n| SH Degree | AC coeff/channel | Total AC params | % of full 45 |\n|---|---|---|---|\n| 3 (full) | 15 | 45 | 100% |\n| 2 | 8 | 24 | 53% |\n| 1 | 3 | 9 | 20% |\n| 0 (DC only) | 0 | 0 | 0% |\n\nDropping from degree 3 to degree 1 cuts total parameters from 59 to 23 — a **2.6× size reduction** before any encoding.\n\n**Quality impact**: Degree 0 removes all view-dependent effects. For diffuse scenes this is nearly lossless, but for scenes with specular surfaces or strong directional lighting, PSNR drops by 1–3 dB. LightGS and RDOGaussian use **learned masking** to adaptively select the SH degree per-Gaussian, allocating higher-order SH only to Gaussians that genuinely need view-dependent color.\n\n## Rotation Parameterization\n\nThe standard 3DGS stores rotation as a unit quaternion (4 parameters). Since unit quaternions live on the 3-sphere \\(S^3\\), only 3 degrees of freedom are actually needed. Several methods use:\n- **3-parameter representations**: store \\((q_x, q_y, q_z)\\) and recover \\(q_w = \\sqrt{1 - q_x^2 - q_y^2 - q_z^2}\\), saving one float per Gaussian.\n- **Rotation matrix directly**: 9 values, but highly redundant and needs orthogonality enforcement.\n\nThe savings from dropping one quaternion component is small (4→3 = 1.3× reduction for rotation only), but for scenes with tens of millions of Gaussians it adds up.\n\n## Spherical (Isotropic) Gaussians for Small Splats\n\nAtomGS observes that small Gaussians (acting as point-like atoms in fine-detail regions) often have nearly equal scales along all three axes — they're approximately spherical. Enforcing \\(s_1 = s_2 = s_3\\) for these Gaussians reduces scale from 3 parameters to 1, a 3× reduction for that attribute category.\n\nThe key implementation: during training, a scale-isotropy loss is added for Gaussians below a size threshold, encouraging small Gaussians to converge to spherical shapes without forcing all Gaussians to be isotropic.\n\n## 2D Gaussians as Structural Compaction\n\n2DGS (Huang et al.) goes further: collapse one scale to zero entirely, producing flat disks. This trades one scale parameter for a constraint, and the resulting representation is more compressible because the position and normal of the disk encode surface geometry explicitly — useful for mesh extraction as a downstream task.",
+  "references": [
+    {
+      "label": "Bagdasarian et al. 2025",
+      "title": "3DGS.zip: A Survey on 3D Gaussian Splatting Compression Methods",
+      "url": "https://arxiv.org/abs/2407.09510"
+    },
+    {
+      "label": "Fan et al. 2023",
+      "title": "LightGaussian: Unbounded Scene Compression with 3D Gaussian Splatting",
+      "url": "https://arxiv.org/abs/2311.17245"
+    },
+    {
+      "label": "Liu et al. 2024",
+      "title": "AtomGS: Atomizing Gaussian Splatting for High-Fidelity Radiance Field",
+      "url": "https://arxiv.org/abs/2405.12369"
+    },
+    {
+      "label": "Huang et al. 2024",
+      "title": "2D Gaussian Splatting for Geometrically Accurate Radiance Fields",
+      "url": "https://arxiv.org/abs/2403.17888"
+    }
+  ],
+  "nextItem": {
+    "type": "reading",
+    "id": "r2"
+  },
+  "prevItem": null
+}

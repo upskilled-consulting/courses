@@ -1,0 +1,109 @@
+{
+  "id": "optimizers",
+  "type": "supplement",
+  "title": "Optimizers",
+  "level": "Intermediate",
+  "estimatedHours": 3,
+  "color": "#2a7a6e",
+  "accentLight": "#5ec9be",
+  "description": "A comprehensive guide to all 13 PyTorch optimizers and 15 learning rate schedulers — SGD, Adam, AdamW, adaptive methods, quasi-Newton, and the full lr_scheduler suite — with update-rule derivations, hyperparameter intuition, and side-by-side PyTorch and TensorFlow implementations.",
+  "readings": [
+    {
+      "id": "r0",
+      "title": "What Is an Optimizer?",
+      "estimatedMinutes": 12,
+      "description": "Gradient descent mechanics, the PyTorch optimizer interface, param groups, gradient clipping, and a practical selection guide.",
+      "dataPath": "data/supplements/optimizers/readings/r0-foundations.json"
+    },
+    {
+      "id": "r1",
+      "title": "SGD & Momentum Methods",
+      "estimatedMinutes": 14,
+      "description": "Vanilla SGD, momentum, Nesterov acceleration, ASGD averaging, and Rprop's sign-based per-parameter step sizes.",
+      "dataPath": "data/supplements/optimizers/readings/r1-sgd-momentum.json"
+    },
+    {
+      "id": "r2",
+      "title": "Adaptive Learning Rate Methods",
+      "estimatedMinutes": 14,
+      "description": "Adagrad's accumulated squared gradients, RMSprop's exponential moving average fix, and Adadelta's learning-rate-free design.",
+      "dataPath": "data/supplements/optimizers/readings/r2-adaptive.json"
+    },
+    {
+      "id": "r3",
+      "title": "The Adam Family",
+      "estimatedMinutes": 16,
+      "description": "Adam, AdamW, Adamax, NAdam, RAdam, and SparseAdam — moment estimates, bias correction, decoupled weight decay, and variance rectification.",
+      "dataPath": "data/supplements/optimizers/readings/r3-adam-family.json"
+    },
+    {
+      "id": "r4",
+      "title": "Second-Order & Advanced Techniques",
+      "estimatedMinutes": 13,
+      "description": "LBFGS quasi-Newton with closure, param groups for layer-wise learning rates, gradient clipping, and fused optimizer kernels.",
+      "dataPath": "data/supplements/optimizers/readings/r4-advanced.json"
+    },
+    {
+      "id": "r5",
+      "title": "Learning Rate Schedulers",
+      "estimatedMinutes": 15,
+      "description": "StepLR, MultiStepLR, ExponentialLR, PolynomialLR, ConstantLR, LinearLR, CosineAnnealingLR, ReduceLROnPlateau, LambdaLR, and MultiplicativeLR.",
+      "dataPath": "data/supplements/optimizers/readings/r5-schedulers.json"
+    },
+    {
+      "id": "r6",
+      "title": "Advanced Schedulers & Composition",
+      "estimatedMinutes": 14,
+      "description": "CosineAnnealingWarmRestarts, CyclicLR, OneCycleLR super-convergence, SequentialLR, ChainedScheduler, and warmup-then-decay patterns.",
+      "dataPath": "data/supplements/optimizers/readings/r6-advanced-schedulers.json"
+    }
+  ],
+  "drills": [
+    {
+      "id": "d1",
+      "title": "SGD, Adaptive Methods & the Adam Family",
+      "cardCount": 12,
+      "estimatedMinutes": 10,
+      "dataPath": "data/supplements/optimizers/drills/d1-optimizers.json"
+    },
+    {
+      "id": "d2",
+      "title": "Learning Rate Schedulers",
+      "cardCount": 12,
+      "estimatedMinutes": 10,
+      "dataPath": "data/supplements/optimizers/drills/d2-schedulers.json"
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "q1",
+      "title": "SGD, Adaptive Methods & Adam",
+      "questionCount": 6,
+      "passingScore": 0.7,
+      "dataPath": "data/supplements/optimizers/quizzes/q1-sgd-adaptive-adam.json"
+    },
+    {
+      "id": "q2",
+      "title": "Advanced Techniques & Schedulers",
+      "questionCount": 6,
+      "passingScore": 0.7,
+      "dataPath": "data/supplements/optimizers/quizzes/q2-advanced-schedulers.json"
+    }
+  ],
+  "labs": [
+    {
+      "id": "lab1",
+      "title": "Optimizers in PyTorch",
+      "estimatedMinutes": 55,
+      "description": "Implement all 13 optimizers, visualize trajectories on the Rosenbrock function, compare convergence on CIFAR-10, and benchmark OneCycleLR super-convergence.",
+      "dataPath": "data/supplements/optimizers/labs/lab1-pytorch.json"
+    },
+    {
+      "id": "lab2",
+      "title": "Optimizers in TensorFlow",
+      "estimatedMinutes": 40,
+      "description": "TensorFlow/Keras optimizer equivalents, custom RAdam optimizer subclass, LR scheduling with callbacks, and parity check vs PyTorch.",
+      "dataPath": "data/supplements/optimizers/labs/lab2-tensorflow.json"
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "id": "d1",
+  "moduleId": "loss-functions",
+  "title": "Regression & Classification Losses",
+  "description": "Flashcards for the equations, gradients, and input conventions of L1, MSE, Huber, BCE, CrossEntropy, NLL, Poisson, and Gaussian NLL losses.",
+  "estimatedMinutes": 10,
+  "cards": [
+    {
+      "id": "c01",
+      "front": "$$\\mathcal{L}_{\\text{MAE}} = \\frac{1}{n}\\sum_{i=1}^n |y_i - \\hat{y}_i|$$",
+      "back": "**L1Loss (Mean Absolute Error)**\n\nGradient is constant $\\pm 1$ regardless of error magnitude — no runaway gradients from outliers.\n\n*PyTorch: `nn.L1Loss()` · expects raw predictions (not logits)*\n\n*Use when: targets contain outliers; you want equal penalisation per unit error*"
+    },
+    {
+      "id": "c02",
+      "front": "$$\\mathcal{L}_{\\text{MSE}} = \\frac{1}{n}\\sum_{i=1}^n (y_i - \\hat{y}_i)^2$$",
+      "back": "**MSELoss (Mean Squared Error)**\n\nGradient scales linearly with error: $-2(y_i - \\hat{y}_i)$. Large errors dominate — sensitive to outliers.\n\n*PyTorch: `nn.MSELoss()` · default for regression*\n\n*Use when: errors are Gaussian and outliers are rare*"
+    },
+    {
+      "id": "c03",
+      "front": "**HuberLoss** — what is the transition at $\\delta$?",
+      "back": "$$\\ell_\\delta(e) = \\begin{cases} \\tfrac{1}{2}e^2 & |e| \\leq \\delta \\\\ \\delta(|e| - \\tfrac{1}{2}\\delta) & |e| > \\delta \\end{cases}$$\n\nQuadratic for small errors (like MSE); linear for large errors (like MAE). Gradient is bounded by $\\delta$.\n\n*PyTorch: `nn.HuberLoss(delta=1.0)` · default $\\delta=1$*\n\n*Use when: mostly clean data with occasional outliers*"
+    },
+    {
+      "id": "c04",
+      "front": "**SmoothL1Loss** vs **HuberLoss** — what is the difference?",
+      "back": "Both are quadratic near zero and linear far away, but the scaling differs:\n\n$$\\text{SmoothL1}(e) = \\begin{cases} \\tfrac{1}{2}e^2 & |e|<1 \\\\ |e|-\\tfrac{1}{2} & |e|\\geq 1 \\end{cases}$$\n\nSmoothL1 is fixed at $\\delta=1$; HuberLoss rescales by $\\delta^2$ inside the quadratic region.\n\n*SmoothL1 = Faster R-CNN original; Huber = general version*"
+    },
+    {
+      "id": "c05",
+      "front": "**NLL loss** — how is any regression loss derived from it?",
+      "back": "Assume output $\\hat{y}$ follows distribution $p(y|\\hat{y})$. The loss is the negative log-likelihood:\n\n$$\\mathcal{L} = -\\log p(y_i | \\hat{y}_i)$$\n\n- Gaussian $\\Rightarrow$ MSE\n- Laplace $\\Rightarrow$ MAE\n- Poisson $\\Rightarrow$ PoissonNLL\n\n*The choice of loss encodes an assumption about the noise distribution*"
+    },
+    {
+      "id": "c06",
+      "front": "$$\\mathcal{L}_{\\text{Poisson}} = \\hat{y}_i - y_i \\log \\hat{y}_i$$",
+      "back": "**PoissonNLLLoss**\n\nNegative log-likelihood of a Poisson distribution. Target $y_i$ must be a non-negative integer count.\n\n*PyTorch: `nn.PoissonNLLLoss(log_input=True)` when model outputs $\\log\\hat{y}$*\n\n*Use when: modelling event counts (tokens, clicks, photons)*"
+    },
+    {
+      "id": "c07",
+      "front": "**GaussianNLLLoss** — what does the model predict?",
+      "back": "The model predicts both **mean** $\\mu_i$ and **variance** $\\sigma_i^2$:\n\n$$\\mathcal{L} = \\frac{(y_i - \\mu_i)^2}{2\\sigma_i^2} + \\frac{1}{2}\\log\\sigma_i^2$$\n\nThe loss trades off fit against confident predictions — large $\\sigma$ reduces squared error penalty but adds a log cost.\n\n*Use when: uncertainty quantification or heteroscedastic noise*"
+    },
+    {
+      "id": "c08",
+      "front": "$$\\mathcal{L}_{\\text{BCE}} = -[y\\log\\hat{p} + (1-y)\\log(1-\\hat{p})]$$",
+      "back": "**BCELoss** (Binary Cross-Entropy / Bernoulli NLL)\n\nExpects $\\hat{p} \\in (0,1)$ — apply sigmoid **before** passing to this loss.\n\n**Warning:** numerically unstable near 0 and 1 — prefer `BCEWithLogitsLoss`.\n\n*Use when: binary classification with pre-computed probabilities*"
+    },
+    {
+      "id": "c09",
+      "front": "Why use **BCEWithLogitsLoss** instead of sigmoid + BCELoss?",
+      "back": "Fuses sigmoid and BCE using the log-sum-exp trick:\n\n$$\\mathcal{L} = \\max(z,0) - zy + \\log(1 + e^{-|z|})$$\n\nNumerically stable for large $|z|$ — avoids log(0) and overflow.\n\n*PyTorch: `nn.BCEWithLogitsLoss()` · input = raw logits, no sigmoid needed*"
+    },
+    {
+      "id": "c10",
+      "front": "$$\\mathcal{L}_{\\text{CE}} = -\\log \\frac{e^{z_{y_i}}}{\\sum_j e^{z_j}}$$",
+      "back": "**CrossEntropyLoss** (Categorical NLL)\n\nInternally applies log-softmax then NLL: `F.log_softmax(z) → NLLLoss`.\n\n- Input: raw **logits** $(B \\times C)$\n- Target: integer class indices $(B,)$\n\n*PyTorch: `nn.CrossEntropyLoss()` · most common multi-class loss*"
+    },
+    {
+      "id": "c11",
+      "front": "What input format does **NLLLoss** expect?",
+      "back": "**NLLLoss** expects **log-probabilities** as input (e.g. from `F.log_softmax`).\n\n$$\\mathcal{L} = -\\text{input}[i][y_i]$$\n\nIt simply indexes the log-prob of the correct class — no softmax applied internally.\n\n*CrossEntropyLoss = log_softmax + NLLLoss fused. Use NLLLoss when you already have log-probs.*"
+    },
+    {
+      "id": "c12",
+      "front": "**Input format** cheat sheet — which losses expect logits vs probabilities?",
+      "back": "| Loss | Expects |\n|---|---|\n| `BCELoss` | probabilities (sigmoid applied externally) |\n| `BCEWithLogitsLoss` | raw logits |\n| `CrossEntropyLoss` | raw logits |\n| `NLLLoss` | log-probabilities |\n\n*Rule of thumb: prefer logit-based losses — they are numerically stable and let the framework optimise the sigmoid/softmax fusion*"
+    }
+  ]
+}

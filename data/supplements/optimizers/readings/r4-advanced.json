@@ -1,0 +1,121 @@
+{
+  "id": "r4",
+  "moduleId": "optimizers",
+  "title": "Second-Order & Advanced Techniques",
+  "estimatedMinutes": 13,
+  "learningObjectives": [
+    {
+      "id": "r4-lo1",
+      "verb": "Explain",
+      "description": "Explain why L-BFGS requires a closure function and identify the model sizes and problem types where quasi-Newton methods are practical",
+      "skillTags": [
+        "second-order"
+      ]
+    },
+    {
+      "id": "r4-lo2",
+      "verb": "Implement",
+      "description": "Implement layer-wise learning rate decay using param groups and explain why earlier layers receive smaller learning rates during fine-tuning",
+      "skillTags": [
+        "second-order",
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r4-lo3",
+      "verb": "Apply",
+      "description": "Apply clip_grad_norm_ and clip_grad_value_ at the correct point in the training loop and explain the difference in their effect on gradient direction",
+      "skillTags": [
+        "training-dynamics",
+        "regularization"
+      ]
+    },
+    {
+      "id": "r4-lo4",
+      "verb": "Identify",
+      "description": "Identify when fused optimizer kernels improve throughput and explain why failing to save optimizer state causes momentum resets on training resumption",
+      "skillTags": [
+        "second-order",
+        "training-dynamics"
+      ]
+    }
+  ],
+  "prevItem": {
+    "type": "quiz",
+    "id": "q1"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r5"
+  },
+  "content": "## LBFGS — Limited-Memory BFGS\n\nBFGS is a quasi-Newton method that approximates the inverse Hessian $H^{-1}$ using gradient differences across iterations, enabling Newton-like steps without ever computing the full Hessian:\n$$\\theta_{t+1} = \\theta_t - H_t^{-1} g_t$$\n\nFull BFGS requires $O(n^2)$ memory (an $n \\times n$ matrix for $n$ parameters). L-BFGS keeps only the last $m$ gradient/update vector pairs (default `history_size=100`) to approximate $H^{-1}$, reducing memory to $O(mn)$.\n\n### The Closure Pattern\n\nL-BFGS performs multiple function evaluations per step (line search). PyTorch implements this via a **closure** — a callable that recomputes the loss:\n\n```python\noptimizer = torch.optim.LBFGS(\n    model.parameters(), lr=1, max_iter=20,\n    history_size=100, line_search_fn='strong_wolfe'\n)\n\nfor x, y in dataloader:\n    def closure():\n        optimizer.zero_grad()\n        loss = criterion(model(x), y)\n        loss.backward()\n        return loss\n    optimizer.step(closure)\n```\n\n**TensorFlow:** No L-BFGS in Keras. TensorFlow Probability provides it:\n```python\nimport tensorflow_probability as tfp\n\nresult = tfp.optimizer.lbfgs_minimize(\n    value_and_gradients_function,\n    initial_position=initial_params,\n    max_iterations=50,\n)\n```\n\n> **When to use:** LBFGS is practical for small to medium models (< ~1M parameters) where you want fast convergence to a precise minimum — physics simulations, scientific computing, small regression problems, neural ODE fitting. It does not scale to large batches or full ImageNet training.\n\n## Param Groups Deep-Dive\n\nParam groups let you apply different hyperparameters to different parts of the model. Every optimizer has a `param_groups` list you can manipulate at runtime:\n\n```python\noptimizer = torch.optim.AdamW([\n    {'params': model.backbone.parameters(), 'lr': 1e-4, 'weight_decay': 0.01},\n    {'params': model.head.parameters(),     'lr': 1e-3, 'weight_decay': 0.0},\n], betas=(0.9, 0.999))\n\n# Modify LR at runtime (e.g., after epoch)\nfor group in optimizer.param_groups:\n    group['lr'] *= 0.1\n```\n\n### Layer-Wise Learning Rate Decay (LLRD)\n\nLLRD multiplies each layer's LR by a decay factor as you move from the output toward the input. It's standard for fine-tuning pretrained models:\n\n```python\ndef get_llrd_groups(model, base_lr=1e-3, decay=0.9):\n    layers = list(model.children())\n    groups = []\n    for i, layer in enumerate(reversed(layers)):\n        lr = base_lr * (decay ** i)\n        groups.append({'params': layer.parameters(), 'lr': lr})\n    return groups\n\noptimizer = torch.optim.AdamW(get_llrd_groups(model))\n```\n\n**TensorFlow:** Keras doesn't support per-variable LRs natively. Use a custom training loop with separate optimizers per layer group:\n```python\ndef get_llrd_optimizers(model, base_lr=1e-3, decay=0.9):\n    layers = list(model.layers)\n    optimizers = []\n    for i, layer in enumerate(reversed(layers)):\n        lr = base_lr * (decay ** i)\n        opt = tf.keras.optimizers.AdamW(learning_rate=lr, weight_decay=0.01)\n        optimizers.append((opt, layer.trainable_variables))\n    return optimizers\n\n# In training loop:\nwith tf.GradientTape() as tape:\n    loss = loss_fn(model(x, training=True), y)\nall_vars = model.trainable_variables\ngrads = tape.gradient(loss, all_vars)\nfor opt, vars_ in get_llrd_optimizers(model):\n    layer_grads = [grads[all_vars.index(v)] for v in vars_]\n    opt.apply_gradients(zip(layer_grads, vars_))\n```\n\n## Gradient Clipping\n\nGradient clipping is applied *between* `loss.backward()` and `optimizer.step()`.\n\n### clip_grad_norm_\n\nComputes the global L2 norm of all gradients and rescales them so the norm equals `max_norm`:\n$$\\text{if } \\| g \\|_2 > \\text{max\\_norm}: \\quad g \\leftarrow g \\cdot \\frac{\\text{max\\_norm}}{\\|g\\|_2}$$\n\n```python\nloss.backward()\ntotal_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)\noptimizer.step()\n```\n\n**TensorFlow:**\n```python\ngrads = tape.gradient(loss, model.trainable_variables)\ngrads, total_norm = tf.clip_by_global_norm(grads, clip_norm=1.0)\noptimizer.apply_gradients(zip(grads, model.trainable_variables))\n# Or via constructor: tf.keras.optimizers.Adam(clipnorm=1.0)\n```\n\nThe return value `total_norm` is useful for monitoring gradient health. A spike signals instability.\n\n### clip_grad_value_\n\nClips each gradient element independently to `[-clip_value, clip_value]`. Simpler but changes gradient direction (unlike norm clipping which preserves direction):\n\n```python\ntorch.nn.utils.clip_grad_value_(model.parameters(), clip_value=0.5)\n```\n\n**Recommendation:** Use `clip_grad_norm_` (max_norm=1.0) for transformers and RNNs. It's standard in Hugging Face Trainer, PyTorch Lightning, and similar frameworks.\n\n## Fused Optimizers\n\nPyTorch 2.x supports `fused=True` for Adam, AdamW, SGD, and RMSprop on CUDA. The fused kernel combines all update operations into a single GPU kernel, reducing kernel launch overhead and memory traffic:\n\n```python\noptimizer = torch.optim.AdamW(\n    model.parameters(), lr=1e-3, fused=True  # requires CUDA\n)\n```\n\n**TensorFlow:** TF/XLA handles kernel fusion automatically via `@tf.function` with `jit_compile=True`. No manual `fused=True` flag is needed:\n```python\n@tf.function(jit_compile=True)\ndef train_step(x, y):\n    with tf.GradientTape() as tape:\n        loss = loss_fn(model(x, training=True), y)\n    grads = tape.gradient(loss, model.trainable_variables)\n    optimizer.apply_gradients(zip(grads, model.trainable_variables))\n```\n\nBenchmarks show 10–30% wall-clock speedup on large models. Use `foreach=True` as a CPU-compatible fallback that vectorizes the update loop over all parameter tensors at once.\n\n## Optimizer State and Checkpointing\n\nForgetting to save the optimizer state is a common checkpointing mistake. Adam's moment buffers encode the entire training history — restoring just model weights but not optimizer state causes a momentum reset that destabilizes fine-tuning:\n\n```python\n# Save\ntorch.save({\n    'epoch': epoch,\n    'model_state_dict': model.state_dict(),\n    'optimizer_state_dict': optimizer.state_dict(),\n    'loss': loss,\n}, 'checkpoint.pt')\n\n# Load\ncheckpoint = torch.load('checkpoint.pt')\nmodel.load_state_dict(checkpoint['model_state_dict'])\noptimizer.load_state_dict(checkpoint['optimizer_state_dict'])\n```\n",
+  "equationBreakdowns": [
+    {
+      "label": "LBFGS — quasi-Newton step",
+      "heading": "LBFGS",
+      "terms": [
+        {
+          "symbol": "\\theta_{t+1}",
+          "name": "Updated parameters",
+          "desc": "Parameters after the curvature-scaled step"
+        },
+        {
+          "symbol": "H_t^{-1}",
+          "name": "Inverse Hessian approximation",
+          "desc": "L-BFGS approximates this implicitly using the last $m$ gradient-difference and parameter-difference vector pairs — never formed as an explicit matrix. Memory cost: $O(mn)$ vs $O(n^2)$ for full BFGS."
+        },
+        {
+          "symbol": "g_t",
+          "name": "Gradient",
+          "desc": "Full-batch or mini-batch gradient — L-BFGS typically requires a consistent gradient estimate (closure) since it performs multiple evaluations per step"
+        },
+        {
+          "symbol": "H_t^{-1} g_t",
+          "name": "Newton direction",
+          "desc": "Gradient rescaled by curvature information — steps are large in flat directions (low curvature) and small in sharp directions (high curvature), unlike SGD which uses the same scale everywhere"
+        }
+      ]
+    }
+  ,
+    {
+      "label": "clip_grad_norm_",
+      "heading": "clip_grad_norm_",
+      "terms": [
+        {
+          "symbol": "\\|g\\|_2",
+          "name": "Global gradient norm",
+          "desc": "L2 norm across all parameters concatenated into a single vector — a single scalar measuring the total gradient magnitude"
+        },
+        {
+          "symbol": "\\text{max\\_norm}",
+          "name": "Clipping threshold",
+          "desc": "Maximum allowed gradient norm — typical value 1.0 for transformers and RNNs. If $\\|g\\|_2 \\leq \\text{max\\_norm}$, no clipping occurs."
+        },
+        {
+          "symbol": "g \\leftarrow g \\cdot \\frac{\\text{max\\_norm}}{\\|g\\|_2}",
+          "name": "Rescaling operation",
+          "desc": "Scales the entire gradient vector so its norm exactly equals max_norm — preserves gradient direction, unlike value clipping which distorts it"
+        },
+        {
+          "symbol": "\\frac{\\text{max\\_norm}}{\\|g\\|_2}",
+          "name": "Scale factor",
+          "desc": "Always $\\leq 1$ when clipping fires — shrinks the gradient uniformly across all parameters"
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Liu & Nocedal 1989",
+      "title": "On the limited memory BFGS method for large scale optimization",
+      "url": "https://link.springer.com/article/10.1007/BF01589116",
+      "note": "Original L-BFGS paper — the standard reference for quasi-Newton methods in ML"
+    },
+    {
+      "label": "PyTorch Docs",
+      "title": "torch.nn.utils.clip_grad_norm_",
+      "url": "https://docs.pytorch.org/docs/stable/generated/torch.nn.utils.clip_grad_norm_.html",
+      "note": "Official API for gradient clipping utilities"
+    }
+  ]
+}

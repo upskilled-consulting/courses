@@ -1,0 +1,23 @@
+{
+  "id": "lab2",
+  "moduleId": "probability-foundations",
+  "title": "Monte Carlo Estimation and Importance Sampling",
+  "estimatedMinutes": 50,
+  "description": "## Lab 2: Monte Carlo Estimation and Importance Sampling\n\nMonte Carlo methods turn intractable integrals into sample averages. This lab implements the estimators from r2 and r5 — expected value, variance, importance sampling, and effective sample size — and builds the intuition for when importance sampling helps and when it catastrophically fails.\n\n### What You'll Build\n\n- A **Monte Carlo estimator** for $\\mathbb{E}[f(X)]$: estimate $\\mathbb{E}[X^2]$ for $X \\sim \\mathcal{N}(0,1)$ (true value: 1.0) using sample averages, plot the error vs sample size, and confirm the $1/\\sqrt{N}$ convergence rate\n- A **linearity of expectation verifier**: for dependent $X$ and $Y = X^2$ (where $X \\sim \\text{Uniform}(-1,1)$), verify empirically that $\\mathbb{E}[X + Y] = \\mathbb{E}[X] + \\mathbb{E}[Y]$ even though $X$ and $Y$ are not independent\n- An **importance sampling estimator**: estimate $\\mathbb{E}_p[f(x)]$ for a target $p = \\mathcal{N}(3, 1)$ using proposal $q = \\mathcal{N}(0, 1)$, compare variance to direct sampling from $p$, and plot the weight distribution\n- An **ESS calculator**: compute effective sample size $(\\sum w_i)^2 / \\sum w_i^2$ for several $(p, q)$ pairs with varying overlap, and plot ESS as a function of the KL divergence between $p$ and $q$\n- A **weight collapse demonstration**: show what happens when the proposal has lighter tails than the target — a handful of samples get enormous weights, ESS collapses to nearly 1, and the estimator becomes unreliable even with many samples\n\n### Key Concepts Practiced\n\nBy the end you will understand why importance sampling is theoretically valid but practically fragile, what ESS is actually measuring, and why off-policy RL algorithms use clipped importance weights (as in PPO) to prevent collapse.",
+  "objectives": [
+    "Estimate E[X²] for X ~ N(0,1) via Monte Carlo and confirm the 1/√N convergence rate of estimation error.",
+    "Verify linearity of expectation empirically for dependent random variables X and Y = X².",
+    "Implement an importance sampling estimator for E_p[f(x)] using a mismatched proposal q and compare variance to direct sampling.",
+    "Compute ESS for importance weights from several (p, q) pairs and plot ESS as a function of distributional overlap.",
+    "Demonstrate importance weight collapse: show that a proposal with lighter tails than the target causes ESS ≈ 1 regardless of sample count."
+  ],
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/probability-foundations/lab2_monte_carlo_importance_sampling.ipynb",
+  "prevItem": {
+    "type": "lab",
+    "id": "lab1"
+  },
+  "nextItem": {
+    "type": "lab",
+    "id": "lab3"
+  }
+}

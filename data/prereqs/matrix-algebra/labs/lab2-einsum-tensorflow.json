@@ -1,0 +1,21 @@
+{
+  "id": "lab2",
+  "moduleId": "matrix-algebra",
+  "title": "Einsum in TensorFlow",
+  "estimatedMinutes": 40,
+  "description": "## Lab: Einstein Summation in TensorFlow\n\n`tf.einsum` is syntactically identical to `torch.einsum` — the same notation string works in both frameworks, as well as in NumPy and JAX. This lab focuses on what is *different* in the TensorFlow context: how einsum composes with Keras custom layers, how `GradientTape` differentiates through it, and how `tf.function` compilation affects performance.\n\n### What You'll Build\n\n- Parity verification: every operation from the PyTorch lab reproduced in TensorFlow with `np.allclose` checks\n- A custom `EinsumDense` Keras layer that replicates `tf.keras.layers.Dense` using `tf.einsum` — fully trainable, gradient-compatible\n- A multi-head attention forward pass implemented with einsum and integrated into a Keras model\n- A `GradientTape` walkthrough: compute the gradient of \\(f(\\mathbf{x}) = \\mathbf{x}^\\top A \\mathbf{x}\\) and verify it equals \\(2A\\mathbf{x}\\) analytically\n- A benchmark of eager vs `@tf.function`-compiled einsum attention\n\n### Key Concepts Practiced\n\nBy the end you will understand that einsum strings are framework-agnostic, know when to prefer `tf.linalg` over `tf.einsum` (standard ops in perf-critical paths) vs when einsum wins (novel contractions, readability), and be able to drop an einsum operation into a Keras model without any special gradient handling.",
+  "objectives": [
+    "Verify that `tf.einsum` produces numerically identical results to `torch.einsum` for all canonical operations using `np.allclose`.",
+    "Build a custom Keras `EinsumDense` layer and confirm it trains correctly with standard optimizers.",
+    "Implement multi-head attention (score + weighted sum + projection) using `tf.einsum` and verify output shapes.",
+    "Use `tf.GradientTape` to compute the gradient of a quadratic form expressed with einsum and verify it analytically.",
+    "Measure the speedup of `@tf.function` over eager mode for einsum-based attention on realistic tensor sizes.",
+    "Articulate when to prefer `tf.linalg` vs `tf.einsum` in production TensorFlow code."
+  ],
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/supplements/matrix-algebra/lab_einsum_tensorflow.ipynb",
+  "prevItem": {
+    "type": "lab",
+    "id": "lab1"
+  },
+  "nextItem": null
+}

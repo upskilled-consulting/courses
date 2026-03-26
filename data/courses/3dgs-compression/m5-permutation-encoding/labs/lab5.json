@@ -1,0 +1,21 @@
+{
+  "id": "lab5",
+  "moduleId": "m5",
+  "title": "SOG Encoding Pipeline: Quantize, Sort, Compress",
+  "estimatedMinutes": 60,
+  "description": "## Lab 5: Building the SOG Pipeline\n\nThis capstone lab implements the full Self-Organizing Gaussians encoding pipeline end-to-end: generate a synthetic 3DGS scene, quantize each attribute category, sort into a 2D grid, compress with image codecs, and decode — measuring compression ratio and reconstruction error at each stage.\n\n### The Pipeline\n\n```\nSynthetic 3DGS data (N=65536 Gaussians, 59 params, float32)\n    ↓ Quantization (per-attribute bit reduction)\nQuantized integers (avg ~6-bit effective precision)\n    ↓ Grid reshaping (N → √N × √N)\n59 attribute images of size 256×256\n    ↓ Morton-curve sorting (by Gaussian position)\nSmooth 2D attribute images\n    ↓ Image compression (PIL/Pillow JPEG at various qualities)\nCompressed files\n    ↓ Decode + dequantize\nReconstructed float attributes\n```\n\n### What You'll Measure\n\nFor each stage you will record the cumulative compressed size and compute the running compression ratio. The final section plots rate-distortion curves (PSNR vs. file size) for different JPEG quality settings, reproducing the key analysis from the SOG paper.",
+  "objectives": [
+    "Implement per-attribute scalar quantization with appropriate bit depths for each 3DGS attribute category.",
+    "Reshape N Gaussians into a √N × √N grid and visualize the resulting attribute images.",
+    "Implement Morton (Z-order) curve sorting and measure the increase in local correlation.",
+    "Compress attribute grids with PIL JPEG at multiple quality levels and measure file sizes.",
+    "Implement the decode/dequantize pipeline and compute per-attribute RMSE.",
+    "Plot a rate-distortion curve and compare total compression ratio to the reported SOG ~22× result."
+  ],
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/3dgs/lab5_sog_encoding.ipynb",
+  "prevItem": {
+    "type": "quiz",
+    "id": "q2"
+  },
+  "nextItem": null
+}

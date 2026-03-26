@@ -1,0 +1,69 @@
+{
+  "id": "d1",
+  "moduleId": "optimizers",
+  "title": "SGD, Adaptive Methods & the Adam Family",
+  "description": "Flashcards covering vanilla SGD, momentum, Nesterov, Adagrad, RMSprop, Adadelta, Adam, AdamW, and their update rules.",
+  "estimatedMinutes": 10,
+  "cards": [
+    {
+      "id": "c01",
+      "front": "**Vanilla SGD** — update rule and the role of mini-batch noise",
+      "back": "$$\\theta_{t+1} = \\theta_t - \\eta \\, g_t, \\quad g_t = \\frac{1}{B}\\sum_{i \\in \\mathcal{B}} \\nabla_\\theta \\ell_i$$\n\nMini-batch noise is not purely harmful: it acts as implicit regularization and helps escape sharp minima. Vanilla SGD converges slowly on ill-conditioned surfaces because one learning rate must serve all directions equally.\n\n*PyTorch: `torch.optim.SGD(params, lr=0.01)` · TF: `tf.keras.optimizers.SGD(learning_rate=0.01)`*"
+    },
+    {
+      "id": "c02",
+      "front": "**SGD with Momentum** — velocity update and why it helps",
+      "back": "$$v_{t+1} = \\beta v_t + g_t$$\n$$\\theta_{t+1} = \\theta_t - \\eta v_{t+1}$$\n\n$\\beta = 0.9$ gives roughly a 10-step exponential moving average. The velocity **damps oscillations** across high-curvature directions and **accelerates** along consistent gradient directions — like a ball rolling down a valley.\n\n*PyTorch: `SGD(params, lr=0.01, momentum=0.9)` · TF: `SGD(learning_rate=0.01, momentum=0.9)`*"
+    },
+    {
+      "id": "c03",
+      "front": "**Nesterov vs Classical Momentum** — key difference",
+      "back": "Classical momentum evaluates the gradient at the **current** position $\\theta_t$.\n\nNesterov evaluates at the **lookahead** position $\\theta_t - \\eta\\beta v_t$ — where we would be after applying the current velocity:\n\n$$v_{t+1} = \\beta v_t + \\nabla L(\\theta_t - \\eta\\beta v_t)$$\n\nThe lookahead gradient is more informative: it anticipates overshooting and corrects sooner. Consistently outperforms classical momentum on convex problems.\n\n*PyTorch: `SGD(..., nesterov=True)` · TF: `SGD(..., nesterov=True)`*"
+    },
+    {
+      "id": "c04",
+      "front": "**Adagrad** — update rule and the fatal flaw",
+      "back": "$$G_{t,i} = G_{t-1,i} + g_{t,i}^2 \\quad \\text{(cumulative sum)}$$\n$$\\theta_{t+1,i} = \\theta_{t,i} - \\frac{\\eta}{\\sqrt{G_{t,i} + \\varepsilon}}\\, g_{t,i}$$\n\n**Strength:** parameters with rare gradients keep a large effective LR — ideal for sparse features.\n\n**Fatal flaw:** $G_t$ is monotonically increasing and never forgets. After many steps every parameter's effective LR → 0 and learning stops.\n\n*PyTorch: `torch.optim.Adagrad(params, lr=0.01)` · TF: `Adagrad(learning_rate=0.01)`*"
+    },
+    {
+      "id": "c05",
+      "front": "**RMSprop** — how it fixes Adagrad",
+      "back": "$$E[g^2]_t = \\rho \\, E[g^2]_{t-1} + (1-\\rho)\\, g_t^2 \\quad \\text{(EMA, not cumulative sum)}$$\n$$\\theta_{t+1} = \\theta_t - \\frac{\\eta}{\\sqrt{E[g^2]_t + \\varepsilon}}\\, g_t$$\n\nThe exponential moving average with decay $\\rho$ (≈ 0.99) **forgets old gradients**, preventing the accumulator from monotonically growing. The effective LR adapts but never collapses.\n\n*PyTorch: `RMSprop(params, lr=0.01, alpha=0.99)` · TF: `RMSprop(learning_rate=0.001, rho=0.99)`*"
+    },
+    {
+      "id": "c06",
+      "front": "**Adadelta** — how it eliminates the learning rate",
+      "back": "$$\\Delta\\theta_t = -\\frac{\\sqrt{E[\\Delta\\theta^2]_{t-1} + \\varepsilon}}{\\sqrt{E[g^2]_t + \\varepsilon}}\\, g_t$$\n\nTwo EMAs are maintained: one for squared gradients (denominator) and one for squared **parameter updates** (numerator). The numerator self-calibrates the scale — no global LR needed.\n\nPyTorch retains `lr=1.0` as an optional scale multiplier; setting `lr=1.0` gives the pure version.\n\n*PyTorch: `Adadelta(params, lr=1.0, rho=0.9)` · TF: `Adadelta(learning_rate=1.0, rho=0.9)`*"
+    },
+    {
+      "id": "c07",
+      "front": "**Adam** — four equations from scratch",
+      "back": "$$m_t = \\beta_1 m_{t-1} + (1-\\beta_1)g_t \\qquad \\text{first moment}$$\n$$v_t = \\beta_2 v_{t-1} + (1-\\beta_2)g_t^2 \\qquad \\text{second moment}$$\n$$\\hat{m}_t = m_t/(1-\\beta_1^t), \\quad \\hat{v}_t = v_t/(1-\\beta_2^t) \\qquad \\text{bias correction}$$\n$$\\theta_{t+1} = \\theta_t - \\frac{\\eta}{\\sqrt{\\hat{v}_t}+\\varepsilon}\\hat{m}_t$$\n\nDefaults: $\\beta_1=0.9$, $\\beta_2=0.999$, $\\varepsilon=10^{-8}$.\n\n*PyTorch: `Adam(params, lr=1e-3)` · TF: `Adam(learning_rate=1e-3)`*"
+    },
+    {
+      "id": "c08",
+      "front": "**Bias correction in Adam** — why is it necessary?",
+      "back": "Both moment buffers are **zero-initialised**: $m_0 = v_0 = 0$.\n\nAt step $t=1$ with $\\beta_2=0.999$:\n$$v_1 = 0.999 \\cdot 0 + 0.001 \\cdot g_1^2 = 0.001\\, g_1^2$$\n\nWithout correction, $\\sqrt{v_1} \\approx 0$, causing a huge update. Dividing by $(1-0.999^1) \\approx 0.001$ inflates $\\hat{v}_1 = g_1^2$, restoring a sensible effective LR.\n\nThe correction automatically decays away after the first few dozen steps."
+    },
+    {
+      "id": "c09",
+      "front": "**AdamW vs Adam** — what changes and why it matters",
+      "back": "In **Adam**, `weight_decay` adds $\\lambda\\theta$ to the gradient: the decay is **adaptive** (scaled by $1/\\sqrt{\\hat{v}}$), so high-variance parameters receive less regularization.\n\nIn **AdamW**, weight decay is applied *after* the adaptive update:\n$$\\theta_{t+1} = \\theta_t - \\eta\\!\\left(\\frac{\\hat{m}_t}{\\sqrt{\\hat{v}_t}+\\varepsilon} + \\lambda\\theta_t\\right)$$\n\nEvery parameter shrinks by $\\eta\\lambda$ regardless of gradient history — restoring proper L2 semantics. **AdamW is the default for transformers and modern architectures.**\n\n*PyTorch: `AdamW(params, lr=1e-3, weight_decay=0.01)` · TF: `AdamW(learning_rate=1e-3, weight_decay=0.01)`*"
+    },
+    {
+      "id": "c10",
+      "front": "**RAdam** — what problem does it solve and how?",
+      "back": "**Problem:** Early in training, the second moment estimate $v_t$ has high variance (few samples). This causes wild swings in the adaptive LR — sometimes exploding, sometimes collapsing.\n\n**Solution:** RAdam computes a rectification factor $r_t$ based on the estimated variance of $v_t$:\n- If variance is tractable ($\\rho_t > 4$): apply the standard adaptive update\n- Otherwise: fall back to SGD with momentum (no adaptive scaling)\n\nThis gives **automatic warmup-free behavior** — the SGD phase stabilizes early steps, then transitions to full Adam.\n\n*PyTorch: `RAdam(params, lr=1e-3)` · TF: `tfa.optimizers.RectifiedAdam` (TF-Addons)*"
+    },
+    {
+      "id": "c11",
+      "front": "**Adamax** — how does it differ from Adam?",
+      "back": "Adam uses the L2 norm for the second moment: $v_t = \\beta_2 v_{t-1} + (1-\\beta_2)g_t^2$.\n\nAdamax uses the **L∞ (max) norm** instead:\n$$u_t = \\max(\\beta_2 u_{t-1}, |g_t|)$$\n$$\\theta_{t+1} = \\theta_t - \\frac{\\eta}{u_t+\\varepsilon}\\hat{m}_t$$\n\nThe max operation is naturally bounded — no runaway accumulation — so Adamax needs no bias correction on $u_t$. More robust to gradient spikes; useful for embedding layers.\n\n*PyTorch: `Adamax(params, lr=2e-3)` · TF: `Adamax(learning_rate=2e-3)`*"
+    },
+    {
+      "id": "c12",
+      "front": "Optimizer selection cheat sheet",
+      "back": "| Scenario | Optimizer |\n|---|---|\n| General deep learning baseline | **AdamW** |\n| Large-scale vision (ResNet, ViT) | SGD + momentum or AdamW |\n| Transformers / LLMs | AdamW + cosine + warmup |\n| Sparse embeddings (NLP) | SparseAdam |\n| Small models, precise convergence | LBFGS |\n| No LR tuning desired | Adadelta |\n| Super-convergence experiment | SGD + OneCycleLR |\n| Convex / quasi-convex problems | ASGD |\n\n*For almost all modern deep learning: **AdamW** with `weight_decay=0.01` and a warmup + cosine LR schedule.*"
+    }
+  ]
+}

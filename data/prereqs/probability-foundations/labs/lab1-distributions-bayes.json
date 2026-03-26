@@ -1,0 +1,23 @@
+{
+  "id": "lab1",
+  "moduleId": "probability-foundations",
+  "title": "Distributions and Bayes' Theorem",
+  "estimatedMinutes": 45,
+  "description": "## Lab 1: Distributions and Bayes' Theorem\n\nProbability becomes intuitive when you can sample from distributions and watch the theory materialize in histograms. This lab takes the core results from r1–r3 — PMFs, PDFs, joint distributions, the law of total probability, and Bayes' theorem — and makes them concrete in NumPy and SciPy.\n\n### What You'll Build\n\n- A **PMF and PDF explorer**: plot the Bernoulli, Poisson, Uniform, and Gaussian distributions side-by-side; verify normalization by integrating the PDF and summing the PMF\n- A **CDF calculator**: compute and plot CDFs for continuous and discrete RVs; use $F(b) - F(a)$ to answer interval probability questions\n- A **joint distribution sampler**: generate $(X, Y)$ pairs from a 2D Gaussian, scatter-plot them, recover marginals by collapsing one axis, and compare to the theoretical marginal\n- A **law of total probability verifier**: recreate the binary classifier error-rate calculation from q1 ($P(\\text{error}) = 0.10 \\times 0.60 + 0.30 \\times 0.40 = 0.18$) with simulation, confirming the analytic result\n- A **Bayes' theorem sensitivity sweep**: implement the disease-screening posterior $P(D|+)$ as a function of the prior $P(D)$, plot $P(D|+)$ over a range of priors from 0.001 to 0.5, and observe how the base-rate fallacy weakens as prevalence rises\n\n### Key Concepts Practiced\n\nBy the end you will see why PDF values are not probabilities, why the base-rate fallacy is structurally inevitable at low prevalence, and how marginalization is literally summation or integration over the unwanted variable.",
+  "objectives": [
+    "Plot PMFs and PDFs for Bernoulli, Poisson, Uniform, and Gaussian; verify normalization numerically for each.",
+    "Use a CDF to answer interval probability questions such as P(0.5 ≤ X ≤ 1.5) for a Gaussian.",
+    "Sample from a 2D Gaussian, recover empirical marginals by collapsing one axis, and compare to the theoretical marginals.",
+    "Simulate the binary classifier error-rate scenario and confirm the law of total probability result P(error) = 0.18.",
+    "Plot P(D | +) as a function of disease prevalence P(D) and identify the prior at which the test becomes diagnostically useful."
+  ],
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/probability-foundations/lab1_distributions_bayes.ipynb",
+  "prevItem": {
+    "type": "quiz",
+    "id": "q2"
+  },
+  "nextItem": {
+    "type": "lab",
+    "id": "lab2"
+  }
+}

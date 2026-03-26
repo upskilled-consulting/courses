@@ -1,0 +1,87 @@
+{
+  "id": "q1",
+  "moduleId": "optimizers",
+  "title": "SGD, Adaptive Methods & Adam",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "type": "reading", "id": "r3" },
+  "nextItem": { "type": "reading", "id": "r4" },
+  "questions": [
+    {
+      "id": "q1_1",
+      "type": "multiple-choice",
+      "prompt": "Nesterov momentum differs from classical momentum by:",
+      "options": [
+        { "id": "a", "text": "Using a larger momentum coefficient", "correct": false },
+        { "id": "b", "text": "Evaluating the gradient at a lookahead position (where velocity would take us)", "correct": true },
+        { "id": "c", "text": "Decaying the momentum coefficient over time", "correct": false },
+        { "id": "d", "text": "Applying weight decay before the gradient step", "correct": false }
+      ],
+      "explanation": "Nesterov momentum computes the gradient at θ − η·β·v (the lookahead point) rather than at θ. This makes the correction anticipatory rather than reactive, improving convergence on smooth objectives.",
+      "hint": "Where is the gradient evaluated — at the current position, or at an estimated future position?"
+    },
+    {
+      "id": "q1_2",
+      "type": "multiple-choice",
+      "prompt": "Why does Adagrad underperform during long training runs?",
+      "options": [
+        { "id": "a", "text": "Its momentum buffer grows unboundedly and explodes", "correct": false },
+        { "id": "b", "text": "It requires a closure for each optimizer step", "correct": false },
+        { "id": "c", "text": "Its accumulated squared-gradient sum G_t is monotonically increasing, driving effective learning rates toward zero", "correct": true },
+        { "id": "d", "text": "It does not use bias correction, causing large early updates", "correct": false }
+      ],
+      "explanation": "Adagrad accumulates G_t = Σ g²_i with no forgetting mechanism. As training progresses, G_t grows without bound, making η/√G_t → 0 and stopping learning entirely.",
+      "hint": "Think about what happens to the denominator √G_t as training continues for thousands of steps."
+    },
+    {
+      "id": "q1_3",
+      "type": "multiple-choice",
+      "prompt": "RMSprop fixes Adagrad's dying-rate problem by:",
+      "options": [
+        { "id": "a", "text": "Using bias correction on the second moment", "correct": false },
+        { "id": "b", "text": "Replacing the cumulative sum with an exponential moving average of squared gradients", "correct": true },
+        { "id": "c", "text": "Clipping the gradient before updating the accumulator", "correct": false },
+        { "id": "d", "text": "Applying the update only to parameters with non-zero gradients", "correct": false }
+      ],
+      "explanation": "RMSprop replaces the cumulative sum G_t with E[g²]_t = ρ·E[g²]_{t-1} + (1−ρ)·g²_t. The EMA forgets old gradients, preventing the accumulator from growing forever.",
+      "hint": "The key change is in how past squared gradients are aggregated — cumulative sum vs. exponential moving average."
+    },
+    {
+      "id": "q1_4",
+      "type": "multiple-choice",
+      "prompt": "What is the primary difference between AdamW and Adam?",
+      "options": [
+        { "id": "a", "text": "AdamW uses a different beta schedule for the moment estimates", "correct": false },
+        { "id": "b", "text": "AdamW decouples weight decay from the gradient update, applying it directly to the parameters", "correct": true },
+        { "id": "c", "text": "AdamW uses the L-infinity norm instead of the L2 norm for the second moment", "correct": false },
+        { "id": "d", "text": "AdamW eliminates bias correction for faster early steps", "correct": false }
+      ],
+      "explanation": "In Adam, weight_decay multiplies λθ into the gradient, making decay adaptive (scaled by 1/√v̂). AdamW separates the shrinkage: θ ← θ − η(m̂/√v̂+ε) − η·λ·θ. Every parameter is shrunk by the same fraction, regardless of gradient history.",
+      "hint": "In standard Adam, weight decay enters through the gradient. AdamW moves it to a separate, non-adaptive term."
+    },
+    {
+      "id": "q1_5",
+      "type": "multiple-choice",
+      "prompt": "When should you prefer SparseAdam over regular Adam?",
+      "options": [
+        { "id": "a", "text": "When training very deep networks with many layers", "correct": false },
+        { "id": "b", "text": "When optimizing parameters with sparse gradients, such as embedding layers where most tokens are absent from a mini-batch", "correct": true },
+        { "id": "c", "text": "When the model is larger than available GPU memory", "correct": false },
+        { "id": "d", "text": "When you want automatic learning rate warmup", "correct": false }
+      ],
+      "explanation": "SparseAdam uses lazy updates — only parameters with non-zero gradients are updated. For large embedding tables where most rows receive zero gradients each batch, this avoids unnecessary moment updates and saves compute.",
+      "hint": "Think about embedding tables where only a few rows are looked up per batch — what optimizer property would help there?"
+    },
+    {
+      "id": "q1_6",
+      "type": "code-completion",
+      "prompt": "Fill in the PyTorch utility function used to clip gradient norms before calling `optimizer.step()`:",
+      "codeTemplate": "optimizer = torch.optim.SGD(\n    model.parameters(), lr=0.01,\n    momentum=0.9, weight_decay=1e-4\n)\n\nloss = criterion(model(x), y)\nloss.backward()\ntorch.nn.utils.___BLANK___(model.parameters(), max_norm=1.0)\noptimizer.step()",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": ["clip_grad_norm_"],
+      "hint": "This function rescales all gradients so their combined L2 norm does not exceed max_norm. It returns the pre-clipping norm as a scalar tensor.",
+      "explanation": "`torch.nn.utils.clip_grad_norm_` computes the total L2 norm of all parameter gradients and rescales them in-place if the norm exceeds max_norm. It must be called after .backward() and before optimizer.step() to take effect."
+    }
+  ]
+}

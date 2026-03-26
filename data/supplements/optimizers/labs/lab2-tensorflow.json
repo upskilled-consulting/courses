@@ -1,0 +1,21 @@
+{
+  "id": "lab2",
+  "moduleId": "optimizers",
+  "title": "Optimizers in TensorFlow",
+  "estimatedMinutes": 40,
+  "prevItem": {
+    "type": "lab",
+    "id": "lab1"
+  },
+  "nextItem": null,
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/supplements/optimizers/lab_optimizers_tensorflow.ipynb",
+  "description": "## Lab Overview\n\nThis lab covers TensorFlow/Keras optimizer equivalents, implements a custom RAdam optimizer subclass, and uses LR scheduling callbacks — then validates numerical parity with the PyTorch lab.\n\n## What You'll Build\n\n1. **TF/Keras optimizer tour** — map every PyTorch optimizer to its `tf.keras.optimizers` equivalent; note API differences (e.g., `weight_decay` is a constructor arg in Keras, not a gradient modification)\n2. **Custom RAdam optimizer** — subclass `tf.keras.optimizers.Optimizer` to implement RAdam from scratch using `tf.Variable` slots for moment buffers\n3. **Learning rate scheduling in TF** — compare three approaches:\n   - `tf.keras.optimizers.schedules.*` (schedule objects passed to optimizer)\n   - `tf.keras.callbacks.ReduceLROnPlateau` (metric-driven)\n   - Custom `LearningRateScheduler` callback with Python function\n4. **Cosine decay with warmup** — implement `tf.keras.optimizers.schedules.CosineDecayRestarts` and compare with a manual linear warmup + cosine decay schedule\n5. **Parity check vs. PyTorch** — run identical synthetic regression tasks with Adam (lr=1e-3, betas=(0.9, 0.999)) in both frameworks; verify final loss values match within 1e-4\n6. **Fashion-MNIST optimizer comparison** — train the same ConvNet with SGD+momentum, Adam, AdamW, and RMSprop; plot training curves and report test accuracy\n\n## API Differences to Know\n\n| Feature | PyTorch | TensorFlow/Keras |\n|---|---|---|\n| Weight decay | `weight_decay` arg (AdamW) or L2 in Adam | `weight_decay` constructor arg (TF 2.12+) or `kernel_regularizer` |\n| Gradient clipping | `clip_grad_norm_()` before step | `clipnorm` / `clipvalue` in optimizer constructor |\n| LR scheduling | `lr_scheduler.*` wraps optimizer | Schedule object passed as `learning_rate` arg |\n| Step call | `optimizer.step()` | `optimizer.apply_gradients()` or `model.fit()` |\n| State dict | `optimizer.state_dict()` | `optimizer.get_weights()` / `set_weights()` |\n\n## Prerequisites\n\n- Familiarity with TensorFlow `GradientTape` and `model.fit()`\n- Completion of the PyTorch Optimizers lab is helpful but not required",
+  "objectives": [
+    "Map each PyTorch optimizer to its TensorFlow/Keras equivalent",
+    "Subclass tf.keras.optimizers.Optimizer to implement RAdam with moment slots",
+    "Apply learning rate schedules using schedule objects, callbacks, and manual step",
+    "Implement linear warmup + cosine decay without a built-in combined scheduler",
+    "Verify numerical parity between PyTorch and TensorFlow Adam implementations",
+    "Compare optimizer convergence on Fashion-MNIST and interpret the results"
+  ]
+}

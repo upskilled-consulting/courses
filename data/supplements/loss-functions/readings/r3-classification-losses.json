@@ -1,0 +1,130 @@
+{
+  "id": "r3",
+  "moduleId": "loss-functions",
+  "title": "Classification Losses: BCE, CrossEntropy, NLL",
+  "estimatedMinutes": 18,
+  "learningObjectives": [
+    {
+      "id": "r3-lo1",
+      "verb": "Derive",
+      "description": "Derive binary cross-entropy as the Bernoulli negative log-likelihood and state the numerical instability of combining it with a sigmoid",
+      "skillTags": [
+        "classification",
+        "probabilistic-ml"
+      ]
+    },
+    {
+      "id": "r3-lo2",
+      "verb": "Explain",
+      "description": "Explain why BCEWithLogitsLoss is preferred over BCELoss and describe its numerically stable log-sum-exp implementation",
+      "skillTags": [
+        "classification",
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r3-lo3",
+      "verb": "Apply",
+      "description": "Apply CrossEntropyLoss for multi-class classification and identify its internal log-softmax plus NLL decomposition",
+      "skillTags": [
+        "classification"
+      ]
+    },
+    {
+      "id": "r3-lo4",
+      "verb": "Match",
+      "description": "Match each classification loss (BCELoss, BCEWithLogitsLoss, CrossEntropyLoss, NLLLoss) to its expected input format: logits, probabilities, or log-probabilities",
+      "skillTags": [
+        "classification"
+      ]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r2"
+  },
+  "nextItem": {
+    "type": "quiz",
+    "id": "q1"
+  },
+  "content": "## Information-Theoretic Foundation\n\nClassification losses arise naturally from information theory. The **cross-entropy** between a true distribution $p$ and a predicted distribution $q$ measures how many bits are wasted encoding samples from $p$ using a code designed for $q$:\n\n$$H(p, q) = -\\sum_{k} p_k \\log q_k$$\n\nWhen $p$ is the one-hot encoding of the ground-truth label and $q$ is the model's predicted probability vector, minimising cross-entropy is equivalent to maximum likelihood estimation of a categorical distribution.\n\n---\n\n## nn.BCELoss — Binary Cross-Entropy\n\nFor binary classification with label $y \\in \\{0, 1\\}$ and predicted probability $p \\in (0, 1)$:\n\n$$\\ell = -\\left[ y \\log p + (1 - y) \\log(1 - p) \\right]$$\n\nThis is the NLL of the Bernoulli distribution $p(y \\mid p) = p^y (1-p)^{1-y}$. When $y = 1$, only the first term survives and the loss penalises low $p$. When $y = 0$, only the second term survives and the loss penalises high $p$.\n\n**Important:** BCELoss expects **probabilities** in $(0,1)$ as input. You must apply `torch.sigmoid` yourself before passing to BCELoss.\n\n```python\nm = nn.Sigmoid()\nloss = nn.BCELoss()\nlogit = torch.tensor([2.0, -1.0, 0.5])\ntarget = torch.tensor([1.0, 0.0, 1.0])\noutput = loss(m(logit), target)\n```\n\n---\n\n## nn.BCEWithLogitsLoss — Numerically Stable Version\n\nBCEWithLogitsLoss combines sigmoid and BCE into one operation, using the **log-sum-exp trick** to avoid numerical overflow:\n\n$$\\ell = -\\left[ y \\log \\sigma(x) + (1-y) \\log(1 - \\sigma(x)) \\right]$$\n\nwhich simplifies to:\n\n$$\\ell = \\max(x, 0) - x \\cdot y + \\log\\bigl(1 + e^{-|x|}\\bigr)$$\n\nThis avoids computing $e^x$ for large positive $x$ (which overflows to inf in float32). The `pos_weight` parameter re-weights positive examples, useful for class-imbalanced datasets.\n\n```python\nloss = nn.BCEWithLogitsLoss()          # takes RAW LOGITS directly\nlogit  = torch.tensor([2.0, -1.0, 0.5])\ntarget = torch.tensor([1.0, 0.0, 1.0])\noutput = loss(logit, target)\n```\n\n**Always prefer BCEWithLogitsLoss over Sigmoid + BCELoss** — it is more numerically stable and computationally equivalent.\n\n---\n\n## nn.CrossEntropyLoss — Multi-class Classification\n\nFor a $C$-class problem with logits $x \\in \\mathbb{R}^C$ and ground-truth class $c \\in \\{0, \\ldots, C-1\\}$:\n\n$$\\ell = -\\log \\frac{e^{x_c}}{\\sum_{j=0}^{C-1} e^{x_j}} = -x_c + \\log \\sum_{j=0}^{C-1} e^{x_j}$$\n\nThis is the NLL of the **softmax distribution**: $\\text{softmax}(x)_j = e^{x_j} / \\sum_k e^{x_k}$. CrossEntropyLoss applies log-softmax and NLL in one numerically stable step.\n\n```python\nloss = nn.CrossEntropyLoss()         # takes RAW LOGITS\nx = torch.randn(4, 10)               # 4 samples, 10 classes\ny = torch.tensor([0, 3, 7, 2])       # integer class labels\noutput = loss(x, y)\n```\n\nFor **soft labels** (label smoothing or teacher-provided probabilities), pass a float tensor of shape $(N, C)$ as the target:\n\n```python\nloss = nn.CrossEntropyLoss(label_smoothing=0.1)\n```\n\nWith `label_smoothing=ε`, the true distribution is mixed with a uniform distribution: $p_c = 1 - ε + ε/C$, all others $ε/C$. This prevents the model from being overconfident.\n\n---\n\n## nn.NLLLoss — The Building Block\n\nNLLLoss is the final step inside CrossEntropyLoss. It expects **log-probabilities** as input (the output of `F.log_softmax`) and returns:\n\n$$\\ell = -x_{i, c_i}$$\n\nIt simply looks up and negates the log-probability assigned to the correct class.\n\n```python\nm = nn.LogSoftmax(dim=1)\nloss = nn.NLLLoss()\nlogits = torch.randn(4, 10)\ny      = torch.tensor([0, 3, 7, 2])\noutput = loss(m(logits), y)\n# Equivalent to nn.CrossEntropyLoss()(logits, y)\n```\n\n**CrossEntropyLoss = LogSoftmax + NLLLoss** — use CrossEntropyLoss directly; use NLLLoss only when you have already computed log-probabilities (e.g., CTC, mixture models).\n\n---\n\n## Summary: Which Input Does Each Loss Expect?\n\n| Loss | Input type | Target type |\n|------|-----------|-------------|\n| BCELoss | Probabilities $(0,1)$ | Float $\\{0.0, 1.0\\}$ |\n| BCEWithLogitsLoss | Raw logits $\\mathbb{R}$ | Float $\\{0.0, 1.0\\}$ |\n| CrossEntropyLoss | Raw logits $\\mathbb{R}^C$ | Integer class index or float probabilities |\n| NLLLoss | Log-probabilities | Integer class index |\n\nA common mistake is passing probabilities to CrossEntropyLoss (it applies log-softmax internally, so probabilities would be log-softmaxed a second time — producing garbage).",
+  "equationBreakdowns": [
+    {
+      "label": "BCELoss (Bernoulli NLL)",
+      "terms": [
+        {
+          "symbol": "-y \\log p",
+          "name": "Positive-class term",
+          "desc": "Active when y=1. Penalises the model for predicting low probability p for a positive example. As p→0, −log(p)→∞."
+        },
+        {
+          "symbol": "-(1-y)\\log(1-p)",
+          "name": "Negative-class term",
+          "desc": "Active when y=0. Penalises the model for predicting high probability p for a negative example. As p→1, −log(1−p)→∞."
+        },
+        {
+          "symbol": "p",
+          "name": "Predicted probability",
+          "desc": "Must lie in (0,1). This is the output of the sigmoid function σ(x) = 1/(1+e^{−x}) applied to the logit x."
+        }
+      ]
+    },
+    {
+      "label": "CrossEntropyLoss (Categorical NLL)",
+      "terms": [
+        {
+          "symbol": "e^{x_c}",
+          "name": "Exponentiated logit for correct class",
+          "desc": "The unnormalized score the model assigns to the ground-truth class c. A good model makes this large relative to all other logits."
+        },
+        {
+          "symbol": "\\sum_{j=0}^{C-1} e^{x_j}",
+          "name": "Partition function (softmax denominator)",
+          "desc": "The sum of all exponentiated logits. Normalises the scores into a probability distribution. The loss penalises the model for making this sum large relative to x_c."
+        },
+        {
+          "symbol": "-x_c + \\log\\sum_j e^{x_j}",
+          "name": "Log-sum-exp form",
+          "desc": "The numerically stable way to compute cross-entropy. PyTorch subtracts max(x) from all logits before exponentiating to prevent overflow — this is the log-sum-exp trick."
+        },
+        {
+          "symbol": "\\varepsilon",
+          "name": "Label smoothing",
+          "desc": "Mixes the one-hot target with a uniform distribution. Prevents overconfidence; improves calibration. Controlled by the label_smoothing= parameter."
+        }
+      ]
+    },
+    {
+      "label": "NLLLoss",
+      "terms": [
+        {
+          "symbol": "-x_{i, c_i}",
+          "name": "Negative log-probability of correct class",
+          "desc": "NLL simply negates the log-probability that the model assigned to the true class. Input x must already be log-probabilities (output of log_softmax)."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "[1]",
+      "title": "nn.BCELoss — PyTorch docs",
+      "url": "https://pytorch.org/docs/stable/generated/torch.nn.BCELoss.html"
+    },
+    {
+      "label": "[2]",
+      "title": "nn.BCEWithLogitsLoss — PyTorch docs",
+      "url": "https://pytorch.org/docs/stable/generated/torch.nn.BCEWithLogitsLoss.html"
+    },
+    {
+      "label": "[3]",
+      "title": "nn.CrossEntropyLoss — PyTorch docs",
+      "url": "https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html"
+    },
+    {
+      "label": "[4]",
+      "title": "nn.NLLLoss — PyTorch docs",
+      "url": "https://pytorch.org/docs/stable/generated/torch.nn.NLLLoss.html"
+    }
+  ]
+}

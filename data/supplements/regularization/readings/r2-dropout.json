@@ -1,0 +1,86 @@
+{
+  "id": "r2",
+  "moduleId": "regularization",
+  "title": "Dropout and Stochastic Regularization",
+  "estimatedMinutes": 15,
+  "learningObjectives": [
+    {
+      "id": "r2-lo1",
+      "verb": "Explain",
+      "description": "Explain dropout's ensemble interpretation: why randomly masking units during training is equivalent to averaging over an exponential number of subnetworks at inference",
+      "skillTags": ["regularization"]
+    },
+    {
+      "id": "r2-lo2",
+      "verb": "Explain",
+      "description": "Explain inverted dropout — why activations are scaled by 1/(1−p) during training — and state why this allows the same network to be used at inference without any modification",
+      "skillTags": ["regularization"]
+    },
+    {
+      "id": "r2-lo3",
+      "verb": "Distinguish",
+      "description": "Distinguish standard dropout from DropConnect, MC Dropout, and Stochastic Depth (DropPath), and explain the use case for each variant",
+      "skillTags": ["regularization"]
+    },
+    {
+      "id": "r2-lo4",
+      "verb": "Identify",
+      "description": "Identify where dropout is and is not typically applied in modern architectures — including where batch normalization has replaced it and where it remains standard",
+      "skillTags": ["regularization", "training-dynamics"]
+    }
+  ],
+  "prevItem": { "type": "reading", "id": "r1" },
+  "nextItem": { "type": "reading", "id": "r3" },
+  "content": "## The Dropout Idea\n\nDropout (Srivastava et al., 2014) is one of the most widely used regularizers in deep learning. During training, each neuron is independently set to zero with probability $p$ (the **dropout rate**, also called **drop probability**):\n\n$$\\mathbf{h}_{\\text{drop}} = \\mathbf{m} \\odot \\mathbf{h}, \\quad m_i \\sim \\text{Bernoulli}(1-p)$$\n\nA new mask $\\mathbf{m}$ is sampled independently for each training example and each forward pass.\n\nAt inference: the mask is removed. The full network is used without any randomness.\n\n---\n\n## Inverted Dropout: Matching Train and Test Scales\n\nIf we drop neurons with probability $p$ during training, the expected value of each activation is scaled down by $(1-p)$. At inference without dropout, activations are $(1-p)^{-1}$ times larger than the network was trained to expect — a mismatch.\n\n**Inverted dropout** corrects during training: surviving activations are scaled up by $1/(1-p)$:\n\n$$\\mathbf{h}_{\\text{drop}} = \\frac{\\mathbf{m} \\odot \\mathbf{h}}{1-p}, \\quad m_i \\sim \\text{Bernoulli}(1-p)$$\n\nNow $\\mathbb{E}[\\mathbf{h}_{\\text{drop}}] = \\mathbf{h}$ — the expected activation at train time equals the full activation at test time. The same network runs identically at inference with no scaling correction needed.\n\nThis is the standard implementation in PyTorch (`nn.Dropout`) and TensorFlow.\n\n---\n\n## Why Dropout Works\n\n### Ensemble Interpretation\n\nA network with $n$ neurons has $2^n$ possible subnetworks (each neuron either present or absent). Dropout trains all $2^n$ subnetworks simultaneously with shared weights. At inference, using the full network approximates averaging the predictions of all these subnetworks — a **geometric mean ensemble**.\n\nEnsembles consistently outperform single models; dropout achieves this without the cost of training multiple models.\n\n### Preventing Co-Adaptation\n\nWithout dropout, neurons can co-adapt: a neuron learns to depend on specific other neurons to fix its mistakes. With dropout, no neuron can rely on any other being present — each must learn useful features independently. This forces **redundant representations**: multiple neurons learn to detect similar patterns, which generalizes better.\n\n### Noise as Regularization\n\nDropout is equivalent to adding multiplicative noise to activations. Adding noise to training inputs is known to improve generalization; dropout generalizes this to all hidden layers.\n\n---\n\n## Dropout Placement\n\n**Dense layers:** after the activation, before the next layer. Typical drop rate: 0.3–0.5 for fully connected layers.\n\n**CNNs (spatial dropout):** standard neuron dropout on feature maps drops individual values. **SpatialDropout2D** drops entire feature channels — better for CNNs because adjacent spatial positions are highly correlated, so dropping individual values removes little information.\n\n**RNNs:** dropout on inputs and outputs, but **not on recurrent connections** (dropping recurrent connections disrupts the temporal gradient flow). Variational dropout (same mask across timesteps) is often preferred.\n\n**Transformers:** dropout is applied after attention and after the FFN sub-layer. Typical rate: 0.1. In practice, many modern LLMs remove dropout entirely — at scale, data diversity provides sufficient regularization.\n\n**Do not use:** immediately before softmax; in the output layer.\n\n---\n\n## Variants\n\n### DropConnect\n\nInstead of dropping activations, randomly zero-out individual **weights** during training:\n\n$$\\mathbf{h} = (\\mathbf{M} \\odot W)\\mathbf{x}, \\quad M_{ij} \\sim \\text{Bernoulli}(1-p)$$\n\nEven more parameters are masked per forward pass — each forward pass effectively uses a different sparse weight matrix. Marginally stronger regularizer than dropout but more expensive to implement.\n\n### MC Dropout (Uncertainty Estimation)\n\nAt inference time, keep dropout **active** and run multiple stochastic forward passes:\n\n$$p(y \\mid x) \\approx \\frac{1}{T} \\sum_{t=1}^T p(y \\mid x, \\hat{\\theta}_t)$$\n\nwhere $\\hat{\\theta}_t$ is a sample from the weight posterior approximated by dropout. This turns any network with dropout into a **Bayesian approximation** — the variance across forward passes estimates the model's uncertainty. Gal & Ghahramani (2016) showed this is equivalent to variational inference in a deep Gaussian process.\n\nUseful when the model needs to say \"I don't know\" (medical diagnosis, autonomous driving).\n\n### Stochastic Depth (DropPath)\n\nInstead of dropping individual neurons, randomly drop **entire residual blocks** during training:\n\n$$\\mathbf{y} = \\mathcal{F}(\\mathbf{x}) \\cdot b + \\mathbf{x}, \\quad b \\sim \\text{Bernoulli}(1 - p_\\ell)$$\n\nwhere $p_\\ell$ increases linearly with depth (the earliest layers are rarely dropped; the deepest are dropped most often).\n\nAt inference: scale residual by $(1-p_\\ell)$. The effective depth during training is randomly shorter, acting as an ensemble over depths.\n\nUsed in: EfficientNet, DeiT (Vision Transformers), Swin Transformer. Particularly effective for very deep networks or transformer stacks with many layers.\n\n---\n\n## Hyperparameter: Choosing Drop Rate $p$\n\n| Setting | Typical $p$ |\n|---|---|\n| Fully connected layers (MLP head) | 0.3–0.5 |\n| Transformer (attention + FFN) | 0.1 |\n| CNN spatial layers | 0.1–0.2 |\n| Stochastic depth (DropPath) | 0.0–0.2 (depth-dependent) |\n\nLarger models generally benefit from higher dropout rates. If validation loss is high and training loss is low, increase $p$. If both are high, decrease $p$ (the model is already struggling to learn).\n\n---\n\n## PyTorch and TensorFlow\n\n**PyTorch** — dropout, MC Dropout, and DropPath:\n\n```python\nimport torch\nimport torch.nn as nn\n\n# Standard dropout (inverted: divides by 1-p during training, identity at eval)\ndrop = nn.Dropout(p=0.5)\nx    = torch.randn(8, 256)\n\ndrop.train();  out_train = drop(x)   # ~half zeros, survivors scaled by 1/(1-0.5)=2\ndrop.eval();   out_eval  = drop(x)   # identity — no scaling needed\n\n# Dropout2d: zeros entire channels in (B, C, H, W) feature maps\ndrop2d = nn.Dropout2d(p=0.2)\nx2d    = torch.randn(4, 64, 8, 8)\nout    = drop2d(x2d)                 # whole channels set to zero\n\n# MC Dropout: keep model in train() at inference, run N forward passes\nclass MCDropoutMLP(nn.Module):\n    def __init__(self):\n        super().__init__()\n        self.net = nn.Sequential(\n            nn.Linear(64, 128), nn.ReLU(), nn.Dropout(0.3),\n            nn.Linear(128, 10),\n        )\n    def forward(self, x): return self.net(x)\n\nmodel = MCDropoutMLP()\nmodel.train()                              # keep dropout active at inference\nN = 30\nwith torch.no_grad():\n    preds = torch.stack([model(x) for _ in range(N)])  # (30, B, 10)\nmean = preds.mean(0)                       # predictive mean\nvar  = preds.var(0)                        # epistemic uncertainty\n\n# Stochastic Depth (DropPath) — typical timm implementation\nclass DropPath(nn.Module):\n    \"\"\"Drop entire residual branches with probability drop_prob.\"\"\"\n    def __init__(self, drop_prob: float = 0.0):\n        super().__init__()\n        self.drop_prob = drop_prob\n\n    def forward(self, x):\n        if not self.training or self.drop_prob == 0.0:\n            return x\n        keep = 1 - self.drop_prob\n        shape = (x.shape[0],) + (1,) * (x.ndim - 1)   # per-sample mask\n        mask  = torch.bernoulli(torch.full(shape, keep, device=x.device)) / keep\n        return x * mask\n```\n\n**TensorFlow / Keras:**\n\n```python\nimport tensorflow as tf\n\n# Standard dropout\ndrop = tf.keras.layers.Dropout(rate=0.5)\nx    = tf.random.normal((8, 256))\nout_train = drop(x, training=True)    # active\nout_eval  = drop(x, training=False)   # identity\n\n# SpatialDropout2D: zeros entire channels in (B, H, W, C)\ndrop2d = tf.keras.layers.SpatialDropout2D(rate=0.2)\nx2d    = tf.random.normal((4, 8, 8, 64))\nout    = drop2d(x2d, training=True)\n\n# MC Dropout: call model with training=True at inference\nmodel = tf.keras.Sequential([\n    tf.keras.layers.Dense(128, activation='relu'),\n    tf.keras.layers.Dropout(0.3),\n    tf.keras.layers.Dense(10),\n])\n\nN = 30\npreds = tf.stack([model(x, training=True) for _ in range(N)])  # (30, B, 10)\nmean  = tf.reduce_mean(preds, axis=0)\nvar   = tf.math.reduce_variance(preds, axis=0)\n```",
+  "equationBreakdowns": [
+    {
+      "label": "Inverted Dropout",
+      "heading": "Inverted Dropout",
+      "terms": [
+        {
+          "symbol": "m_i \\sim \\text{Bernoulli}(1-p)",
+          "name": "Binary mask",
+          "desc": "Each element is independently 1 (keep) with probability 1−p or 0 (drop) with probability p. A new mask is sampled for every forward pass during training."
+        },
+        {
+          "symbol": "1/(1-p)",
+          "name": "Inverted scaling factor",
+          "desc": "Dividing by (1−p) compensates for the dropped units — the expected value of a surviving activation is preserved. Means the network behaves the same at inference as during training, without any test-time adjustment."
+        }
+      ]
+    },
+    {
+      "label": "Stochastic Depth",
+      "heading": "Stochastic Depth (DropPath)",
+      "terms": [
+        {
+          "symbol": "\\mathcal{F}(\\mathbf{x}) \\cdot b",
+          "name": "Gated residual branch",
+          "desc": "The entire block output is multiplied by b ∈ {0,1}. When b=0, only the identity shortcut survives — the block is skipped entirely."
+        },
+        {
+          "symbol": "p_\\ell",
+          "name": "Layer-dependent drop rate",
+          "desc": "Increases linearly from 0 at the first layer to a maximum at the last. Early layers (critical for feature extraction) are rarely dropped; late layers can be skipped more often."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Srivastava et al. 2014",
+      "title": "Dropout: A Simple Way to Prevent Neural Networks from Overfitting",
+      "url": "https://jmlr.org/papers/v15/srivastava14a.html"
+    },
+    {
+      "label": "Gal & Ghahramani 2016",
+      "title": "Dropout as a Bayesian Approximation",
+      "url": "https://arxiv.org/abs/1506.02142"
+    },
+    {
+      "label": "Huang et al. 2016",
+      "title": "Deep Networks with Stochastic Depth",
+      "url": "https://arxiv.org/abs/1603.09382"
+    }
+  ]
+}

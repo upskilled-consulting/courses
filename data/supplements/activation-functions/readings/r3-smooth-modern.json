@@ -1,0 +1,159 @@
+{
+  "id": "r3",
+  "moduleId": "activation-functions",
+  "title": "Smooth Modern Activations",
+  "estimatedMinutes": 16,
+  "learningObjectives": [
+    {
+      "id": "r3-lo1",
+      "verb": "State",
+      "description": "State the GELU formula and explain its probabilistic interpretation as an input-gated activation",
+      "skillTags": [
+        "smooth-modern"
+      ]
+    },
+    {
+      "id": "r3-lo2",
+      "verb": "Explain",
+      "description": "Explain why SiLU/Swish is non-monotonic and describe the self-gating property x * sigmoid(x)",
+      "skillTags": [
+        "smooth-modern"
+      ]
+    },
+    {
+      "id": "r3-lo3",
+      "verb": "Compare",
+      "description": "Compare ELU, CELU, and SELU in terms of negative saturation value and the conditions under which SELU induces self-normalisation",
+      "skillTags": [
+        "smooth-modern",
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r3-lo4",
+      "verb": "Select",
+      "description": "Select among GELU, SiLU, Mish, ELU, and SELU for a given architecture based on smoothness, monotonicity, and self-normalisation requirements",
+      "skillTags": [
+        "smooth-modern"
+      ]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r2"
+  },
+  "nextItem": {
+    "type": "quiz",
+    "id": "q1"
+  },
+  "content": "## GELU — Gaussian Error Linear Unit\n\n$$f(x) = x \\cdot \\Phi(x)$$\n\nwhere $\\Phi(x)$ is the standard normal CDF. The interpretation: GELU stochastically gates the input by the probability that the input is positive. For small $x$, the gate closes (output ≈ 0); for large $x$, the gate opens (output ≈ $x$).\n\n**Approximation:** Computing $\\Phi(x)$ exactly requires the error function. In practice, the tanh approximation is used:\n\n$$f(x) \\approx 0.5x\\left(1 + \\tanh\\!\\left(\\sqrt{\\tfrac{2}{\\pi}}\\,(x + 0.044715\\,x^3)\\right)\\right)$$\n\nThis approximation is accurate to within $\\sim 10^{-4}$ for all $x$. PyTorch also supports `approximate='none'` for the exact form.\n\n**Where it's used:** BERT, GPT-2, GPT-3, ViT — essentially every modern transformer uses GELU.\n\n**PyTorch:**\n```python\nx = torch.tensor([-2., -1., 0., 1., 2.])\nprint(nn.GELU()(x))                        # tensor([-0.0455, -0.1587,  0.0000,  0.8413,  1.9545])\nprint(nn.GELU(approximate='tanh')(x))      # near-identical (tanh approx)\nprint(F.gelu(x, approximate='none'))       # exact via erf\n```\n\n**TensorFlow:**\n```python\nx = tf.constant([-2., -1., 0., 1., 2.])\nprint(tf.keras.activations.gelu(x, approximate=False))  # exact\nprint(tf.keras.activations.gelu(x, approximate=True))   # tanh approx\n# In a model: tf.keras.layers.Dense(64, activation='gelu')\n```\n\n## SiLU / Swish — Sigmoid Linear Unit\n\n$$f(x) = x \\cdot \\sigma(x) = \\frac{x}{1 + e^{-x}}$$\n\nSwish is GELU's close relative: instead of gating by the normal CDF, it gates by the sigmoid. The output is the input scaled by a soft gate that ranges from 0 (at $x \\to -\\infty$) to 1 (at $x \\to +\\infty$).\n\n**Key property — non-monotonic:** Unlike ReLU, SiLU has a local minimum near $x \\approx -1.28$ where $f'(x) = 0$. This non-monotonicity allows the function to represent a broader class of functions.\n\n**Derivative:**\n$$f'(x) = \\sigma(x) + x\\,\\sigma(x)(1 - \\sigma(x)) = f(x) + \\sigma(x)(1 - f(x))$$\n\n**Where it's used:** EfficientNet, MobileNetV3, LLaMA, Mistral.\n\n**PyTorch:**\n```python\nx = torch.tensor([-2., -1., 0., 1., 2.])\nprint(nn.SiLU()(x))   # tensor([-0.0955, -0.2689,  0.0000,  0.7311,  1.7616])\nprint(F.silu(x))      # identical\n# Note: non-monotone; minimum near x ≈ -1.28\n```\n\n**TensorFlow:**\n```python\nx = tf.constant([-2., -1., 0., 1., 2.])\nprint(tf.keras.activations.swish(x))   # [-0.0955 -0.2689  0.     0.7311  1.7616]\nprint(tf.nn.swish(x))                  # identical\n# In a model: tf.keras.layers.Dense(64, activation='swish')\n```\n\n## Mish — Self-Regularized Non-Monotone\n\n$$f(x) = x \\cdot \\tanh(\\text{softplus}(x)) = x \\cdot \\tanh\\!\\left(\\ln(1 + e^x)\\right)$$\n\nMish combines the smoothness of Tanh with the unboundedness of ReLU. Like SiLU, it is non-monotone and self-gating. The \"self-regularizing\" label comes from the observation that the softplus inside tanh acts like a smooth version of max(0,x) — Mish applies an adaptive soft gate.\n\n**Comparison to SiLU:** Mish is smoother in the negative region (continuous second derivative) and slightly outperforms SiLU empirically in some computer vision benchmarks, at higher computational cost.\n\n**PyTorch:**\n```python\nx = torch.tensor([-2., -1., 0., 1., 2.])\nprint(nn.Mish()(x))   # tensor([-0.3034, -0.3034,  0.0000,  0.8651,  1.9440])\nprint(F.mish(x))      # identical\n```\n\n**TensorFlow:**\n```python\nx = tf.constant([-2., -1., 0., 1., 2.])\n# No built-in Mish in TensorFlow; implement from formula\nmish = lambda x: x * tf.math.tanh(tf.math.softplus(x))\nprint(mish(x))   # [-0.3034 -0.3034  0.      0.8651  1.9440]\n```\n\n## ELU — Exponential Linear Unit\n\n$$f(x) = \\begin{cases} x & x > 0 \\\\ \\alpha(e^x - 1) & x \\leq 0 \\end{cases}$$\n\nELU uses an exponential curve for negative inputs, making it smooth at $x=0$ when $\\alpha=1$: $f(0) = 0$, $f'(0) = 1$ from both sides. The negative saturation is bounded below by $-\\alpha$, typically $-1$.\n\n**Advantage over ReLU:** ELU pushes mean activations toward zero (like batch normalization, but inherent), which speeds convergence. The exponential negative region provides a useful non-zero negative output.\n\n**Gradient for $x \\leq 0$:** $f'(x) = \\alpha e^x = f(x) + \\alpha$.\n\n**PyTorch:**\n```python\nx = torch.tensor([-2., -1., 0., 1., 2.])\nprint(nn.ELU(alpha=1.0)(x))   # tensor([-0.8647, -0.6321,  0.0000,  1.0000,  2.0000])\n# Gradient for x<=0: alpha * exp(x) — never zero, but saturates at -alpha\n```\n\n**TensorFlow:**\n```python\nx = tf.constant([-2., -1., 0., 1., 2.])\nprint(tf.keras.activations.elu(x))         # [-0.8647 -0.6321  0.      1.      2.    ]\nprint(tf.nn.elu(x))                        # identical\n# In a model: tf.keras.layers.ELU(alpha=1.0)\n```\n\n## CELU — Continuously Differentiable ELU\n\n$$f(x) = \\max(0, x) + \\min\\!\\left(0,\\, \\alpha\\left(e^{x/\\alpha} - 1\\right)\\right)$$\n\nCELU fixes a subtle issue with ELU: ELU's derivative at $x=0$ from the left is $\\alpha$, which equals 1 only when $\\alpha=1$. For other $\\alpha$ values, ELU is not $C^1$ (continuously differentiable). CELU reparameterizes the negative region with $e^{x/\\alpha}$ so that $f'(0^-) = 1$ for any $\\alpha$.\n\n**PyTorch:**\n```python\nx = torch.tensor([-2., -1., 0., 1., 2.])\nprint(nn.CELU(alpha=1.0)(x))     # tensor([-0.8647, -0.6321,  0.0000,  1.0000,  2.0000])\nprint(nn.CELU(alpha=0.5)(x))     # different scaling in negative region\n```\n\n**TensorFlow:**\n```python\n# No built-in CELU in TensorFlow; implement from formula\ndef celu(x, alpha=1.0):\n    return tf.where(x > 0, x, alpha * (tf.exp(x / alpha) - 1))\n\nx = tf.constant([-2., -1., 0., 1., 2.])\nprint(celu(x))   # [-0.8647 -0.6321  0.      1.      2.    ]\n```\n\n## SELU — Scaled Exponential Linear Unit\n\n$$f(x) = \\lambda \\cdot \\text{ELU}(x, \\alpha) = \\lambda \\begin{cases} x & x > 0 \\\\ \\alpha(e^x - 1) & x \\leq 0 \\end{cases}$$\n\nwhere $\\lambda \\approx 1.0507$ and $\\alpha \\approx 1.6733$. These constants were derived analytically to produce a **self-normalizing** property: if the inputs to a SELU layer have mean 0 and variance 1, the outputs will also have mean ≈ 0 and variance ≈ 1 (a fixed-point argument).\n\nThis means SELU networks don't need BatchNorm — the activations self-regulate. Works best with `nn.AlphaDropout` and He/LeCun initialization.\n\n**PyTorch:**\n```python\n# Constants are fixed: lambda=1.0507, alpha=1.6733\nx = torch.tensor([-2., -1., 0., 1., 2.])\nprint(nn.SELU()(x))   # tensor([-1.5202, -1.1113,  0.0000,  1.0507,  2.1014])\n# Must use AlphaDropout + LeCun init for self-normalisation to hold:\n# nn.init.kaiming_normal_(layer.weight, mode='fan_in', nonlinearity='linear')\n```\n\n**TensorFlow:**\n```python\nx = tf.constant([-2., -1., 0., 1., 2.])\nprint(tf.keras.activations.selu(x))   # [-1.5202 -1.1113  0.      1.0507  2.1014]\n# In a model (with LeCun init):\n# tf.keras.layers.Dense(64, activation='selu',\n#     kernel_initializer='lecun_normal')\n```\n\n## Comparison Table\n\n| Activation | Smooth | Monotone | Self-gating | Non-linear negative |\n|-----------|--------|----------|------------|---------------------|\n| GELU | Yes | Mostly | Yes (via CDF) | Yes |\n| SiLU | Yes | No | Yes (via sigmoid) | Yes |\n| Mish | Yes | No | Yes (via tanh·softplus) | Yes |\n| ELU | Yes | Yes | No | Yes (exponential) |\n| CELU | Yes ($C^1$) | Yes | No | Yes (exponential) |\n| SELU | Yes | Yes | No | Yes (self-normalizing) |",
+  "equationBreakdowns": [
+    {
+      "label": "GELU formula",
+      "terms": [
+        {
+          "symbol": "x",
+          "name": "Input",
+          "desc": "The pre-activation value passed through the gate"
+        },
+        {
+          "symbol": "\\Phi(x)",
+          "name": "Normal CDF gate",
+          "desc": "Probability that a standard normal sample is $\\leq x$ — acts as a soft gate between 0 and 1"
+        },
+        {
+          "symbol": "0.044715",
+          "name": "Cubic correction",
+          "desc": "Small cubic term in the tanh approximation that improves accuracy for large $|x|$"
+        }
+      ]
+    },
+    {
+      "label": "SiLU / Swish formula",
+      "terms": [
+        {
+          "symbol": "x",
+          "name": "Linear component",
+          "desc": "The unsuppressed signal — passed through when gate is open"
+        },
+        {
+          "symbol": "\\sigma(x)",
+          "name": "Sigmoid gate",
+          "desc": "Ranges from 0 to 1; for $x > 0$ gate is $> 0.5$, for $x < 0$ gate is $< 0.5$"
+        },
+        {
+          "symbol": "1 + e^{-x}",
+          "name": "Sigmoid denominator",
+          "desc": "Ensures gate output is in $(0,1)$"
+        }
+      ]
+    },
+    {
+      "label": "Mish formula",
+      "terms": [
+        {
+          "symbol": "x",
+          "name": "Input signal",
+          "desc": "Passed through a smooth adaptive gate"
+        },
+        {
+          "symbol": "\\tanh(\\cdot)",
+          "name": "Outer tanh gate",
+          "desc": "Squashes the softplus output to $(-1,1)$, creating the smooth gate"
+        },
+        {
+          "symbol": "\\ln(1 + e^x)",
+          "name": "Softplus argument",
+          "desc": "Smooth approximation of $\\max(0,x)$ — provides the non-linear gate input"
+        }
+      ]
+    },
+    {
+      "label": "SELU scaling constants",
+      "terms": [
+        {
+          "symbol": "\\lambda \\approx 1.0507",
+          "name": "Scale factor",
+          "desc": "Ensures variance is preserved (fixed point of the self-normalizing map)"
+        },
+        {
+          "symbol": "\\alpha \\approx 1.6733",
+          "name": "ELU alpha",
+          "desc": "Chosen so that the mean is preserved at 0 (fixed point of mean map)"
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Hendrycks & Gimpel (2016) — GELU",
+      "title": "Introduced GELU; later adopted in BERT and GPT",
+      "url": null,
+      "note": "Introduced GELU; later adopted in BERT and GPT"
+    },
+    {
+      "label": "Ramachandran et al. (2017) — Swish (SiLU)",
+      "title": "Found Swish via neural architecture search; showed it outperforms ReLU on deep models",
+      "url": null,
+      "note": "Found Swish via neural architecture search; showed it outperforms ReLU on deep models"
+    },
+    {
+      "label": "Misra (2019) — Mish",
+      "title": "Introduced Mish; demonstrated self-regularizing properties",
+      "url": null,
+      "note": "Introduced Mish; demonstrated self-regularizing properties"
+    },
+    {
+      "label": "Clevert et al. (2016) — ELU",
+      "title": "Introduced ELU; showed faster convergence due to mean-pushing property",
+      "url": null,
+      "note": "Introduced ELU; showed faster convergence due to mean-pushing property"
+    },
+    {
+      "label": "Klambauer et al. (2017) — SELU (Self-Normalizing Networks)",
+      "title": "Derived the exact λ and α constants that produce the self-normalizing fixed point",
+      "url": null,
+      "note": "Derived the exact λ and α constants that produce the self-normalizing fixed point"
+    }
+  ]
+}

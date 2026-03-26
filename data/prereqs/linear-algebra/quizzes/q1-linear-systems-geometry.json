@@ -1,0 +1,168 @@
+{
+  "id": "q1",
+  "moduleId": "linear-algebra",
+  "title": "Linear Systems and Geometry",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "questions": [
+    {
+      "id": "q1_1",
+      "type": "multiple-choice",
+      "prompt": "Two word-embedding vectors $\\vec{u}, \\vec{v} \\in \\mathbb{R}^{300}$ have cosine similarity exactly $0$. Which statement is necessarily true?",
+      "options": [
+        {
+          "id": "a",
+          "text": "$\\vec{u} = -\\vec{v}$",
+          "correct": false
+        },
+        {
+          "id": "b",
+          "text": "$\\vec{u} \\cdot \\vec{v} = 0$ — the vectors are orthogonal",
+          "correct": true
+        },
+        {
+          "id": "c",
+          "text": "At least one of the vectors is $\\vec{0}$",
+          "correct": false
+        },
+        {
+          "id": "d",
+          "text": "The vectors have equal $\\ell^2$ norms",
+          "correct": false
+        }
+      ],
+      "explanation": "Cosine similarity $= \\frac{\\vec{u}\\cdot\\vec{v}}{|\\vec{u}||\\vec{v}|}$. For this to be zero the numerator must be zero: $\\vec{u}\\cdot\\vec{v}=0$, i.e., orthogonal. Neither vector need be zero (that makes the expression undefined), and nothing constrains their lengths.",
+      "hint": "Write out the cosine similarity formula and ask: which part must be zero?"
+    },
+    {
+      "id": "q1_2",
+      "type": "code-completion",
+      "prompt": "Given a batch of embedding vectors `X` of shape `(n, d)` in PyTorch, compute the $(n \\times n)$ matrix of all pairwise cosine similarities in one expression — no loops.",
+      "codeTemplate": "# X: torch.Tensor of shape (n, d)\nX_norm = X / X.norm(dim=1, keepdim=True)\nsimilarities = ___BLANK___",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "X_norm @ X_norm.T",
+        "torch.mm(X_norm, X_norm.T)",
+        "torch.mm(X_norm, X_norm.t())",
+        "torch.matmul(X_norm, X_norm.T)",
+        "torch.matmul(X_norm, X_norm.t())",
+        "X_norm @ X_norm.t()"
+      ],
+      "explanation": "Unit-normalising each row gives $\\hat{x}_i = \\vec{x}_i / |\\vec{x}_i|$. Then $\\hat{X}\\hat{X}^T$ has entry $(i,j) = \\hat{x}_i \\cdot \\hat{x}_j = \\cos\\theta_{ij}$. This is exactly the inner-product structure inside scaled dot-product attention.",
+      "hint": "Cosine similarity of unit vectors is just their dot product. How do you compute all pairwise dot products between rows of a matrix at once?"
+    },
+    {
+      "id": "q1_3",
+      "type": "multiple-choice",
+      "prompt": "A layer computes $\\vec{y} = W\\vec{x}$ where $W \\in \\mathbb{R}^{64 \\times 128}$. The null space of $W$ has dimension 80. What does this mean for the layer?",
+      "options": [
+        {
+          "id": "a",
+          "text": "The layer can represent exactly 80 distinct output vectors",
+          "correct": false
+        },
+        {
+          "id": "b",
+          "text": "80 independent input directions are mapped to $\\vec{0}$ — the layer silently discards that variation",
+          "correct": true
+        },
+        {
+          "id": "c",
+          "text": "The weight matrix has 80 nonzero rows",
+          "correct": false
+        },
+        {
+          "id": "d",
+          "text": "The layer is invertible on 80 of its 128 inputs",
+          "correct": false
+        }
+      ],
+      "explanation": "By rank-nullity: $\\text{rank}(W) = 128 - 80 = 48$. The 80-dimensional null space means 80 linearly independent input directions are completely erased — the output is identical for any two inputs differing only in those directions. This is a concrete measure of information loss.",
+      "hint": "The null space is all $\\vec{x}$ with $W\\vec{x}=\\vec{0}$. A dim-80 null space means how many independent directions get killed?"
+    },
+    {
+      "id": "q1_4",
+      "type": "multiple-choice",
+      "prompt": "$A\\vec{x} = \\vec{b}$ has infinitely many solutions. You find one particular solution $\\vec{p}$. The complete solution set is:",
+      "options": [
+        {
+          "id": "a",
+          "text": "Just $\\{\\vec{p}\\}$",
+          "correct": false
+        },
+        {
+          "id": "b",
+          "text": "$\\{\\vec{p} + \\vec{h} : A\\vec{h} = \\vec{0}\\}$ — a translated copy of the null space",
+          "correct": true
+        },
+        {
+          "id": "c",
+          "text": "The span of $\\vec{p}$ and the null-space basis vectors",
+          "correct": false
+        },
+        {
+          "id": "d",
+          "text": "All vectors orthogonal to $\\vec{p}$",
+          "correct": false
+        }
+      ],
+      "explanation": "General = Particular + Homogeneous. If $A\\vec{p}=\\vec{b}$ and $A\\vec{h}=\\vec{0}$, then $A(\\vec{p}+\\vec{h})=\\vec{b}$. The solution set is an affine flat through $\\vec{p}$, parallel to $\\mathcal{N}(A)$. In ML: the set of weights achieving a given training loss often has this structure.",
+      "hint": "What happens when you add any null-space vector to a particular solution?"
+    },
+    {
+      "id": "q1_5",
+      "type": "code-completion",
+      "prompt": "Complete the function that checks whether $\\vec{b}$ lies in the column space of $A$ — i.e., whether $A\\vec{x}=\\vec{b}$ is consistent.",
+      "codeTemplate": "import numpy as np\n\ndef in_column_space(A, b):\n    rank_A  = np.linalg.matrix_rank(A)\n    rank_Ab = np.linalg.matrix_rank(___BLANK___)\n    return rank_A == rank_Ab",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "np.column_stack([A, b])",
+        "np.c_[A, b]",
+        "np.hstack([A, b.reshape(-1,1)])",
+        "np.hstack([A, b[:,None]])",
+        "np.concatenate([A, b[:,None]], axis=1)",
+        "np.concatenate([A, b.reshape(-1,1)], axis=1)"
+      ],
+      "explanation": "If $\\vec{b}$ is already in the span of the columns, appending it doesn't increase the rank. Appending $\\vec{b}$ raises the rank by 1 only when the system is inconsistent. This is the Rouché–Capelli theorem. In PyTorch: `torch.linalg.matrix_rank(torch.cat([A, b[:,None]], dim=1))`.",
+      "hint": "The augmented matrix $[A \\mid \\vec{b}]$ is key. What numpy function appends b as a new column?"
+    },
+    {
+      "id": "q1_6",
+      "type": "multiple-choice",
+      "prompt": "$\\ell^2$ regularisation adds $\\lambda\\|\\vec{w}\\|_2^2$ to the training loss. The level sets $\\|\\vec{w}\\|_2 = r$ are:",
+      "options": [
+        {
+          "id": "a",
+          "text": "Hyperplanes through the origin",
+          "correct": false
+        },
+        {
+          "id": "b",
+          "text": "Hyperspheres centred at the origin",
+          "correct": true
+        },
+        {
+          "id": "c",
+          "text": "Hypercubes $\\{\\vec{w} : \\max_i|w_i| \\leq r\\}$",
+          "correct": false
+        },
+        {
+          "id": "d",
+          "text": "The null space of the data matrix $X$",
+          "correct": false
+        }
+      ],
+      "explanation": "$\\|\\vec{w}\\|_2 = r$ defines a hypersphere of radius $r$. $\\ell^2$ regularisation pulls weights toward the origin uniformly in all directions, shrinking them but rarely zeroing them. Contrast with $\\ell^1$ (hypercube level sets) which promotes sparsity by pushing weights to axis-aligned faces.",
+      "hint": "What does $\\{\\vec{w} : \\|\\vec{w}\\|_2 = r\\}$ look like geometrically in $\\mathbb{R}^n$?"
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r2b"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r3"
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "id": "d2",
+  "moduleId": "calculus-foundations",
+  "title": "Optimization, Linear Approximation, and Integration",
+  "description": "Flashcards covering critical points, the second derivative test, linear approximation, gradient descent, antiderivatives, and the Fundamental Theorem.",
+  "estimatedMinutes": 12,
+  "cards": [
+    {
+      "id": "c01",
+      "front": "**Critical point** — definition and how to find one",
+      "back": "A point $x_0$ where $f'(x_0) = 0$ (or $f'$ does not exist).\n\n**To find:** Set $f'(x) = 0$ and solve for $x$.\n\nCritical points are *candidates* for minima and maxima — not guaranteed to be either. They are also where the tangent line is horizontal."
+    },
+    {
+      "id": "c02",
+      "front": "**Second derivative test** — all three cases",
+      "back": "At a critical point $x_0$ where $f'(x_0) = 0$:\n\n| $f''(x_0)$ | Classification |\n|------------|----------------|\n| $> 0$ | **Local minimum** (concave up) |\n| $< 0$ | **Local maximum** (concave down) |\n| $= 0$ | Inconclusive — check further |\n\n*Intuition:* $f'' > 0$ means the slope is increasing through zero — a valley bottom."
+    },
+    {
+      "id": "c03",
+      "front": "Find and classify the critical points of $f(x) = x^3 - 3x$",
+      "back": "$f'(x) = 3x^2 - 3 = 0 \\Rightarrow x = \\pm 1$\n\n$f''(x) = 6x$\n\n- $x = 1$: $f'' = 6 > 0$ → **local minimum**, $f(1) = -2$\n- $x = -1$: $f'' = -6 < 0$ → **local maximum**, $f(-1) = 2$"
+    },
+    {
+      "id": "c04",
+      "front": "**Linear approximation** — formula and when it is valid",
+      "back": "$$f(x_0 + \\delta) \\approx f(x_0) + f'(x_0) \\cdot \\delta$$\n\nValid when $\\delta$ is **small** — the tangent line hugs the curve near $x_0$.\n\nThis is the first-order Taylor approximation. The error is $O(\\delta^2)$ — it shrinks quadratically as the step shrinks."
+    },
+    {
+      "id": "c05",
+      "front": "Use linear approximation to estimate $\\sqrt{9.04}$",
+      "back": "$f(x) = \\sqrt{x}$, $x_0 = 9$, $\\delta = 0.04$\n\n$f'(x) = \\frac{1}{2\\sqrt{x}}$, so $f'(9) = \\frac{1}{6}$\n\n$$\\sqrt{9.04} \\approx 3 + \\frac{1}{6}(0.04) = 3 + 0.00\\overline{6} \\approx 3.0067$$\n\nActual: $3.00666...$  ✓"
+    },
+    {
+      "id": "c06",
+      "front": "**Gradient descent** — the update rule and its derivation",
+      "back": "$$\\theta \\leftarrow \\theta - \\eta \\cdot \\nabla_\\theta \\mathcal{L}$$\n\n**Why:** Linear approximation says $\\mathcal{L}(\\theta + \\delta) \\approx \\mathcal{L}(\\theta) + \\nabla\\mathcal{L} \\cdot \\delta$. Setting $\\delta = -\\eta\\,\\nabla\\mathcal{L}$ gives change $= -\\eta\\,|\\nabla\\mathcal{L}|^2 \\leq 0$ — guaranteed decrease for small $\\eta$."
+    },
+    {
+      "id": "c07",
+      "front": "**Learning rate $\\eta$** — what happens if it is too large? too small?",
+      "back": "**Too large:** Steps overshoot the minimum; the linear approximation breaks down; loss may increase or oscillate.\n\n**Too small:** Convergence is extremely slow; many steps needed to make meaningful progress.\n\n**Just right:** Consistent decrease per step without oscillation. Found via learning rate schedules, warmup, or adaptive optimizers (Adam, RMSProp)."
+    },
+    {
+      "id": "c08",
+      "front": "**Definite integral** — geometric meaning and Riemann sum definition",
+      "back": "$$\\int_a^b f(x)\\,dx = \\lim_{n\\to\\infty}\\sum_{i=1}^n f(x_i^*)\\,\\Delta x$$\n\n*Geometry:* Signed area between $f(x)$ and the $x$-axis over $[a,b]$. Positive above, negative below.\n\n$dx$ is the infinitesimal width — the limit of $\\Delta x = (b-a)/n$ as $n \\to \\infty$."
+    },
+    {
+      "id": "c09",
+      "front": "**Antiderivative** — definition and the $+C$",
+      "back": "$F(x)$ is an antiderivative of $f(x)$ if $F'(x) = f(x)$.\n\nThe $+C$ (constant of integration) appears because differentiating destroys constants — infinitely many antiderivatives exist, differing only by a constant.\n\nFor definite integrals, $C$ always cancels: $[F(b)+C] - [F(a)+C] = F(b)-F(a)$."
+    },
+    {
+      "id": "c10",
+      "front": "**Fundamental Theorem of Calculus** — state it",
+      "back": "If $F'(x) = f(x)$, then:\n$$\\int_a^b f(x)\\,dx = F(b) - F(a)$$\n\nTo evaluate a definite integral: find an antiderivative $F$, plug in $b$, plug in $a$, subtract.\n\n*Also:* $\\frac{d}{dx}\\int_a^x f(t)\\,dt = f(x)$ — differentiation and integration are inverse operations."
+    },
+    {
+      "id": "c11",
+      "front": "Evaluate $\\int_0^2 (3x^2 + 2x)\\,dx$",
+      "back": "Antiderivative: $F(x) = x^3 + x^2$\n\n$$\\int_0^2 (3x^2+2x)\\,dx = F(2) - F(0) = (8+4) - (0+0) = 12$$"
+    },
+    {
+      "id": "c12",
+      "front": "**Key antiderivatives** — fill in the table",
+      "back": "| $f(x)$ | $\\int f(x)\\,dx$ |\n|--------|------------------|\n| $x^n$ | $\\frac{x^{n+1}}{n+1} + C$ |\n| $e^x$ | $e^x + C$ |\n| $1/x$ | $\\ln|x| + C$ |\n| $\\cos x$ | $\\sin x + C$ |\n| $\\sin x$ | $-\\cos x + C$ |"
+    },
+    {
+      "id": "c13",
+      "front": "**PDF normalization** — express it as an integral",
+      "back": "For any probability density function $f(x)$:\n$$\\int_{-\\infty}^{\\infty} f(x)\\,dx = 1$$\n\nProbability of $X \\in [a,b]$:\n$$P(a \\leq X \\leq b) = \\int_a^b f(x)\\,dx$$\n\nThis is integration, not summation — the continuous analogue of summing $p(x)=1$ for a PMF."
+    },
+    {
+      "id": "c14",
+      "front": "**Expected value** and **entropy** — continuous integral forms",
+      "back": "**Expected value:**\n$$\\mathbb{E}[X] = \\int_{-\\infty}^{\\infty} x\\,f(x)\\,dx$$\n\n**Entropy:**\n$$H = -\\int_{-\\infty}^{\\infty} f(x)\\ln f(x)\\,dx$$\n\n**KL divergence:**\n$$D_{\\text{KL}}(p\\|q) = \\int p(x)\\ln\\frac{p(x)}{q(x)}\\,dx$$\n\nAll three are weighted integrals over a distribution."
+    },
+    {
+      "id": "c15",
+      "front": "**Derivative and integration as inverses** — why does this connect training and probability?",
+      "back": "Differentiation (→ gradient descent) and integration (→ probability densities) are inverse operations by the Fundamental Theorem.\n\n- Training uses derivatives to navigate the loss surface.\n- Probability uses integrals to measure how likely regions are.\n\nBoth operations are essential in ML because the loss is a functional of the model's output distribution — connecting optimization and probability at their core."
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "id": "q2",
+  "moduleId": "m6",
+  "title": "Binary Format, Encoding & Export",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "questions": [
+    {
+      "id": "q6_q2_1",
+      "type": "multiple-choice",
+      "prompt": "The .splat format uses `(rot / np.linalg.norm(rot)) * 128 + 128` to encode a unit quaternion into uint8. A quaternion component q = -1.0 encodes to byte value 0; q = +1.0 encodes to byte value 256, which clips to 255. What is the maximum quaternion component quantization error, and which rotation error does it produce?",
+      "options": [
+        { "id": "a", "text": "Maximum error is ±1/256 per component; this is below the threshold for visible rotation artifacts in typical scenes", "correct": false },
+        { "id": "b", "text": "Maximum error is ±1/128 ≈ ±0.0078 per component; after decoding and renormalization, the rotation angle error is at most ~2arcsin(0.0078/2) ≈ 0.45° — imperceptible for most Gaussian orientations", "correct": true },
+        { "id": "c", "text": "Maximum error is ±1/2 per component because the encoding maps [-1, 1] to [0, 255] and the center is 127.5, not 128", "correct": false },
+        { "id": "d", "text": "There is no quantization error because the quaternion is renormalized after decoding, restoring the exact original value", "correct": false }
+      ],
+      "explanation": "The encoding step is q_byte = (q * 128 + 128).clip(0,255).astype(uint8). The maximum representable values are 0 (q=-1) and 255 (q=+0.9922). Decoding: q_decoded = (byte - 128) / 128. For q=1.0: byte=256→255, decoded=127/128≈0.9922. Error = 1.0 - 0.9922 = 0.0078. For a unit quaternion, component error ε propagates to rotation angle error Δθ ≈ 2arcsin(ε) ≈ 2ε radians ≈ 0.9° for ε=0.0078 at the extreme. In practice, q components rarely equal exactly ±1 (that would require a 180° rotation about a pure axis), so typical errors are much smaller.",
+      "hint": "The encoding maps q ∈ [-1,1] to byte ∈ [0,256]. What is the step size between adjacent uint8 values in q-space?"
+    },
+    {
+      "id": "q6_q2_2",
+      "type": "code-completion",
+      "prompt": "Complete the opacity-weighted volume sort key used to order Gaussians in the .splat encoder. The key should be computed from the log-scale fields and the raw opacity logit:",
+      "codeTemplate": "import numpy as np\nfrom plyfile import PlyData\n\ndef compute_sort_keys(vert):\n    \"\"\"\n    Compute descending sort keys for .splat ordering.\n    Large, opaque Gaussians should come first (highest key).\n    \n    vert: PlyData vertex element with fields:\n        scale_0, scale_1, scale_2  (log-scale values)\n        opacity                    (pre-sigmoid logit)\n    \n    Returns: 1D array of sort keys (higher = render first)\n    \"\"\"\n    log_volume = vert[\"scale_0\"] + vert[\"scale_1\"] + vert[\"scale_2\"]\n    alpha = ___BLANK___\n    return np.exp(log_volume) * alpha\n\n# Usage: sorted_indices = np.argsort(-compute_sort_keys(vert))",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "1 / (1 + np.exp(-vert[\"opacity\"]))",
+        "1.0 / (1.0 + np.exp(-vert[\"opacity\"]))",
+        "np.exp(vert[\"opacity\"]) / (1 + np.exp(vert[\"opacity\"]))",
+        "1/(1+np.exp(-vert['opacity']))"
+      ],
+      "explanation": "The opacity field stores a pre-sigmoid logit o. The activated opacity is α = sigmoid(o) = 1/(1+exp(-o)), ranging in (0,1). The volume proxy is exp(s₀+s₁+s₂) = exp(s₀)·exp(s₁)·exp(s₂) = s₀_activated·s₁_activated·s₂_activated, proportional to the product of the three ellipsoid semi-axes. The sort key V·α prioritizes Gaussians that are both large (in 3D) and opaque — those most likely to occlude everything behind them regardless of viewpoint.",
+      "hint": "The sigmoid function converts a logit to a probability: sigmoid(x) = 1/(1+exp(-x))."
+    },
+    {
+      "id": "q6_q2_3",
+      "type": "multiple-choice",
+      "prompt": "A Gaussian has `f_dc_0 = 1.77`. Using SH_C0 = 0.28209479177387814, what uint8 value is stored for the red channel in the .splat file, and what does this value represent visually?",
+      "options": [
+        { "id": "a", "text": "byte = 128 (neutral gray), because f_dc values above 1.0 are clipped before encoding", "correct": false },
+        { "id": "b", "text": "byte = 255 (full red), because 0.5 + 0.28209 × 1.77 ≈ 0.999, which × 255 ≈ 254.7, clipped to 255", "correct": true },
+        { "id": "c", "text": "byte = 45 (dark red), because f_dc values are divided by SH_C0 before encoding", "correct": false },
+        { "id": "d", "text": "byte = 204, because the encoding uses only the integer part of the float computation", "correct": false }
+      ],
+      "explanation": "The encoding formula is: color = 0.5 + SH_C0 * f_dc = 0.5 + 0.28209 * 1.77 ≈ 0.5 + 0.4993 ≈ 0.9993. Multiplied by 255: 254.8, clipped to 255. So f_dc ≈ 1.77 is approximately the maximum meaningful value — it drives the channel to full saturation (255). This confirms that trained 3DGS models use f_dc values in approximately [-1.77, +1.77] to span the full [0, 255] color range, with 0 corresponding to neutral gray (byte 128).",
+      "hint": "Compute 0.5 + SH_C0 × 1.77 first, then multiply by 255 and clip to [0, 255]."
+    },
+    {
+      "id": "q6_q2_4",
+      "type": "multiple-choice",
+      "prompt": "The .splat format pre-sorts Gaussians by opacity-weighted volume rather than per-frame depth. In which scenario would this static sort produce the most visible artifacts?",
+      "options": [
+        { "id": "a", "text": "Viewing a scene from the same angle it was reconstructed, at the center of the training camera distribution", "correct": false },
+        { "id": "b", "text": "Viewing from behind the scene (180° from training views), where the depth ordering of Gaussians is reversed relative to the viewer", "correct": true },
+        { "id": "c", "text": "Zooming in on a high-detail region, because small Gaussians sort to the end of the array and are rendered last", "correct": false },
+        { "id": "d", "text": "Viewing at very low opacity threshold settings, because the sort key underweights transparent Gaussians", "correct": false }
+      ],
+      "explanation": "The static sort approximates 'importance' but not depth order. When viewing from behind, Gaussians that were 'background' from training viewpoints are now 'foreground'. A large, opaque background Gaussian (high sort key) renders first and occludes everything else — including foreground Gaussians that should be visible. This manifests as incorrect occlusion and ghosting artifacts. The closer to the training view distribution you stay, the better the static sort performs, because the importance heuristic correlates with depth in typical forward-facing captures.",
+      "hint": "What does 'large and opaque' correspond to spatially in a typical forward-facing scene? What happens when you flip the viewpoint?"
+    },
+    {
+      "id": "q6_q2_5",
+      "type": "multiple-choice",
+      "prompt": "The simple PLY fallback (no scale/rotation/SH fields) assigns fixed scale [1.0, 1.0, 1.0] to every point. Why is this a reasonable fallback for point-cloud preview but not for high-quality rendering?",
+      "options": [
+        { "id": "a", "text": "Scale [1.0, 1.0, 1.0] means each Gaussian has exactly 1 meter radius — fine for architectural scenes but wrong for small objects", "correct": false },
+        { "id": "b", "text": "Unit scale produces spherical Gaussians of equal size: the point cloud structure is preserved but geometry sharpness is lost — surfaces appear as blobs rather than oriented thin splats, and scale [1.0,1.0,1.0] in world units is likely far too large, causing bloated, overlapping Gaussians that over-darken the scene", "correct": true },
+        { "id": "c", "text": "The fallback fails because identity rotation means all Gaussians point in the same direction, which violates the isotropy assumption of the SfM point cloud", "correct": false },
+        { "id": "d", "text": "Unit scale is fine for rendering but the fallback breaks because point clouds don't have opacity values", "correct": false }
+      ],
+      "explanation": "In a trained 3DGS model, scale values are in log-space and the exp-activated values are typically very small — often 0.001 to 0.01 world-space units for fine surface detail. The simple fallback sets exp-activated scale to 1.0, which in typical scenes (where COLMAP coordinates span a few meters) produces Gaussians roughly 1 meter in radius — hundreds of times too large. Each Gaussian covers a huge screen area, leading to over-saturation of alpha compositing and a completely blurred, flat image. The fallback is only useful for rough visualization where you know the coordinate scale and can rescale manually.",
+      "hint": "What does scale = [1.0, 1.0, 1.0] after exp-activation mean geometrically? What typical scale values does a trained 3DGS model learn?"
+    }
+  ],
+  "prevItem": { "type": "quiz", "id": "q1" },
+  "nextItem": { "type": "quiz", "id": "q3" }
+}

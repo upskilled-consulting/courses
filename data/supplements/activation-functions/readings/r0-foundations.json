@@ -1,0 +1,117 @@
+{
+  "id": "r0",
+  "moduleId": "activation-functions",
+  "title": "What Is an Activation Function?",
+  "estimatedMinutes": 12,
+  "learningObjectives": [
+    {
+      "id": "r0-lo1",
+      "verb": "Explain",
+      "description": "Explain why non-linear activation functions are necessary and what a network without them can only represent",
+      "skillTags": [
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r0-lo2",
+      "verb": "Trace",
+      "description": "Trace the gradient through a single activation using the chain rule and identify where vanishing gradients originate",
+      "skillTags": [
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r0-lo3",
+      "verb": "Distinguish",
+      "description": "Distinguish the vanishing gradient problem from the dying ReLU problem and state a remedy for each",
+      "skillTags": [
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r0-lo4",
+      "verb": "Select",
+      "description": "Select an activation function family for a given architecture and task using the practical selection guide",
+      "skillTags": [
+        "training-dynamics"
+      ]
+    }
+  ],
+  "prevItem": null,
+  "nextItem": {
+    "type": "reading",
+    "id": "r1"
+  },
+  "content": "## The Role of Non-Linearity\n\nWithout activation functions, a neural network with any number of layers collapses to a single linear transformation. If every layer computes $z^{(l)} = W^{(l)} z^{(l-1)}$, the entire network reduces to $z^{(L)} = (W^{(L)} \\cdots W^{(1)}) x = Wx$. No amount of depth helps — you can express the same function with a single weight matrix.\n\nActivation functions $\\sigma$ break this linearity:\n\n$$z^{(l)} = \\sigma\\!\\left(W^{(l)} z^{(l-1)} + b^{(l)}\\right)$$\n\nThis is what makes deep networks universal approximators: with enough width, a two-layer network with a non-linear activation can approximate any continuous function on a compact domain (Universal Approximation Theorem).\n\n## Backpropagation and the Chain Rule\n\nEvery activation function must be differentiable (or at least sub-differentiable) because training uses gradient descent via backpropagation. For a loss $\\mathcal{L}$, the gradient at layer $l$ flows backward through $\\sigma'$:\n\n$$\\frac{\\partial \\mathcal{L}}{\\partial z^{(l-1)}} = \\frac{\\partial \\mathcal{L}}{\\partial z^{(l)}} \\cdot W^{(l)\\top} \\cdot \\sigma'\\!\\left(W^{(l)} z^{(l-1)} + b^{(l)}\\right)$$\n\nThe term $\\sigma'$ multiplied at every layer determines whether gradients grow, shrink, or stay stable as they propagate back through many layers.\n\n## The Vanishing Gradient Problem\n\nSaturating activations like Sigmoid and Tanh compress their input to a bounded range. Their derivatives approach zero for large $|x|$:\n\n$$\\sigma'(x) = \\sigma(x)(1-\\sigma(x)) \\xrightarrow{|x| \\to \\infty} 0$$\n\nIn a 50-layer network, multiplying 50 values each $< 0.25$ together produces a gradient that is numerically zero — the early layers receive no learning signal. ReLU and its variants were designed specifically to avoid this.\n\n## The Dying ReLU Problem\n\nReLU solves vanishing gradients, but introduces a new failure mode: neurons that always output 0 are dead. If a neuron's pre-activation is always negative (e.g., after a large negative update), its gradient is always 0 and it never recovers.\n\nLeakyReLU, PReLU, ELU, and SELU were all designed to keep a small gradient for negative inputs, solving the dying neuron problem while retaining ReLU's computational simplicity.\n\n## Key Properties to Compare\n\nWhen choosing an activation function, four properties matter most:\n\n| Property | Why It Matters |\n|----------|---------------|\n| **Output range** | Bounded outputs (Sigmoid, Tanh) constrain values but may saturate; unbounded (ReLU) can explode |\n| **Smoothness** | Smooth (GELU, SiLU, Mish) have well-defined gradients everywhere; non-smooth (ReLU) have sub-gradients at kinks |\n| **Monotonicity** | Most activations are monotone; non-monotone ones (SiLU near $x≈-1.3$) can represent more complex functions |\n| **Zero-centering** | Zero-centered outputs (Tanh) reduce zig-zag gradient updates; non-zero-centered (ReLU, Sigmoid) can slow convergence |\n\n## Practical Selection Guide\n\n| Scenario | Recommended Activation |\n|----------|------------------------|\n| Default hidden layers | ReLU, then try GELU or SiLU |\n| Transformers / NLP | GELU (BERT, GPT), SiLU (LLaMA) |\n| Mobile / edge inference | ReLU6, Hardswish, Hardsigmoid |\n| Multi-class output | Softmax |\n| Binary output | Sigmoid |\n| Large vocabulary NLP | AdaptiveLogSoftmax |\n| Variance / positive params | Softplus |\n| Self-normalizing networks | SELU |\n| Sparse representations | Hardshrink, Softshrink |\n\n## Using Activations in Practice\n\n**PyTorch — inline with nn.Sequential:**\n```python\nimport torch.nn as nn\n\nmodel = nn.Sequential(\n    nn.Linear(784, 256),\n    nn.ReLU(),\n    nn.Linear(256, 128),\n    nn.GELU(),\n    nn.Linear(128, 10)\n)\n```\n\n**PyTorch — functional style (stateless activations only):**\n```python\nimport torch.nn.functional as F\n\ndef forward(self, x):\n    x = F.relu(self.fc1(x))\n    x = F.gelu(self.fc2(x))\n    return self.fc3(x)\n```\n\n**TensorFlow/Keras — string shorthand:**\n```python\nimport tensorflow as tf\n\nmodel = tf.keras.Sequential([\n    tf.keras.layers.Dense(256, activation='relu'),\n    tf.keras.layers.Dense(128, activation='gelu'),\n    tf.keras.layers.Dense(10, activation='softmax')\n])\n```\n\n**TensorFlow/Keras — layer objects (configurable):**\n```python\nmodel = tf.keras.Sequential([\n    tf.keras.layers.Dense(256),\n    tf.keras.layers.LeakyReLU(negative_slope=0.01),\n    tf.keras.layers.Dense(128),\n    tf.keras.layers.ELU(alpha=1.0),\n    tf.keras.layers.Dense(10, activation='softmax')\n])\n```",
+  "equationBreakdowns": [
+    {
+      "label": "Layer-wise forward pass with activation",
+      "terms": [
+        {
+          "symbol": "z^{(l)}",
+          "name": "Layer output",
+          "desc": "Activated output vector of layer $l$; input to the next layer"
+        },
+        {
+          "symbol": "\\sigma",
+          "name": "Activation function",
+          "desc": "Non-linear function applied element-wise to the pre-activation"
+        },
+        {
+          "symbol": "W^{(l)}",
+          "name": "Weight matrix",
+          "desc": "Learnable weight matrix for layer $l$"
+        },
+        {
+          "symbol": "z^{(l-1)}",
+          "name": "Previous layer output",
+          "desc": "Activated output of the preceding layer (or input $x$ for $l=1$)"
+        },
+        {
+          "symbol": "b^{(l)}",
+          "name": "Bias vector",
+          "desc": "Learnable bias added before the activation"
+        }
+      ]
+    },
+    {
+      "label": "Backpropagation gradient formula",
+      "terms": [
+        {
+          "symbol": "\\partial \\mathcal{L}/\\partial z^{(l-1)}",
+          "name": "Gradient at layer $l-1$",
+          "desc": "How the loss changes with respect to the pre-activation of the previous layer"
+        },
+        {
+          "symbol": "\\partial \\mathcal{L}/\\partial z^{(l)}",
+          "name": "Incoming gradient",
+          "desc": "Gradient arriving from the next layer during backprop"
+        },
+        {
+          "symbol": "W^{(l)\\top}",
+          "name": "Transposed weight matrix",
+          "desc": "Transposes the gradient from output space back to input space"
+        },
+        {
+          "symbol": "\\sigma'",
+          "name": "Activation derivative",
+          "desc": "Local gradient of the activation; the key factor in vanishing/exploding gradients"
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Cybenko (1989) — Universal Approximation Theorem",
+      "title": "Proved that a two-layer network with sigmoid activations can approximate any continuous function",
+      "url": null,
+      "note": "Proved that a two-layer network with sigmoid activations can approximate any continuous function"
+    },
+    {
+      "label": "Hochreiter (1991) — Vanishing Gradient Problem",
+      "title": "Identified that saturating activations cause gradients to vanish in deep networks",
+      "url": null,
+      "note": "Identified that saturating activations cause gradients to vanish in deep networks"
+    }
+  ]
+}

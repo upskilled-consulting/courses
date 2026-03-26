@@ -1,0 +1,77 @@
+{
+  "id": "q2",
+  "moduleId": "m5",
+  "title": "Encoding Strategies and the SOG Pipeline",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "questions": [
+    {
+      "id": "q5_q2_1",
+      "type": "multiple-choice",
+      "prompt": "SOG quantizes SH AC coefficients to 5 bits (32 levels) but positions to 16 bits (65536 levels). What justifies using far fewer bits for SH coefficients?",
+      "options": [
+        { "id": "a", "text": "SH coefficients are view-independent and therefore less sensitive to quantization error", "correct": false },
+        { "id": "b", "text": "High-order SH coefficients encode fine-scale view-dependent variation; after sorting, they vary slowly across the grid and their quantization error averages out. Position errors directly affect geometry and cannot be averaged away.", "correct": true },
+        { "id": "c", "text": "SH coefficients are always in the range [-1, 1], so 5 bits provides adequate precision for that range", "correct": false },
+        { "id": "d", "text": "The human visual system is insensitive to SH coefficients above order 1", "correct": false }
+      ],
+      "explanation": "The visual sensitivity to SH AC quantization error is genuinely lower than to position error — a position error moves a Gaussian in 3D space, causing geometry artifacts, while a small SH AC error slightly changes view-dependent color variation. Additionally, in a sorted grid the SH AC coefficients of neighboring Gaussians are similar, so quantization error is spatially correlated and visually less noticeable than independent random noise.",
+      "hint": "Consider what visual artifact results from quantizing each attribute type: what does a position error look like vs. an SH coefficient error?"
+    },
+    {
+      "id": "q5_q2_2",
+      "type": "code-completion",
+      "prompt": "Implement scalar quantization for a given attribute array. Complete the encode and decode functions:",
+      "codeTemplate": "import numpy as np\n\ndef quantize(values, n_bits, v_min, v_max):\n    \"\"\"\n    Quantize float values to integer codes.\n    values: float array in [v_min, v_max]\n    n_bits: number of bits (e.g., 8 for 256 levels)\n    Returns: integer codes in [0, 2**n_bits - 1]\n    \"\"\"\n    n_levels = 2 ** n_bits\n    normalized = (values - v_min) / (v_max - v_min + 1e-8)\n    normalized = np.clip(normalized, 0, 1)\n    return ___BLANK___\n\ndef dequantize(codes, n_bits, v_min, v_max):\n    n_levels = 2 ** n_bits\n    return v_min + (codes / (n_levels - 1)) * (v_max - v_min)",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "np.round(normalized * (n_levels - 1)).astype(np.int32)",
+        "(np.round(normalized * (n_levels - 1))).astype(np.int32)",
+        "np.round(normalized * (n_levels - 1)).astype(int)",
+        "np.floor(normalized * n_levels).clip(0, n_levels-1).astype(np.int32)"
+      ],
+      "explanation": "Quantization maps [v_min, v_max] uniformly to n_levels integer codes. Multiply normalized value by (n_levels-1) and round to nearest integer. The dequantize function inverts this: maps integer codes back to float values at the center of each quantization interval.",
+      "hint": "With n_bits bits, there are 2**n_bits levels indexed 0 to 2**n_bits - 1. Scale the normalized value accordingly."
+    },
+    {
+      "id": "q5_q2_3",
+      "type": "multiple-choice",
+      "prompt": "SOG reports approximately 22× overall compression for the Truck scene (639.7 MB → 28.8 MB). Of the three stages — quantization (~6×), sorting + image coding (~3.7×), what is the approximate additional gain from each stage?",
+      "options": [
+        { "id": "a", "text": "Quantization provides ~22× by itself; sorting and coding provide no additional benefit", "correct": false },
+        { "id": "b", "text": "Quantization ~6×, image coding on unsorted data ~1.5×, image coding on sorted data ~3.7× — sorting multiplies the compression effect of the codec", "correct": true },
+        { "id": "c", "text": "All three stages provide equal 7.3× compression, combining multiplicatively to 22×", "correct": false },
+        { "id": "d", "text": "Sorting alone provides 22×; quantization and image coding are optional optimizations", "correct": false }
+      ],
+      "explanation": "The stages compose multiplicatively. Quantization reduces from 32-bit to ~5 bits average ≈ 6×. Image codecs achieve poor compression on unsorted quantized data (~1.5×) but strong compression on sorted data (~3.7×). Together: 6 × 3.7 ≈ 22×. The sorting step is what makes image codecs effective — without sorting, applying an image codec to quantized 3DGS data yields only marginal gains.",
+      "hint": "From 639.7 MB: after quantization alone, what size would you estimate? Then what size after image coding unsorted? Then sorted?"
+    },
+    {
+      "id": "q5_q2_4",
+      "type": "multiple-choice",
+      "prompt": "KISS-GS achieves 228× compression by combining compaction (15.7×), encoding (6.6×), and adaptation (2.2×). These factors compose multiplicatively. What does this imply about the relationship between the three stages?",
+      "options": [
+        { "id": "a", "text": "The three stages are independent — each reduces size by its factor regardless of what the other stages do", "correct": false },
+        { "id": "b", "text": "The stages are roughly independent in their compression effect: the input to each stage is the output of the previous, and each reduces size by a consistent factor", "correct": true },
+        { "id": "c", "text": "Multiplicative composition means the later stages achieve higher compression than if applied alone", "correct": false },
+        { "id": "d", "text": "The 228× total is only achievable if all three stages are applied in this specific order", "correct": false }
+      ],
+      "explanation": "Multiplicative composition holds approximately when the stages are independent. Compaction reduces Gaussian count and parameter count → encoding compresses the resulting attribute values → adaptation fine-tunes the representation for better encodability. Each stage receives a different-sized and different-distribution input and applies its own mechanism. The approximate independence means each factor is relatively stable regardless of what precedes it, making the multiplicative model a useful (if imperfect) estimate.",
+      "hint": "If stage A reduces size by 15.7× and stage B then reduces the result by 6.6×, what is the total reduction?"
+    },
+    {
+      "id": "q5_q2_5",
+      "type": "multiple-choice",
+      "prompt": "The SOG smoothness finetuning loss \\(\\mathcal{L}_{smooth}\\) penalizes variation between neighboring Gaussians in the sorted grid. What risk does adding this loss introduce, and how does SOG mitigate it?",
+      "options": [
+        { "id": "a", "text": "The smoothness loss may over-smooth sharp geometry; SOG mitigates by only applying it to SH coefficients, not positions", "correct": false },
+        { "id": "b", "text": "The smoothness loss encourages attribute uniformity, which could reduce rendering quality if it forces distinct Gaussians to become identical; SOG mitigates by balancing with the photometric rendering loss", "correct": true },
+        { "id": "c", "text": "The smoothness loss causes gradient explosion; SOG mitigates by gradient clipping", "correct": false },
+        { "id": "d", "text": "The smoothness loss is only applied to opacity, which has no effect on rendering quality", "correct": false }
+      ],
+      "explanation": "A pure smoothness loss would drive all attributes to their mean — all Gaussians become identical — which perfectly satisfies smoothness but completely destroys the scene representation. The rendering loss \\(\\mathcal{L}_{render}\\) prevents this by requiring that the rendered images remain close to the originals. The smoothness loss is a regularizer: it improves compressibility as long as the photometric constraint keeps it from trivializing the representation.",
+      "hint": "What would happen if you applied only the smoothness loss without any rendering loss?"
+    }
+  ]
+}

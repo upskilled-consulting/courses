@@ -1,0 +1,65 @@
+{
+  "id": "r4",
+  "moduleId": "calculus-foundations",
+  "title": "Exponentials, Logarithms, and Their Derivatives",
+  "estimatedMinutes": 15,
+  "learningObjectives": [
+    {
+      "id": "r4-lo1",
+      "verb": "State",
+      "description": "State the derivatives of e^x and ln(x) and apply them with the chain rule to differentiate compositions involving exponentials and logarithms",
+      "skillTags": ["calculus-foundations", "derivatives"]
+    },
+    {
+      "id": "r4-lo2",
+      "verb": "Derive",
+      "description": "Derive the sigmoid derivative σ'(x) = σ(x)(1 − σ(x)) using the quotient rule and exponential derivative",
+      "skillTags": ["calculus-foundations", "derivatives", "ml-connection"]
+    },
+    {
+      "id": "r4-lo3",
+      "verb": "Explain",
+      "description": "Explain why log appears in cross-entropy loss and why numerical stability requires computing log-probabilities rather than raw probabilities",
+      "skillTags": ["calculus-foundations", "ml-connection"]
+    }
+  ],
+  "prevItem": { "type": "reading", "id": "r3" },
+  "nextItem": { "type": "quiz", "id": "q1" },
+  "content": "## The Natural Exponential Function\n\nThe exponential function $e^x$ (where $e \\approx 2.71828...$) has a remarkable property: it is its own derivative.\n\n$$\\frac{d}{dx}\\left[e^x\\right] = e^x$$\n\nNo other base has this property. $e$ is defined precisely so that this holds — it is the unique base for which the derivative of $a^x$ at $x = 0$ equals 1.\n\nWhy does this matter? Because a function that equals its own rate of change is the natural model for *anything that grows (or decays) proportionally to its current size*: compound interest, population growth, radioactive decay, and — centrally for ML — the exponential in the softmax function.\n\n---\n\n## The Natural Logarithm\n\nThe natural logarithm $\\ln x$ is the inverse of $e^x$: $\\ln(e^x) = x$ and $e^{\\ln x} = x$. Its derivative:\n\n$$\\frac{d}{dx}[\\ln x] = \\frac{1}{x} \\qquad (x > 0)$$\n\nNotice that as $x$ grows, $1/x$ shrinks toward zero — the logarithm's slope becomes shallower and shallower, reflecting how slowly $\\ln x$ grows for large $x$. For small positive $x$ near zero, $1/x$ is large — $\\ln x$ falls steeply toward $-\\infty$.\n\n---\n\n## Chain Rule Combinations\n\nWith the chain rule from r3, we can differentiate any composition involving $e^x$ and $\\ln x$:\n\n$$\\frac{d}{dx}\\left[e^{g(x)}\\right] = g'(x)\\,e^{g(x)}$$\n\n$$\\frac{d}{dx}\\left[\\ln g(x)\\right] = \\frac{g'(x)}{g(x)}$$\n\n**Examples:**\n\n| Function | Derivative |\n|----------|------------|\n| $e^{3x}$ | $3e^{3x}$ |\n| $e^{-x^2}$ | $-2x\\,e^{-x^2}$ |\n| $\\ln(x^2 + 1)$ | $\\frac{2x}{x^2+1}$ |\n| $\\ln(\\sin x)$ | $\\frac{\\cos x}{\\sin x} = \\cot x$ |\n\n---\n\n## Deriving the Sigmoid Derivative\n\nThe **sigmoid function** $\\sigma(x) = \\frac{1}{1+e^{-x}}$ is one of the most important functions in ML. Let's derive its derivative from first principles.\n\nWrite $\\sigma(x) = (1 + e^{-x})^{-1}$ and apply the chain rule:\n\n$$\\sigma'(x) = -(1+e^{-x})^{-2} \\cdot (-e^{-x}) = \\frac{e^{-x}}{(1+e^{-x})^2}$$\n\nNow rewrite using a clever algebraic trick. Factor and recognize $\\sigma$:\n\n$$\\sigma'(x) = \\frac{1}{1+e^{-x}} \\cdot \\frac{e^{-x}}{1+e^{-x}} = \\sigma(x) \\cdot \\frac{e^{-x}}{1+e^{-x}}$$\n\nNote that $\\frac{e^{-x}}{1+e^{-x}} = 1 - \\frac{1}{1+e^{-x}} = 1 - \\sigma(x)$. Therefore:\n\n$$\\boxed{\\sigma'(x) = \\sigma(x)\\,(1 - \\sigma(x))}$$\n\nThis is the result previewed in r3. The sigmoid derivative is expressible entirely in terms of the sigmoid output itself — no separate computation needed. At $\\sigma = 0.5$ (the steepest point), $\\sigma' = 0.25$. At extreme values near 0 or 1, $\\sigma'$ collapses toward zero — the **vanishing gradient** problem.\n\n---\n\n## Cross-Entropy Loss and the Log Derivative\n\nFor a binary classifier with prediction $\\hat{p} \\in (0,1)$ and true label $y \\in \\{0,1\\}$, the **cross-entropy loss** is:\n\n$$\\mathcal{L} = -y \\ln \\hat{p} - (1-y) \\ln(1-\\hat{p})$$\n\nWhen $y = 1$, this reduces to $-\\ln \\hat{p}$. Why log?\n\n1. **Probabilistic motivation:** Maximum likelihood estimation of $\\hat{p}$ is equivalent to minimizing $-\\ln \\hat{p}$, since $\\ln$ is monotone.\n2. **Gradient behavior:** The gradient of $-\\ln \\hat{p}$ with respect to $\\hat{p}$ is $-1/\\hat{p}$. When the model is confidently wrong ($\\hat{p} \\approx 0$), this gradient is very large — the loss sends a strong correction signal. When the model is correct ($\\hat{p} \\approx 1$), the gradient is small — small nudge needed.\n\nThe chain rule then gives the gradient with respect to the network's output $z$ (before sigmoid):\n$$\\frac{\\partial \\mathcal{L}}{\\partial z} = \\hat{p} - y$$\n\nThis elegantly simple form — prediction minus label — is why logistic regression with cross-entropy loss trains so cleanly.\n\n---\n\n## Numerical Stability: Log-Probabilities\n\nComputing $\\ln p$ before exponentiation prevents underflow. The softmax denominator $\\sum_k e^{z_k}$ can overflow for large logits. The standard fix:\n\n$$\\ln \\sigma(x) = \\ln\\!\\left(\\frac{1}{1+e^{-x}}\\right) = -\\ln(1 + e^{-x})$$\n\nFor large positive $x$: $\\approx -e^{-x} \\approx 0$. For large negative $x$: $\\approx x$. Both cases are numerically stable. This is why `torch.nn.BCEWithLogitsLoss` and `log_softmax` exist — they fuse the log and exp operations to avoid intermediate overflow.\n\n---\n\n## PyTorch and TensorFlow\n\n```python\nimport torch\nimport torch.nn.functional as F\n\n# Sigmoid derivative: σ(x)(1 - σ(x))\nx = torch.tensor(0.0, requires_grad=True)  # at x=0, σ=0.5\na = torch.sigmoid(x)\na.backward()\nprint(x.grad.item())   # 0.25  = 0.5 * (1 - 0.5)  ✓\n\n# Numerically stable log-sigmoid\nlogits = torch.tensor([2.0, -3.0, 0.5])\nlog_probs = F.log_softmax(logits, dim=0)\nprint(log_probs)       # safe: never computes raw softmax\n```\n\n```python\nimport tensorflow as tf\nimport numpy as np\n\n# Sigmoid derivative at x=0\nx = tf.Variable(0.0)\nwith tf.GradientTape() as tape:\n    a = tf.sigmoid(x)\nprint(tape.gradient(a, x).numpy())  # 0.25\n\n# Numerically stable cross-entropy (pass logits, not probabilities)\nlogits = tf.constant([[2.0, -3.0, 0.5]])\nlabels = tf.constant([[1, 0, 0]])\nloss = tf.keras.losses.CategoricalCrossentropy(from_logits=True)\nprint(loss(labels, logits).numpy())  # computed via log-softmax internally\n```",
+  "equationBreakdowns": [
+    {
+      "label": "Exponential Derivative",
+      "heading": "d/dx[e^x] = e^x",
+      "terms": [
+        {
+          "symbol": "e^x",
+          "name": "The natural exponential",
+          "desc": "The unique function that equals its own derivative. The base e ≈ 2.718 is defined precisely so this holds. With the chain rule: d/dx[e^{g(x)}] = g'(x)·e^{g(x)}."
+        }
+      ]
+    },
+    {
+      "label": "Sigmoid Derivative",
+      "heading": "σ'(x) = σ(x)(1 − σ(x))",
+      "terms": [
+        {
+          "symbol": "\\sigma(x)",
+          "name": "Sigmoid output",
+          "desc": "The current activation value, between 0 and 1."
+        },
+        {
+          "symbol": "1 - \\sigma(x)",
+          "name": "Complement",
+          "desc": "The gap between the activation and 1. The product σ(1−σ) is maximized at σ=0.5 (giving 0.25) and approaches 0 near the saturation regions σ≈0 or σ≈1 — the vanishing gradient regime."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "MIT 18.01SC — Sessions 16–18",
+      "title": "Exponential Functions and Their Derivatives",
+      "url": "https://ocw.mit.edu/courses/18-01sc-single-variable-calculus-fall-2010/"
+    }
+  ]
+}

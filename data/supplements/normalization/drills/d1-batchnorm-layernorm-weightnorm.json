@@ -1,0 +1,84 @@
+{
+  "id": "d1",
+  "moduleId": "normalization",
+  "title": "BatchNorm, LayerNorm, Weight Norm, and Spectral Norm",
+  "description": "Core mechanics and failure modes of the four foundational normalization techniques",
+  "estimatedMinutes": 20,
+  "cards": [
+    {
+      "id": "d1-c1",
+      "front": "What are the three steps of the BatchNorm forward pass?",
+      "back": "**1. Compute batch statistics:**\n$$\\mu_\\mathcal{B} = \\frac{1}{B}\\sum_i z_i \\qquad \\sigma^2_\\mathcal{B} = \\frac{1}{B}\\sum_i (z_i - \\mu_\\mathcal{B})^2$$\n\n**2. Normalize:**\n$$\\hat{z}_i = \\frac{z_i - \\mu_\\mathcal{B}}{\\sqrt{\\sigma^2_\\mathcal{B} + \\epsilon}}$$\n\n**3. Scale and shift:**\n$$y_i = \\gamma\\hat{z}_i + \\beta$$\n\n$\\gamma$ and $\\beta$ are learned per-feature parameters."
+    },
+    {
+      "id": "d1-c2",
+      "front": "Why does BatchNorm use running statistics at inference, and what is the consequence of forgetting `model.eval()`?",
+      "back": "**Running stats are needed because:**\n- Inference batch may be a single example (unreliable statistics)\n- Test distribution may differ from training\n- Determinism is required in production\n\n**Forgetting `model.eval()`:** BatchNorm uses batch statistics instead of running stats. Outputs become **non-deterministic** — they change based on what other examples are in the batch. Outputs also change if batch size changes.\n\nRunning stats are updated during training:\n$$\\mu_{\\text{run}} \\leftarrow (1-m)\\mu_{\\text{run}} + m\\,\\mu_\\mathcal{B}$$\nwith $m = 0.1$ in PyTorch (10% weight on the new batch)."
+    },
+    {
+      "id": "d1-c3",
+      "front": "What do the learned parameters γ and β in BatchNorm recover?",
+      "back": "Pure normalization forces zero mean and unit variance, preventing the network from representing layers that should output large activations.\n\n$\\gamma$ and $\\beta$ **restore full expressive capacity**: the network can learn any mean and variance, but in a parameterized, optimizer-controlled way.\n\nIf the optimal transformation is the identity, the network can learn $\\gamma = \\sigma_\\mathcal{B}$ and $\\beta = \\mu_\\mathcal{B}$.\n\nBatchNorm never forces any particular scale — it only provides a normalized starting point."
+    },
+    {
+      "id": "d1-c4",
+      "front": "What is the Santurkar et al. (2018) finding about BatchNorm's mechanism?",
+      "back": "**The original hypothesis** (Ioffe & Szegedy): BatchNorm helps by reducing internal covariate shift.\n\n**The 2018 finding:** Santurkar et al. deliberately reintroduced covariate shift in BN networks (adding random noise to activations) and found training still improved. Covariate shift was not the key mechanism.\n\n**The actual mechanism: loss landscape smoothing.**\n\nBatchNorm reduces the **β-smoothness** of the gradients:\n$$\\|\\nabla\\mathcal{L}(\\theta_1) - \\nabla\\mathcal{L}(\\theta_2)\\| \\leq \\beta\\|\\theta_1 - \\theta_2\\|$$\n\nA smoother loss surface allows (1) larger learning rates and (2) less sensitivity to initialization."
+    },
+    {
+      "id": "d1-c5",
+      "front": "How does Spatial BatchNorm (BatchNorm for CNNs) compute statistics for a feature map $(B, C, H, W)$?",
+      "back": "Normalize **per channel** over the $(B, H, W)$ dimensions:\n\n$$\\mu_c = \\frac{1}{B \\cdot H \\cdot W}\\sum_{b,h,w} x_{b,c,h,w}$$\n\nOne $\\mu_c$, $\\sigma^2_c$, $\\gamma_c$, $\\beta_c$ per channel.\n\nThe spatial dimensions $H, W$ are treated as extra batch dimensions. A network with 64 channels has 64 sets of BN parameters regardless of spatial resolution."
+    },
+    {
+      "id": "d1-c6",
+      "front": "What is Synchronized BatchNorm (SyncBN) and when is it needed?",
+      "back": "**Problem:** In multi-GPU training, each device sees only its sub-batch. With 32 images across 8 GPUs = 4 images per GPU — per-device BN statistics are extremely noisy.\n\n**SyncBN solution:**\n1. Each GPU computes local sum $\\sum z_i$ and $\\sum z_i^2$\n2. **All-reduce** across devices to compute global $\\mu$ and $\\sigma^2$\n3. Each GPU normalizes using the global statistics\n\n**Cost:** one all-reduce communication round per BN layer per forward pass.\n\n**When needed:** object detection and segmentation where per-image processing limits per-GPU batch to 1–4 images."
+    },
+    {
+      "id": "d1-c7",
+      "front": "What dimension does LayerNorm normalize, and why does this make it batch-size independent?",
+      "back": "LayerNorm normalizes over the **feature dimension** of each example independently:\n\n$$\\mu = \\frac{1}{d}\\sum_{j=1}^d x_j \\qquad \\sigma^2 = \\frac{1}{d}\\sum_{j=1}^d (x_j - \\mu)^2$$\n\n$\\mu$ and $\\sigma^2$ are computed per-example — they depend on **nothing outside the current input**.\n\nBatch-size independence follows directly: no other examples are involved in the computation. Train and inference are identical; works at batch size 1."
+    },
+    {
+      "id": "d1-c8",
+      "front": "Compare pre-norm and post-norm placement in a transformer block. Which is more stable and why?",
+      "back": "**Post-norm (original Transformer):**\n$$\\mathbf{y} = \\text{LN}(\\mathbf{x} + \\text{SubLayer}(\\mathbf{x}))$$\nGradients must pass through LayerNorm at every block — can cause instability at initialization in deep networks. Requires learning rate warmup.\n\n**Pre-norm (modern transformers):**\n$$\\mathbf{y} = \\mathbf{x} + \\text{SubLayer}(\\text{LN}(\\mathbf{x}))$$\nThe raw unnormalized residual passes directly through the skip connection. At initialization, $\\text{SubLayer}(\\text{LN}(\\mathbf{x})) \\approx 0$, so $\\mathbf{y} \\approx \\mathbf{x}$ — the block is approximately identity. Gradients flow freely regardless of depth.\n\n**Pre-norm is more stable.** GPT-3, LLaMA, Mistral, Gemma all use pre-norm."
+    },
+    {
+      "id": "d1-c9",
+      "front": "What does RMSNorm remove from LayerNorm, and what speed improvement does this provide?",
+      "back": "RMSNorm removes the **mean-centering step** ($x_j - \\mu$) and the **bias parameter $\\beta$**:\n\n$$\\text{RMS}(\\mathbf{x}) = \\sqrt{\\frac{1}{d}\\sum_{j=1}^d x_j^2 + \\epsilon} \\qquad y_j = \\frac{x_j}{\\text{RMS}(\\mathbf{x})} \\cdot \\gamma_j$$\n\n**Speed:** ~15–20% fewer floating-point operations (no mean accumulation pass, no subtraction, no $\\beta$).\n\n**Motivation:** mean centering provides little additional benefit for language model activations — most of the benefit comes from scale normalization.\n\n**Used in:** LLaMA (all versions), Mistral, Gemma, Falcon — now the standard for decoder-only LLMs."
+    },
+    {
+      "id": "d1-c10",
+      "front": "What is the weight normalization reparameterization, and how does it decouple magnitude from direction?",
+      "back": "Replace each weight vector $\\mathbf{w}_i$ with:\n\n$$\\mathbf{w}_i = g_i \\cdot \\frac{\\mathbf{v}_i}{\\|\\mathbf{v}_i\\|}$$\n\n$g_i$: scalar magnitude. $\\mathbf{v}_i$: direction vector (unnormalized).\n\n**Decoupling:** the gradient w.r.t. $\\mathbf{v}$ is automatically orthogonalized — the component of $\\nabla_{\\mathbf{w}}\\mathcal{L}$ along $\\hat{\\mathbf{v}}$ is subtracted out. Updates to $\\mathbf{v}$ only change the *direction* of $\\mathbf{w}$; updates to $g$ only change its *magnitude*.\n\n**Key advantage over BatchNorm:** no batch statistics, no train/eval difference, no running averages — works at batch size 1."
+    },
+    {
+      "id": "d1-c11",
+      "front": "What is the spectral norm of a matrix, and what does spectral normalization do to a weight matrix?",
+      "back": "The **spectral norm** is the largest singular value:\n\n$$\\sigma_1(W) = \\max_{\\mathbf{x} \\neq 0} \\frac{\\|W\\mathbf{x}\\|_2}{\\|\\mathbf{x}\\|_2}$$\n\nIt bounds the layer's Lipschitz constant — the maximum factor by which the linear map can amplify any input.\n\n**Spectral normalization** divides $W$ by its spectral norm:\n$$\\hat{W} = W / \\sigma_1(W)$$\n\nThis ensures $\\sigma_1(\\hat{W}) = 1$: the normalized layer is Lipschitz-1. A network of Lipschitz-1 layers has global Lipschitz constant ≤ 1."
+    },
+    {
+      "id": "d1-c12",
+      "front": "How does power iteration estimate σ₁(W) efficiently, and why is 1 iteration per training step sufficient?",
+      "back": "**Power iteration** maintains unit vectors $\\tilde{\\mathbf{u}} \\in \\mathbb{R}^m$ and $\\tilde{\\mathbf{v}} \\in \\mathbb{R}^n$:\n\n$$\\tilde{\\mathbf{v}} \\leftarrow \\frac{W^\\top \\tilde{\\mathbf{u}}}{\\|W^\\top \\tilde{\\mathbf{u}}\\|} \\qquad \\tilde{\\mathbf{u}} \\leftarrow \\frac{W \\tilde{\\mathbf{v}}}{\\|W \\tilde{\\mathbf{v}}\\|}$$\n\n$$\\sigma_1(W) \\approx \\tilde{\\mathbf{u}}^\\top W \\tilde{\\mathbf{v}}$$\n\n**Why 1 iteration suffices:** $\\tilde{\\mathbf{u}}$ and $\\tilde{\\mathbf{v}}$ are stored between steps and initialized from the previous estimate. Since $W$ changes slowly (small gradient updates), one iteration updates the estimate to track the small change.\n\nExact SVD costs $O(\\min(m,n) \\cdot mn)$ — too expensive per step. Power iteration costs $O(mn)$."
+    },
+    {
+      "id": "d1-c13",
+      "front": "Why does the WGAN discriminator require a Lipschitz constraint, and how does spectral normalization satisfy it?",
+      "back": "**WGAN objective:**\n$$\\mathcal{L}_{\\text{WGAN}} = \\mathbb{E}_{x \\sim p_{\\text{data}}}[D(x)] - \\mathbb{E}_{x \\sim p_g}[D(x)]$$\n\nFor this to equal the Wasserstein-1 distance (Kantorovich-Rubinstein duality), $D$ must be **1-Lipschitz**: $|D(x) - D(y)| \\leq \\|x - y\\|$ for all $x, y$.\n\n**Spectral normalization** enforces Lipschitz-1 directly by setting $\\sigma_1(\\hat{W}) = 1$ at each layer. The product of per-layer Lipschitz constants bounds the network's global constant.\n\n**Advantages over WGAN-GP** (gradient penalty): no extra loss term, no hyperparameter $\\lambda$, no backward-through-backward computation."
+    },
+    {
+      "id": "d1-c14",
+      "front": "What does DeepNorm's formula y = LN(α·x + SubLayer(x)) accomplish that standard pre-norm does not?",
+      "back": "**Standard pre-norm:** $\\mathbf{y} = \\mathbf{x} + \\text{SubLayer}(\\text{LN}(\\mathbf{x}))$ — practical stability for dozens of layers.\n\n**DeepNorm:** $\\mathbf{y} = \\text{LN}(\\alpha\\,\\mathbf{x} + \\text{SubLayer}(\\mathbf{x}))$ with $\\alpha > 1$, sub-layer weights initialized at $\\beta < 1$.\n\n**What it accomplishes:**\n- $\\alpha > 1$ makes the residual dominate at initialization — the sub-layer starts as a small perturbation\n- Combined with $\\beta$-scaled initialization, this gives a **provably bounded gradient** throughout training\n- Enabled training of transformers with **1000+ layers** without divergence (DeepNet paper, Wang et al. 2022)\n\nPre-norm is stable in practice; DeepNorm provides a formal theoretical guarantee at extreme depth."
+    },
+    {
+      "id": "d1-c15",
+      "front": "When should you use BatchNorm vs. LayerNorm vs. GroupNorm? Give the standard domain for each.",
+      "back": "**BatchNorm** — supervised vision with large batch sizes (≥ 16–32 per device). CNNs for image classification. Standard in ResNets, EfficientNets.\n\n**LayerNorm (or RMSNorm)** — sequence models, transformers, NLP. Per-example feature-dimension normalization. Standard in all major LLMs (GPT, LLaMA, etc.).\n\n**GroupNorm** — vision tasks with small per-GPU batches: object detection, instance segmentation, video. BatchNorm degrades; GroupNorm is batch-size independent. Standard in Detectron2, Mask R-CNN.\n\n**InstanceNorm** — style transfer, image-to-image translation, any task where per-example appearance statistics should be normalized. CycleGAN, pix2pix.\n\n**Weight Norm / Spectral Norm** — generative models, RL. Spectral norm: GAN discriminators for Lipschitz constraint."
+    }
+  ]
+}

@@ -1,0 +1,331 @@
+{
+  "id": "r1",
+  "moduleId": "optimizers",
+  "title": "SGD & Momentum Methods",
+  "estimatedMinutes": 14,
+  "learningObjectives": [
+    {
+      "id": "r1-lo1",
+      "verb": "State",
+      "description": "State the SGD with momentum update rule and explain how the velocity term damps oscillations across high-curvature directions",
+      "skillTags": [
+        "sgd-momentum",
+        "training-dynamics"
+      ]
+    },
+    {
+      "id": "r1-lo2",
+      "verb": "Distinguish",
+      "description": "Distinguish Nesterov momentum from classical momentum and explain why evaluating the gradient at the lookahead position improves convergence",
+      "skillTags": [
+        "sgd-momentum"
+      ]
+    },
+    {
+      "id": "r1-lo3",
+      "verb": "Apply",
+      "description": "Apply weight decay in SGD as L2 regularization and state why L2 regularization and weight decay are equivalent for SGD but not for adaptive optimizers",
+      "skillTags": [
+        "sgd-momentum",
+        "regularization"
+      ]
+    },
+    {
+      "id": "r1-lo4",
+      "verb": "Distinguish",
+      "description": "Distinguish ASGD (parameter averaging for variance reduction) from Rprop (sign-based per-parameter step sizes) and identify when each is appropriate",
+      "skillTags": [
+        "sgd-momentum"
+      ]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r0"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r2"
+  },
+  "content": "## Stochastic Gradient Descent\n\nAt its core, SGD replaces the full-dataset gradient with a mini-batch estimate:\n$$\\theta_{t+1} = \\theta_t - \\eta \\, g_t, \\quad g_t = \\frac{1}{B} \\sum_{i \\in \\mathcal{B}} \\nabla_{\\theta} \\ell_i$$\n\nThe noise from sampling is not purely harmful — it acts as implicit regularization and helps escape sharp minima. But vanilla SGD converges slowly on ill-conditioned loss surfaces because the optimal step size varies across directions.\n\n```python\noptimizer = torch.optim.SGD(model.parameters(), lr=0.01)\n```\n\n**TensorFlow:**\n```python\noptimizer = tf.keras.optimizers.SGD(learning_rate=0.01)\n```\n\n## Momentum\n\nMomentum adds a velocity term $v$ that accumulates gradients exponentially, smoothing oscillations across high-curvature directions:\n$$v_{t+1} = \\beta v_t + g_t$$\n\n$$\\theta_{t+1} = \\theta_t - \\eta v_{t+1}$$\n\nWith $\\beta = 0.9$, the effective gradient is a 10-step exponential moving average. This damps oscillations perpendicular to the optimum and accelerates along consistent gradient directions.\n\n```python\noptimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)\n```\n\n**TensorFlow:**\n```python\noptimizer = tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9)\n```\n\n**Dampening** (`dampening > 0`) reduces the contribution of the current gradient to the velocity — useful when the gradient is noisy:\n$$v_{t+1} = \\beta v_t + (1 - \\text{dampening}) \\cdot g_t$$\n\n## Nesterov Accelerated Gradient\n\nNesterov momentum evaluates the gradient at a *lookahead* position — where we would be after applying the current velocity — rather than at the current parameters:\n$$\\theta_{\\text{look}} = \\theta_t - \\eta \\beta v_t$$\n\n$$v_{t+1} = \\beta v_t + \\nabla L(\\theta_{\\text{look}})$$\n\n$$\\theta_{t+1} = \\theta_t - \\eta v_{t+1}$$\n\nThis makes momentum *anticipatory* rather than *corrective*. Nesterov consistently outperforms classical momentum on convex problems and is widely used in practice:\n\n```python\noptimizer = torch.optim.SGD(\n    model.parameters(), lr=0.01, momentum=0.9, nesterov=True\n)\n```\n\n**TensorFlow:**\n```python\noptimizer = tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9, nesterov=True)\n```\n\n> **Note:** `nesterov=True` requires `momentum > 0` and `dampening = 0`.\n\n## Weight Decay in SGD\n\nSGD applies L2 regularization by adding $\\lambda \\theta$ to the gradient before the update:\n$$\\theta_{t+1} = \\theta_t - \\eta (g_t + \\lambda \\theta_t)$$\n\nFor SGD, L2 regularization and weight decay are equivalent. This equivalence breaks for adaptive optimizers (see AdamW).\n\n```python\noptimizer = torch.optim.SGD(\n    model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4\n)\n```\n\n**TensorFlow:**\n```python\n# Keras SGD does not have weight_decay; apply via kernel_regularizer on each layer\n# or use the newer tf.keras.optimizers.SGD with weight_decay (Keras 3 / TF 2.13+):\noptimizer = tf.keras.optimizers.SGD(learning_rate=0.01, momentum=0.9, weight_decay=1e-4)\n```\n\n## ASGD — Averaged SGD\n\nASGD runs standard SGD but maintains a running average of parameter iterates, activated after `t0` steps:\n$$\\bar{\\theta}_t = \\frac{1}{t - t_0} \\sum_{i=t_0}^{t} \\theta_i$$\n\nAveraging reduces variance from late-stage gradient noise. It's theoretically optimal for convex problems and occasionally used in NLP (classic LSTM training).\n\n```python\noptimizer = torch.optim.ASGD(\n    model.parameters(), lr=0.01, lambd=1e-4, alpha=0.75, t0=1e6\n)\n# Use optimizer.state[p]['ax'] for the averaged parameters\n```\n\n**TensorFlow:** No built-in ASGD. Use `tf.train.experimental.enable_mixed_precision_graph_rewrite` or implement parameter averaging manually with `tf.train.ExponentialMovingAverage`:\n```python\nema = tf.train.ExponentialMovingAverage(decay=0.999)\nema.apply(model.trainable_variables)  # call after each optimizer step\n# For inference: use ema.average(var) instead of var\n```\n\nThe `lambd` parameter adds a small per-step decay to the effective learning rate; `alpha` controls how fast that decay accelerates.\n\n## Rprop — Resilient Backpropagation\n\nRprop ignores gradient magnitude entirely and updates each parameter by a fixed step size whose sign matches the gradient sign. Step sizes grow or shrink based on whether the gradient sign is consistent across consecutive steps:\n\n- If `sign(g_t) == sign(g_{t-1})`: increase step size by `etas[1]` (default 1.2)\n- If `sign(g_t) != sign(g_{t-1})`: decrease step size by `etas[0]` (default 0.5)\n- Step sizes are clipped to `step_sizes` bounds (default 1e-6 to 50)\n\n```python\noptimizer = torch.optim.Rprop(\n    model.parameters(), lr=0.01, etas=(0.5, 1.2), step_sizes=(1e-6, 50)\n)\n```\n\n**TensorFlow:** No built-in Rprop. RMSprop (`tf.keras.optimizers.RMSprop`) is Rprop's direct descendant and is the practical TF substitute for mini-batch settings.\n\nRprop is effectively RMSprop's ancestor. It works well for full-batch training and small networks but poorly for mini-batch settings where sign changes are noisy.\n\n## Choosing Between SGD Variants\n\n| Variant | Best for |\n|---|---|\n| SGD (no momentum) | Convex baselines, simple experiments |\n| SGD + momentum | Most supervised deep learning |\n| SGD + Nesterov | When classical momentum shows oscillations |\n| ASGD | Convex/quasi-convex language models, final-phase averaging |\n| Rprop | Full-batch training, small networks |\n\nFor large-scale vision models (ResNets, ViTs), well-tuned SGD with momentum + cosine LR schedule often matches or beats Adam.\n",
+  "equationBreakdowns": [
+    {
+      "label": "Vanilla SGD",
+      "heading": "Stochastic Gradient Descent",
+      "terms": [
+        {
+          "symbol": "\\theta_{t+1}",
+          "name": "Updated parameters",
+          "desc": "Parameter vector after applying this step's update"
+        },
+        {
+          "symbol": "\\theta_t",
+          "name": "Current parameters",
+          "desc": "Parameter vector before this step"
+        },
+        {
+          "symbol": "\\eta",
+          "name": "Learning rate",
+          "desc": "Global step size — too large causes divergence, too small causes slow convergence"
+        },
+        {
+          "symbol": "g_t",
+          "name": "Mini-batch gradient",
+          "desc": "Average gradient over the current mini-batch: $\\frac{1}{B}\\sum_{i \\in \\mathcal{B}} \\nabla_{\\theta} \\ell_i$"
+        },
+        {
+          "symbol": "B",
+          "name": "Batch size",
+          "desc": "Number of samples in the mini-batch — larger B reduces gradient variance but increases memory"
+        },
+        {
+          "symbol": "\\mathcal{B}",
+          "name": "Mini-batch indices",
+          "desc": "Random subset of training indices sampled each step"
+        },
+        {
+          "symbol": "\\nabla_{\\theta} \\ell_i",
+          "name": "Per-sample gradient",
+          "desc": "Gradient of the loss for a single example $i$ with respect to all parameters $\\theta$"
+        }
+      ]
+    },
+    {
+      "label": "Momentum — velocity update",
+      "heading": "Momentum",
+      "terms": [
+        {
+          "symbol": "v_{t+1}",
+          "name": "New velocity",
+          "desc": "Exponentially weighted accumulation of past gradients — carries history from all previous steps"
+        },
+        {
+          "symbol": "\\beta",
+          "name": "Momentum coefficient",
+          "desc": "Decay factor for past velocity — typical value 0.9 gives roughly a 10-step exponential moving average"
+        },
+        {
+          "symbol": "v_t",
+          "name": "Previous velocity",
+          "desc": "Accumulated gradient direction from the prior step"
+        },
+        {
+          "symbol": "g_t",
+          "name": "Current gradient",
+          "desc": "Mini-batch gradient at step $t$ — added directly (no scaling) to the velocity"
+        }
+      ]
+    },
+    {
+      "label": "Momentum — parameter update",
+      "heading": "Momentum",
+      "terms": [
+        {
+          "symbol": "\\theta_{t+1}",
+          "name": "Updated parameters",
+          "desc": "Parameters after moving in the direction of accumulated velocity"
+        },
+        {
+          "symbol": "\\theta_t",
+          "name": "Current parameters",
+          "desc": "Parameters before this step"
+        },
+        {
+          "symbol": "\\eta",
+          "name": "Learning rate",
+          "desc": "Scales the velocity vector before it is subtracted from the parameters"
+        },
+        {
+          "symbol": "v_{t+1}",
+          "name": "Velocity",
+          "desc": "The smoothed gradient direction computed in the velocity update above"
+        }
+      ]
+    },
+    {
+      "label": "Nesterov — lookahead position",
+      "heading": "Nesterov Accelerated Gradient",
+      "terms": [
+        {
+          "symbol": "\\theta_{\\text{look}}",
+          "name": "Lookahead position",
+          "desc": "Where the parameters would be after applying the current velocity — the gradient is evaluated here, not at $\\theta_t$"
+        },
+        {
+          "symbol": "\\theta_t",
+          "name": "Current parameters",
+          "desc": "Actual parameter values before the update"
+        },
+        {
+          "symbol": "\\eta",
+          "name": "Learning rate",
+          "desc": "Step size scalar"
+        },
+        {
+          "symbol": "\\beta",
+          "name": "Momentum coefficient",
+          "desc": "Controls how far ahead to look — larger β projects further along the current velocity direction"
+        },
+        {
+          "symbol": "v_t",
+          "name": "Current velocity",
+          "desc": "Accumulated gradient direction from prior steps — defines the lookahead direction"
+        }
+      ]
+    },
+    {
+      "label": "Nesterov — velocity update",
+      "heading": "Nesterov Accelerated Gradient",
+      "terms": [
+        {
+          "symbol": "v_{t+1}",
+          "name": "New velocity",
+          "desc": "Updated velocity incorporating the anticipatory gradient"
+        },
+        {
+          "symbol": "\\beta v_t",
+          "name": "Momentum term",
+          "desc": "Decayed previous velocity — same as classical momentum"
+        },
+        {
+          "symbol": "\\nabla L(\\theta_{\\text{look}})",
+          "name": "Lookahead gradient",
+          "desc": "Gradient evaluated at the projected position $\\theta_{\\text{look}}$ — more informative than the gradient at $\\theta_t$ because it anticipates the effect of the velocity step"
+        }
+      ]
+    },
+    {
+      "label": "Nesterov — parameter update",
+      "heading": "Nesterov Accelerated Gradient",
+      "terms": [
+        {
+          "symbol": "\\theta_{t+1}",
+          "name": "Updated parameters",
+          "desc": "Parameters after applying the corrected velocity"
+        },
+        {
+          "symbol": "\\eta",
+          "name": "Learning rate",
+          "desc": "Scales the velocity before subtracting from parameters"
+        },
+        {
+          "symbol": "v_{t+1}",
+          "name": "Corrected velocity",
+          "desc": "Velocity built from the lookahead gradient — corrects for overshooting before it happens"
+        }
+      ]
+    },
+    {
+      "label": "Weight Decay in SGD",
+      "heading": "Weight Decay in SGD",
+      "terms": [
+        {
+          "symbol": "\\theta_{t+1}",
+          "name": "Updated parameters",
+          "desc": "Parameters after the regularized gradient step"
+        },
+        {
+          "symbol": "\\theta_t",
+          "name": "Current parameters",
+          "desc": "Parameters before this step — also appear in the penalty term"
+        },
+        {
+          "symbol": "\\eta",
+          "name": "Learning rate",
+          "desc": "Step size applied to the full augmented gradient"
+        },
+        {
+          "symbol": "g_t",
+          "name": "Mini-batch gradient",
+          "desc": "Gradient of the loss with respect to parameters — the task signal"
+        },
+        {
+          "symbol": "\\lambda",
+          "name": "Weight decay coefficient",
+          "desc": "Controls the strength of L2 regularization — typical values 1e-4 to 1e-2"
+        },
+        {
+          "symbol": "\\lambda \\theta_t",
+          "name": "L2 penalty gradient",
+          "desc": "Gradient of $\\frac{\\lambda}{2}\\|\\theta\\|^2$ — pulls parameters toward zero proportionally to their magnitude. For SGD, this is exactly equivalent to weight decay."
+        }
+      ]
+    },
+    {
+      "label": "ASGD — parameter averaging",
+      "heading": "ASGD — Averaged SGD",
+      "terms": [
+        {
+          "symbol": "\\bar{\\theta}_t",
+          "name": "Averaged parameters",
+          "desc": "Running average of all parameter iterates since $t_0$ — used for inference instead of $\\theta_t$"
+        },
+        {
+          "symbol": "t - t_0",
+          "name": "Number of averaged iterates",
+          "desc": "How many steps have been included in the average — grows over time, progressively reducing variance"
+        },
+        {
+          "symbol": "t_0",
+          "name": "Averaging start step",
+          "desc": "Step at which averaging activates — SGD runs normally before this. PyTorch default: 1e6 (very late); set lower to enable averaging earlier"
+        },
+        {
+          "symbol": "\\sum_{i=t_0}^{t} \\theta_i",
+          "name": "Sum of iterates",
+          "desc": "Cumulative sum of all parameter vectors from step $t_0$ onward — dividing by the count gives the mean"
+        },
+        {
+          "symbol": "\\theta_i",
+          "name": "Iterate at step $i$",
+          "desc": "The actual SGD parameter vector at step $i$ — noisy due to mini-batch gradients, but the average cancels noise over time"
+        }
+      ]
+    },
+    {
+      "label": "Momentum — dampening",
+      "heading": "Momentum",
+      "terms": [
+        {
+          "symbol": "v_{t+1}",
+          "name": "New velocity",
+          "desc": "Updated velocity with reduced gradient contribution"
+        },
+        {
+          "symbol": "\\beta",
+          "name": "Momentum coefficient",
+          "desc": "Decay factor applied to the previous velocity — unchanged by dampening"
+        },
+        {
+          "symbol": "v_t",
+          "name": "Previous velocity",
+          "desc": "Accumulated gradient direction carried forward from the prior step"
+        },
+        {
+          "symbol": "(1 - \\text{dampening})",
+          "name": "Gradient scaling factor",
+          "desc": "Reduces how much of the current gradient is added — `dampening=0` recovers the standard momentum update; `dampening=0.5` halves the gradient's contribution"
+        },
+        {
+          "symbol": "g_t",
+          "name": "Current gradient",
+          "desc": "Mini-batch gradient at step $t$, scaled down before accumulation when dampening > 0"
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Sutskever et al. 2013",
+      "title": "On the importance of initialization and momentum in deep learning",
+      "url": "https://proceedings.mlr.press/v28/sutskever13.html",
+      "note": "Establishes Nesterov momentum as key for training deep networks"
+    },
+    {
+      "label": "Polyak & Juditsky 1992",
+      "title": "Acceleration of stochastic approximation by averaging",
+      "url": "https://epubs.siam.org/doi/10.1137/0330046",
+      "note": "Original ASGD paper — iterate averaging theory"
+    }
+  ]
+}

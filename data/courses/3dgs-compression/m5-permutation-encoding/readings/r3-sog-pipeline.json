@@ -1,0 +1,114 @@
+{
+  "id": "r3",
+  "moduleId": "m5",
+  "title": "The SOG Encoding Pipeline and KISS-GS",
+  "estimatedMinutes": 13,
+  "learningObjectives": [
+    {
+      "id": "m5r3-lo1",
+      "verb": "Trace",
+      "description": "Trace the three SOG pipeline stages (quantization → 2D grid sorting → image codec compression) and identify the compression contribution of each stage for a representative scene",
+      "skillTags": [
+        "compression",
+        "grid-sorting",
+        "quantization"
+      ]
+    },
+    {
+      "id": "m5r3-lo2",
+      "verb": "Explain",
+      "description": "Explain why no 3DGS-specific codec is needed in the SOG pipeline when Gaussian attributes are arranged into a spatially sorted 2D grid and standard image codecs are applied",
+      "skillTags": [
+        "compression",
+        "grid-sorting"
+      ]
+    },
+    {
+      "id": "m5r3-lo3",
+      "verb": "Describe",
+      "description": "Describe how KISS-GS stacks GaussianSpa compaction, SOG encoding, and coding-aware finetuning to achieve 228× compression and identify the compression contribution of each component",
+      "skillTags": [
+        "compression",
+        "compaction"
+      ]
+    },
+    {
+      "id": "m5r3-lo4",
+      "verb": "Explain",
+      "description": "Explain the SOG loss term for joint training and identify how a differentiable grid smoothness objective guides Gaussian arrangement during 3DGS optimization to improve final compression",
+      "skillTags": [
+        "compression",
+        "training",
+        "permutation-learning"
+      ]
+    }
+  ],
+  "content": "## Self-Organizing Gaussians (SOG)\n\nSOG (Morgenstern et al., ECCV 2024) is the first method to fully integrate grid-based sorting into the 3DGS compression pipeline. It demonstrates that standard image codecs — designed for photographs — can compress 3DGS attribute grids by 20–40× without any 3DGS-specific codec.\n\n## The Three-Stage Pipeline\n\n### Stage 1: Quantization\n\nEach attribute category is quantized to a reduced bit depth:\n\n| Attribute | Bit depth | Rationale |\n|---|---|---|\n| Position xyz | 16-bit (split: 8 high + 8 low per channel) | Two-pass encoding: high bytes form a smooth grid; low bytes are residuals |\n| DC color | 8-bit | Perceptually, 256 levels is sufficient for base color |\n| Scale \\(s_1,s_2,s_3\\) | 6-bit | 64 levels cover the observed scale distribution |\n| Rotation \\(q\\) | 6-bit | 64 levels per quaternion component |\n| Opacity \\(\\sigma_\\alpha\\) | 6-bit | 64 opacity levels |\n| SH AC | 5-bit | 32 levels; high SH coefficients have small magnitude |\n\nTotal after quantization: much less than 59 × 32 bits. The non-linear parameter distortions (sigmoid for opacity, exp for scale) are applied in reverse before quantization to work in the linear parameter space.\n\n### Stage 2: Sorting into 2D Grids\n\nThe \\(N\\) Gaussians are sorted onto a \\(\\sqrt{N} \\times \\sqrt{N}\\) grid using FLAS or ShuffleSoftSort. The sorting key is a weighted combination of attributes, with position weighted most heavily.\n\nAfter sorting, each of the 59 quantized attribute arrays becomes a 2D image. Attributes are grouped:\n- **Position**: 6 images (x_high, x_low, y_high, y_low, z_high, z_low)\n- **DC color**: 1 RGB image\n- **Scale + rotation**: multi-layer images\n- **SH AC**: 15-layer multi-channel image (45 coefficients × 1/3 channels per layer)\n\n### Stage 3: Image Compression\n\nEach attribute image is compressed with a standard image codec:\n- **JPEG XL** (lossless mode for high-precision attributes, lossy for SH)\n- **WebP** (good lossy compression with adjustable quality)\n\nBecause the sorted grids are spatially smooth (the sorting step maximized local correlation), the DCT/transform in the image codec finds smooth patches with concentrated low-frequency energy.\n\n## Results\n\nFor the Truck scene (originally 639.7 MB at float32):\n- After quantization only: ~107 MB\n- After quantization + sorting + JPEG XL: **28.8 MB** (≈22× overall compression)\n\nKey advantages of SOG:\n- **No structural modifications**: works on any existing 3DGS output, no retraining needed (though optional finetuning helps)\n- **Hardware decodable**: the decoder just decompresses standard image files and dequantizes — no custom CUDA kernel needed\n- **Extensible**: any improvement in 3DGS training that produces smoother Gaussian distributions will automatically improve SOG compression\n\n## Adaptation (Finetuning)\n\nAfter the encode/decode cycle, a small quantization error is introduced. Optional finetuning minimizes this:\n\n\\[\\mathcal{L}_{finetune} = \\mathcal{L}_{render} + \\lambda_{smooth}\\mathcal{L}_{smooth}\\]\n\nwhere \\(\\mathcal{L}_{smooth}\\) penalizes variation between neighboring Gaussians in the sorted grid (further reducing the residuals that the image codec must encode). This adaptation step yields ~2× additional reduction without further quality loss.\n\n## KISS-GS: Combining All Three Approaches\n\nKISS-GS (Keep It Simple and Scalable GS) demonstrates the combined power of all three compression strategies:\n\n| Component | Method | Compression |\n|---|---|---|\n| Compaction | GaussianSpa + GaussianPop | 15.7× |\n| Encoding | HD sorting + SH via codebooks | 6.6× |\n| Adaptation | Coding-aware finetuning | 2.2× |\n| **Total** | | **~228×** |\n\nStarting from a 1.3 GB representation: KISS-GS produces approximately 6 MB while maintaining competitive visual quality. This demonstrates that compaction, encoding, and adaptation compound multiplicatively — each stage builds on the previous one.\n\n## The SOG Loss for Joint Training\n\nFor optimal results, SOG proposes adding a smoothness loss during 3DGS training:\n\n\\[\\mathcal{L}_{SOG} = \\sum_{(i,j) \\in \\text{neighbors}} \\|A_{grid(i)} - A_{grid(j)}\\|^2\\]\n\nThis encourages neighboring grid cells to have similar attributes — exactly the property that image codecs exploit. The sort order is updated periodically during training, so the grid structure is jointly optimized with the Gaussian attributes.",
+  "equationBreakdowns": [
+    {
+      "label": "SOG Finetuning Loss",
+      "terms": [
+        {
+          "symbol": "\\mathcal{L}_{finetune}",
+          "name": "Total finetuning objective",
+          "desc": "The loss minimised during the optional post-encode adaptation step. Gradients update only the Gaussian attributes — the grid structure and codec are fixed. The goal is to recover quality lost during quantization and image compression."
+        },
+        {
+          "symbol": "\\mathcal{L}_{render}",
+          "name": "Photometric rendering loss",
+          "desc": "Standard L1 + D-SSIM loss between rendered and ground-truth views. Ensures the finetuned Gaussians still reproduce the training photographs accurately."
+        },
+        {
+          "symbol": "\\lambda_{smooth}",
+          "name": "Smoothness loss weight",
+          "desc": "Controls how strongly the finetuning pulls attributes toward grid-smooth values. Higher values produce more compressible grids but may sacrifice rendering quality at high compression ratios."
+        },
+        {
+          "symbol": "\\mathcal{L}_{smooth}",
+          "name": "Grid smoothness penalty",
+          "desc": "Penalises large differences between neighbouring cells in the sorted 2D grid. Reducing this term means smaller residuals for the image codec to encode — directly improving the compression ratio of the subsequent JPEG XL / WebP pass."
+        }
+      ]
+    },
+    {
+      "label": "SOG Grid Smoothness Loss",
+      "terms": [
+        {
+          "symbol": "\\sum_{(i,j) \\in \\text{neighbors}}",
+          "name": "Sum over adjacent grid cell pairs",
+          "desc": "Iterates over every pair of cells that are immediate neighbors (N/E/S/W) in the 2D sorted grid. Only adjacent pairs contribute — this is a local loss, not a global one."
+        },
+        {
+          "symbol": "A_{grid(i)}",
+          "name": "Attribute vector at grid position i",
+          "desc": "The full 59-dimensional Gaussian attribute vector assigned to grid cell i after sorting. grid(i) maps the grid coordinate to the Gaussian index."
+        },
+        {
+          "symbol": "\\|A_{grid(i)} - A_{grid(j)}\\|^2",
+          "name": "Squared attribute distance between neighbors",
+          "desc": "How dissimilar two adjacent grid cells are in attribute space. A smooth grid has small values here everywhere. Minimising this sum is exactly what good sorting achieves — and what image codecs exploit via local prediction."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Morgenstern et al. 2024",
+      "title": "Compact 3D Scene Representation via Self-Organizing Gaussian Grids",
+      "url": "https://arxiv.org/abs/2312.13299"
+    },
+    {
+      "label": "Wen et al. 2024",
+      "title": "GaussianSpa: An Optimizing-Sparsifying Simplification Framework for Compact and High-Quality 3D Gaussian Splatting",
+      "url": "https://arxiv.org/abs/2411.06019"
+    }
+  ],
+  "nextItem": {
+    "type": "quiz",
+    "id": "q1"
+  },
+  "prevItem": {
+    "type": "reading",
+    "id": "r2"
+  }
+}

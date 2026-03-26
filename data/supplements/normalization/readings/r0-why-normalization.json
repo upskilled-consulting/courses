@@ -1,0 +1,60 @@
+{
+  "id": "r0",
+  "moduleId": "normalization",
+  "title": "Why Normalization? Covariate Shift and the Loss Landscape",
+  "estimatedMinutes": 13,
+  "learningObjectives": [
+    {
+      "id": "r0-lo1",
+      "verb": "Explain",
+      "description": "Explain internal covariate shift — how simultaneous parameter updates in all layers cause the input distribution of each layer to shift during training — and state why this slows optimization",
+      "skillTags": ["normalization", "training-dynamics"]
+    },
+    {
+      "id": "r0-lo2",
+      "verb": "Explain",
+      "description": "Explain the Santurkar et al. (2018) finding that batch normalization's primary benefit is loss landscape smoothing rather than covariate shift reduction, and state what 'β-smooth' means for an optimizer",
+      "skillTags": ["normalization", "training-dynamics"]
+    },
+    {
+      "id": "r0-lo3",
+      "verb": "Identify",
+      "description": "Identify the four normalization axes — what dimension is normalized, whether statistics are computed per-example or across the batch, whether parameters are fixed or adaptive — and use them to locate BatchNorm, LayerNorm, InstanceNorm, and WeightNorm on a unified map",
+      "skillTags": ["normalization"]
+    },
+    {
+      "id": "r0-lo4",
+      "verb": "Explain",
+      "description": "Explain why normalization allows larger learning rates and reduces sensitivity to weight initialization, connecting both to the loss landscape smoothing view",
+      "skillTags": ["normalization", "training-dynamics"]
+    }
+  ],
+  "prevItem": null,
+  "nextItem": { "type": "reading", "id": "r1" },
+  "content": "## The Problem Before Normalization\n\nTraining deep networks in 2014 required careful initialization, very small learning rates, and extensive hyperparameter tuning. The root difficulty was that each layer's behavior depended heavily on the outputs of all previous layers — and those outputs were constantly changing as upstream parameters updated.\n\nConsider what happens during a single gradient step: the optimizer updates parameters in every layer simultaneously. From layer $\\ell$'s perspective, not only do its own weights change, but the distribution of its inputs (the outputs of layer $\\ell-1$) shifts too. Layer $\\ell$ must then adapt to this new input distribution at the same time it is trying to minimize the loss. Every layer is trying to hit a moving target.\n\nThis is **internal covariate shift**: the distribution of each layer's activations changes continuously throughout training, in a way that is correlated with the parameter updates themselves.\n\n---\n\n## Two Concrete Failure Modes\n\n### Saturated Activations\n\nFor sigmoid and tanh activations, inputs far from zero produce near-zero gradients. Without normalization, activations can drift into saturated regions as earlier layers update, killing gradient flow to downstream layers. The network effectively stops learning.\n\n### Scale Sensitivity\n\nIf the inputs to a layer have very different scales across features (e.g., feature 1 has mean 0, std 0.01 while feature 2 has mean 10, std 100), the loss landscape has very different curvature in different directions — shallow in some directions, steep in others. A single global learning rate performs poorly: it either undershoots in steep directions or diverges in shallow ones.\n\n---\n\n## The Original Hypothesis: Covariate Shift Reduction\n\nIoffe & Szegedy (2015) introduced batch normalization with the hypothesis that its benefit came from **reducing internal covariate shift** — by normalizing layer inputs to zero mean and unit variance, each layer sees a more stable distribution and can optimize more effectively.\n\nThis is a compelling intuition and is still widely cited. However, subsequent work challenged whether covariate shift was actually the primary mechanism.\n\n---\n\n## The Revised View: Loss Landscape Smoothing\n\nSanturkar et al. (2018) ran controlled experiments where they *added* random noise to the activations of a BatchNorm network — reintroducing covariate shift deliberately — and found the network still trained faster than a non-BN baseline. Covariate shift was not the key.\n\nTheir finding: **BatchNorm makes the loss landscape smoother**.\n\nFormally, normalization reduces the **Lipschitz constant** of the loss and the **β-smoothness** of the gradients:\n\n- **β-smooth gradient:** $\\|\\nabla\\mathcal{L}(\\theta_1) - \\nabla\\mathcal{L}(\\theta_2)\\| \\leq \\beta\\|\\theta_1 - \\theta_2\\|$ — the gradient does not change too rapidly\n- **Lipschitz loss:** $|\\mathcal{L}(\\theta_1) - \\mathcal{L}(\\theta_2)| \\leq L\\|\\theta_1 - \\theta_2\\|$ — the loss does not change too rapidly\n\nA smoother loss surface has two direct practical benefits:\n1. **Larger learning rates are safe** — a step in any direction from any point cannot encounter a sharp cliff or spike\n2. **Less sensitivity to initialization** — the optimizer starts in a better-conditioned region regardless of where weights are initialized\n\nThis explains empirically why BN allows training with 10–30× larger learning rates than non-BN networks.\n\n---\n\n## A Unified Map: Normalization Axes\n\nEvery normalization technique can be characterized by four dimensions:\n\n| Axis | Options |\n|---|---|\n| **What is normalized** | Activations (feature maps) vs. weights |\n| **Normalization dimension** | Batch (across examples) vs. feature (across channels/dims) vs. spatial |\n| **Statistics scope** | Global (batch) vs. per-example vs. per-group |\n| **Scale/shift parameters** | Fixed (zero mean, unit variance) vs. learned (γ, β) vs. adaptive (predicted) |\n\nMapped onto the major techniques:\n\n| Technique | Normalizes | Dimension | Statistics | Parameters |\n|---|---|---|---|---|\n| **BatchNorm** | Activations | Per-feature across batch | Batch | Learned γ, β |\n| **LayerNorm** | Activations | Per-example across features | Per-example | Learned γ, β |\n| **InstanceNorm** | Activations | Per-example per-channel | Per-example/channel | Learned or none |\n| **GroupNorm** | Activations | Per-example, per group of channels | Per-group | Learned γ, β |\n| **RMSNorm** | Activations | Per-example across features | Per-example (no mean) | Learned γ only |\n| **WeightNorm** | Weights | Per-output-unit | Per-weight-vector | Learned g (scale) |\n| **SpectralNorm** | Weights | Entire matrix | Per-matrix | None (constrained) |\n| **AdaIN** | Activations | Per-example per-channel | Adaptive (from style) | Predicted |\n\nThe subsequent readings examine each in depth.\n\n---\n\n## Why Learning Rate and Initialization Sensitivity Decrease\n\nIn a non-normalized network, the gradient magnitude depends on the scale of the activations, which in turn depends on initialization and the upstream parameter history. A poorly chosen learning rate explodes or stalls depending on the local scale — and the optimal learning rate changes as training progresses.\n\nNormalization decouples gradient magnitude from activation scale. After normalization, gradients flow at a consistent scale regardless of how the unnormalized activations behave. The optimizer sees a more uniform loss landscape and can use a consistent learning rate throughout training.\n\n---\n\n## PyTorch and TensorFlow\n\nThe normalization API is largely consistent across frameworks. This reading is conceptual — the code for each specific technique appears in its own reading. But here is a quick demonstration of the core effect: normalization brings activations to a stable scale regardless of how the weights were initialized.\n\n**PyTorch:**\n\n```python\nimport torch\nimport torch.nn as nn\n\ntorch.manual_seed(0)\nW = torch.randn(64, 64) * 10.0    # poorly scaled weights\nx = torch.randn(32, 64)\nh = x @ W.T                        # raw pre-activations\n\nprint(f'Before normalization: mean={h.mean():.1f}, std={h.std():.1f}')\n# Before normalization: mean~0, std~80  (scale depends entirely on W)\n\nbn  = nn.BatchNorm1d(64)\nh_n = bn(h)\nprint(f'After BatchNorm:      mean={h_n.mean():.4f}, std={h_n.std():.4f}')\n# After BatchNorm: mean~0.0000, std~1.0000\n\n# The same gradient-magnitude stability holds for LayerNorm, GroupNorm, etc.\n# Each reading introduces the relevant nn.* class for its technique.\n```\n\n**TensorFlow:**\n\n```python\nimport tensorflow as tf\n\ntf.random.set_seed(0)\nW = tf.random.normal((64, 64), stddev=10.0)\nx = tf.random.normal((32, 64))\nh = x @ tf.transpose(W)\n\ntf.print('Before normalization: std =', tf.math.reduce_std(h))\n# std ~ 80\n\nbn  = tf.keras.layers.BatchNormalization()\nh_n = bn(h, training=True)\ntf.print('After BatchNorm:      std =', tf.math.reduce_std(h_n))\n# std ~ 1.0\n```",
+  "equationBreakdowns": [
+    {
+      "label": "β-Smooth Gradient",
+      "heading": "Loss Landscape Smoothing",
+      "terms": [
+        {
+          "symbol": "\\|\\nabla\\mathcal{L}(\\theta_1) - \\nabla\\mathcal{L}(\\theta_2)\\| \\leq \\beta\\|\\theta_1 - \\theta_2\\|",
+          "name": "β-smoothness condition",
+          "desc": "The gradient at any two nearby parameter vectors differs by at most β times their distance. Low β means the gradient field is predictable — a gradient step from θ₁ lands close to where the gradient at θ₁ predicts. High β means the gradient can change dramatically over a small step — dangerous for large learning rates."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Ioffe & Szegedy 2015",
+      "title": "Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift",
+      "url": "https://arxiv.org/abs/1502.03167"
+    },
+    {
+      "label": "Santurkar et al. 2018",
+      "title": "How Does Batch Normalization Help Optimization?",
+      "url": "https://arxiv.org/abs/1805.11604"
+    }
+  ]
+}

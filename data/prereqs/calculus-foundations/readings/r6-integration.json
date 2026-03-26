@@ -1,0 +1,70 @@
+{
+  "id": "r6",
+  "moduleId": "calculus-foundations",
+  "title": "Integration and the Fundamental Theorem",
+  "estimatedMinutes": 15,
+  "learningObjectives": [
+    {
+      "id": "r6-lo1",
+      "verb": "Explain",
+      "description": "Explain what a definite integral computes geometrically and how it is defined as a limit of Riemann sums",
+      "skillTags": ["calculus-foundations", "integration"]
+    },
+    {
+      "id": "r6-lo2",
+      "verb": "Apply",
+      "description": "Apply the Fundamental Theorem of Calculus to evaluate definite integrals using antiderivatives",
+      "skillTags": ["calculus-foundations", "integration"]
+    },
+    {
+      "id": "r6-lo3",
+      "verb": "Connect",
+      "description": "Connect integration to ML: interpret probability density functions as distributions whose integral equals 1, and express expected value and entropy as integrals",
+      "skillTags": ["calculus-foundations", "ml-connection", "probability"]
+    }
+  ],
+  "prevItem": { "type": "reading", "id": "r5" },
+  "nextItem": { "type": "quiz", "id": "q2" },
+  "content": "## The Accumulation Problem\n\nDerivatives answer the question of *rates of change*. Integration answers the complementary question: given a rate of change, how much has accumulated over an interval?\n\nIf you know a car's speed at every moment, integration tells you the total distance traveled. If you know the density of a probability distribution at every point, integration tells you the total probability in any region. Both are the same mathematical operation.\n\n---\n\n## Area Under a Curve\n\nThe **definite integral** of $f$ from $a$ to $b$ is written:\n\n$$\\int_a^b f(x)\\, dx$$\n\nGeometrically, it equals the signed area between the curve $f(x)$ and the $x$-axis over $[a, b]$. Regions above the axis contribute positive area; regions below contribute negative area.\n\n---\n\n## Riemann Sums\n\nThe precise definition: divide $[a, b]$ into $n$ subintervals of width $\\Delta x = (b-a)/n$. In each subinterval, evaluate $f$ at some sample point $x_i^*$ and form a rectangle of height $f(x_i^*)$ and width $\\Delta x$.\n\nThe sum of all rectangle areas approximates the integral:\n\n$$\\int_a^b f(x)\\,dx = \\lim_{n \\to \\infty} \\sum_{i=1}^n f(x_i^*)\\,\\Delta x$$\n\nAs $n \\to \\infty$ (rectangles get infinitely thin), the approximation becomes exact. This limit always exists for continuous functions.\n\nThe notation $dx$ in the integral is the limiting version of $\\Delta x$ — an infinitesimally thin strip width. It signals which variable we are integrating over.\n\n---\n\n## Antiderivatives\n\nAn **antiderivative** of $f(x)$ is any function $F(x)$ such that $F'(x) = f(x)$. We can reverse the power rule:\n\n$$\\int x^n\\,dx = \\frac{x^{n+1}}{n+1} + C \\qquad (n \\neq -1)$$\n\nThe constant $C$ — the **constant of integration** — appears because differentiation destroys constant terms: any $F + C$ has the same derivative $f$.\n\n**Key antiderivatives:**\n\n| $f(x)$ | $F(x) = \\int f(x)\\,dx$ |\n|--------|------------------------|\n| $x^n$ ($n \\neq -1$) | $\\frac{x^{n+1}}{n+1} + C$ |\n| $e^x$ | $e^x + C$ |\n| $\\frac{1}{x}$ | $\\ln|x| + C$ |\n| $\\cos x$ | $\\sin x + C$ |\n| $\\sin x$ | $-\\cos x + C$ |\n\n---\n\n## The Fundamental Theorem of Calculus\n\nThe most important result in calculus connects differentiation and integration:\n\n$$\\int_a^b f(x)\\,dx = F(b) - F(a)$$\n\nwhere $F$ is any antiderivative of $f$ ($F' = f$). To compute a definite integral, you do not need to set up and take a limit of Riemann sums — you find an antiderivative, evaluate it at the two endpoints, and subtract.\n\n**Example.** $\\int_1^3 2x\\,dx$\n\n$F(x) = x^2$ is an antiderivative of $2x$ since $(x^2)' = 2x$.\n$$\\int_1^3 2x\\,dx = F(3) - F(1) = 9 - 1 = 8$$\n\nGeometrically: the area under $2x$ from 1 to 3 is the trapezoid with vertices at $(1,2)$, $(3,6)$, $(3,0)$, $(1,0)$ — area $= \\frac{1}{2}(2+6)(2) = 8$. ✓\n\n**Example.** $\\int_0^1 e^x\\,dx = e^1 - e^0 = e - 1 \\approx 1.718$\n\n---\n\n## Why This Matters for ML\n\n**Probability density functions.** The probability foundation module (r1) stated that a PDF $f(x)$ must satisfy $\\int_{-\\infty}^{\\infty} f(x)\\,dx = 1$. This normalization condition is an integral — and verifying it for distributions like the Gaussian requires the fundamental theorem applied to the antiderivative of $e^{-x^2}$.\n\nFor any PDF, the probability of $X$ falling in $[a,b]$ is:\n$$P(a \\leq X \\leq b) = \\int_a^b f(x)\\,dx$$\n\n**Expected value.** The expected value of a continuous random variable is an integral:\n$$\\mathbb{E}[X] = \\int_{-\\infty}^{\\infty} x \\cdot f(x)\\,dx$$\n\nThis is the continuous analogue of the discrete weighted average — infinitely many values, each weighted by their probability density.\n\n**Entropy.** The entropy of a continuous distribution:\n$$H = -\\int_{-\\infty}^{\\infty} f(x) \\ln f(x)\\,dx$$\n\n**KL divergence** between distributions $p$ and $q$:\n$$D_{\\text{KL}}(p \\| q) = \\int_{-\\infty}^{\\infty} p(x) \\ln \\frac{p(x)}{q(x)}\\,dx$$\n\nAll the probabilistic quantities that appear in the probability foundations module are, at their core, integrals. The notation $\\sum$ in the discrete case and $\\int$ in the continuous case are the same concept — summing a quantity weighted by probability — just over different kinds of domains.\n\n---\n\n## The Relationship Between Derivatives and Integrals\n\nThe Fundamental Theorem has a second part that makes explicit the inverse relationship:\n\n$$\\frac{d}{dx}\\int_a^x f(t)\\,dt = f(x)$$\n\nDifferentiating the accumulated area function recovers the original function. Differentiation and integration undo each other — they are inverse operations, like multiplication and division.\n\nThis inverse relationship is why:\n- Gradient descent (differentiation) navigates the loss surface\n- Probability densities (integration) describe uncertainty\n\nare both indispensable tools in ML despite being different operations.\n\n---\n\n## PyTorch and TensorFlow\n\nNumerical integration appears in ML for computing normalizing constants, estimating expectations via Monte Carlo, and evaluating metrics.\n\n```python\nimport torch\nimport numpy as np\n\n# Numerical integration: P(X in [-1, 1]) for N(0,1)\n# using the trapezoidal rule\nx = torch.linspace(-1, 1, 1000)\nf = torch.exp(-x**2 / 2) / (2 * torch.pi)**0.5  # N(0,1) PDF\nprob = torch.trapezoid(f, x)\nprint(prob.item())  # ≈ 0.6827  (the 68% rule)\n\n# Monte Carlo expected value: E[X²] for X ~ U(0,1)\nsamples = torch.rand(100_000)\nprint((samples**2).mean().item())  # ≈ 1/3  (exact: ∫₀¹ x² dx = 1/3)\n```\n\n```python\nimport tensorflow as tf\nimport numpy as np\n\n# Numerical integration using numpy (TF tensors use same approach)\nx = np.linspace(-1, 1, 1000)\nf = np.exp(-x**2 / 2) / np.sqrt(2 * np.pi)\nprob = np.trapz(f, x)\nprint(prob)  # ≈ 0.6827\n\n# Monte Carlo estimate of E[X²] for X ~ U(0,1)\nsamples = tf.random.uniform((100_000,))\nprint(tf.reduce_mean(samples**2).numpy())  # ≈ 0.333\n```\n\nMonte Carlo integration — estimating integrals by averaging function values at random points — is one of the most powerful and widely-used techniques in probabilistic ML. It converts the integral $\\mathbb{E}_p[f(x)]$ into a sample average, making continuous expectations tractable even in high dimensions.",
+  "equationBreakdowns": [
+    {
+      "label": "Definite Integral via Riemann Sum",
+      "heading": "∫_a^b f(x) dx",
+      "terms": [
+        {
+          "symbol": "f(x_i^*)",
+          "name": "Function value at sample point",
+          "desc": "The height of the rectangle in the ith subinterval. Any choice of sample point within the subinterval gives the same limit."
+        },
+        {
+          "symbol": "\\Delta x",
+          "name": "Subinterval width",
+          "desc": "The width (b−a)/n of each rectangle. As n→∞, Δx→0 and the sum converges to the exact area."
+        }
+      ]
+    },
+    {
+      "label": "Fundamental Theorem of Calculus",
+      "heading": "∫_a^b f(x) dx = F(b) − F(a)",
+      "terms": [
+        {
+          "symbol": "F",
+          "name": "Antiderivative of f",
+          "desc": "Any function whose derivative is f. Finding F converts the integration problem into two evaluations. F is unique up to an additive constant C, which cancels in F(b)−F(a)."
+        },
+        {
+          "symbol": "F(b) - F(a)",
+          "name": "Net change",
+          "desc": "The accumulated value from a to b. This is the integral of the rate of change — analogous to: total distance = ∫(speed)dt."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "MIT 18.01SC — Sessions 43, 48",
+      "title": "Definite Integrals and the Fundamental Theorem of Calculus",
+      "url": "https://ocw.mit.edu/courses/18-01sc-single-variable-calculus-fall-2010/"
+    }
+  ]
+}

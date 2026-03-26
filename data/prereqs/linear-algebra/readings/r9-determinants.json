@@ -1,0 +1,80 @@
+{
+  "id": "r9",
+  "moduleId": "linear-algebra",
+  "title": "Determinants",
+  "estimatedMinutes": 15,
+  "learningObjectives": [
+    {
+      "id": "r9-lo1",
+      "verb": "Compute",
+      "description": "Compute the determinant of a matrix via row reduction and state its relationship to invertibility",
+      "skillTags": [
+        "matrix-structure",
+        "spectral-analysis"
+      ]
+    },
+    {
+      "id": "r9-lo2",
+      "verb": "Interpret",
+      "description": "Interpret the determinant as a signed volume scaling factor and explain what det = 0 means geometrically",
+      "skillTags": [
+        "matrix-structure"
+      ]
+    },
+    {
+      "id": "r9-lo3",
+      "verb": "Apply",
+      "description": "Apply the permutation expansion and cofactor (Laplace) expansion to compute determinants of small matrices",
+      "skillTags": [
+        "matrix-structure"
+      ]
+    },
+    {
+      "id": "r9-lo4",
+      "verb": "Use",
+      "description": "Use key determinant properties such as det(AB) = det(A)det(B) and det(A^T) = det(A) to simplify multi-step calculations",
+      "skillTags": [
+        "matrix-structure",
+        "spectral-analysis"
+      ]
+    }
+  ],
+  "content": "## What the Determinant Measures\n\nThe **determinant** of a square matrix $A$, written $\\det(A)$ or $|A|$, answers a geometric question: by what factor does the transformation $\\vec{x} \\mapsto A\\vec{x}$ scale volumes?\n\nMore precisely: if $S$ is any region in $\\mathbb{R}^n$ with volume $\\text{vol}(S)$, then the image $A(S)$ has volume $|\\det(A)| \\cdot \\text{vol}(S)$. The sign of $\\det(A)$ captures orientation: positive means orientation-preserving, negative means orientation-reversing (like a reflection).\n\nWhen $\\det(A) = 0$, the transformation squashes space into a lower dimension — the output has zero volume, and $A$ is singular.\n\n## Properties\n\nThe determinant is characterized by three properties:\n\n1. **Multilinearity**: $\\det$ is linear in each row separately (with other rows held fixed)\n2. **Alternating**: swapping two rows negates $\\det$ — equivalently, $\\det = 0$ if two rows are identical\n3. **Normalization**: $\\det(I) = 1$\n\nThese three properties uniquely determine the determinant. All other properties follow:\n\n- $\\det(A') = \\det(A)$ — rows and columns interchangeable\n- $\\det(AB) = \\det(A)\\det(B)$ — determinant of a product is the product of determinants\n- $\\det(A^{-1}) = 1/\\det(A)$ — follows from the product rule\n- $\\det(cA) = c^n \\det(A)$ for $n \\times n$ matrix\n- Adding a multiple of one row to another leaves $\\det$ unchanged — scaling by the pivot in Gauss's method multiplies $\\det$ by that scalar\n\n## Computing via Row Reduction\n\nGauss's method gives the fastest route to the determinant for large matrices. Tracking the effect of each row operation:\n\n| Operation | Effect on det |\n|---|---|\n| Swap two rows | Negate |\n| Scale row by $k$ | Multiply by $k$ |\n| Add multiple of one row to another | No change |\n\nReduce $A$ to echelon form $U$. The determinant of $U$ is the product of its diagonal entries (the pivots). Then:\n\n$$\\det(A) = (-1)^s \\cdot \\frac{1}{k_1 k_2 \\cdots} \\cdot u_{11} u_{22} \\cdots u_{nn}$$\n\nwhere $s$ = number of row swaps and $k_i$ = scaling factors applied during reduction.\n\nIn practice: reduce to echelon form, track signs from swaps, multiply pivots.\n\n## The Permutation Expansion\n\nFor an $n \\times n$ matrix, the determinant can be written as a sum over all $n!$ permutations $\\sigma$ of $\\{1,\\ldots,n\\}$:\n\n$$\\det(A) = \\sum_{\\sigma \\in S_n} \\text{sgn}(\\sigma)\\, a_{1,\\sigma(1)}\\, a_{2,\\sigma(2)} \\cdots a_{n,\\sigma(n)}$$\n\nwhere $\\text{sgn}(\\sigma) = +1$ if $\\sigma$ is an even permutation (achievable by an even number of transpositions) and $-1$ if odd.\n\nFor $2 \\times 2$: two permutations, $(1,2)$ with sign $+1$ and $(2,1)$ with sign $-1$, giving $\\det = a_{11}a_{22} - a_{12}a_{21}$.\n\nFor $3 \\times 3$: six permutations (Sarrus' rule). For larger $n$, the permutation expansion is impractical ($n!$ grows fast) but theoretically important — it proves properties of the determinant.\n\n## Laplace's Expansion (Cofactor Expansion)\n\nFor computational purposes, **Laplace expansion** along row $i$:\n\n$$\\det(A) = \\sum_{j=1}^n (-1)^{i+j} a_{ij}\\, M_{ij}$$\n\nwhere $M_{ij}$ is the **minor** — the determinant of the $(n-1) \\times (n-1)$ matrix obtained by deleting row $i$ and column $j$. The factor $(-1)^{i+j} M_{ij}$ is the **cofactor** $C_{ij}$.\n\nChoosing a row or column with many zeros minimizes computation. Expansion along any row or column gives the same result.\n\n## Cramer's Rule\n\nFor an invertible $n \\times n$ system $A\\vec{x} = \\vec{b}$, each component of the solution is a ratio of determinants:\n\n$$x_i = \\frac{\\det(A_i)}{\\det(A)}$$\n\nwhere $A_i$ is $A$ with column $i$ replaced by $\\vec{b}$.\n\nCramer's rule is elegant but computationally expensive ($O(n!)$ naively, or $O(n^4)$ with efficient determinant computation). For $n > 3$, Gaussian elimination is always faster. Cramer's rule is mainly useful for theoretical arguments and for $2 \\times 2$ and $3 \\times 3$ closed-form solutions.",
+  "equationBreakdowns": [
+    {
+      "label": "Permutation Expansion",
+      "terms": [
+        {
+          "symbol": "\\sum_{\\sigma \\in S_n}",
+          "name": "Sum over all permutations",
+          "desc": "S_n is the symmetric group of all n! permutations of {1,…,n}. The 2×2 case has 2 permutations; 3×3 has 6; 4×4 has 24. This formula is theoretically central but computationally avoided for n > 3."
+        },
+        {
+          "symbol": "\\text{sgn}(\\sigma)",
+          "name": "Sign of the permutation",
+          "desc": "+1 if σ can be decomposed into an even number of transpositions (swaps of two elements), −1 if odd. This is the alternating property of the determinant encoded combinatorially."
+        },
+        {
+          "symbol": "a_{1,\\sigma(1)} \\cdots a_{n,\\sigma(n)}",
+          "name": "Product along the permuted diagonal",
+          "desc": "Each term picks exactly one entry from each row and each column (a transversal). Summing all n! signed transversal products gives the determinant."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Hefferon 2020",
+      "title": "Linear Algebra, Ch. Four: Determinants",
+      "url": null
+    }
+  ],
+  "prevItem": {
+    "type": "quiz",
+    "id": "q3"
+  },
+  "nextItem": {
+    "type": "reading",
+    "id": "r10"
+  }
+}

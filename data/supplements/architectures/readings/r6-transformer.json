@@ -1,0 +1,94 @@
+{
+  "id": "r6",
+  "moduleId": "architectures",
+  "title": "The Transformer",
+  "estimatedMinutes": 18,
+  "learningObjectives": [
+    {
+      "id": "r6-lo1",
+      "verb": "Trace",
+      "description": "Trace one token through a transformer encoder block — identifying the multi-head self-attention sub-layer, the FFN sub-layer, and the residual + layer-norm wrapping each — and state the dimensionality at each step",
+      "skillTags": ["architectures", "transformer"]
+    },
+    {
+      "id": "r6-lo2",
+      "verb": "Explain",
+      "description": "Explain why positional encodings are necessary, distinguish sinusoidal from learned positional encodings, and state what RoPE achieves that absolute encodings cannot",
+      "skillTags": ["architectures", "transformer"]
+    },
+    {
+      "id": "r6-lo3",
+      "verb": "Distinguish",
+      "description": "Distinguish encoder-only (BERT), decoder-only (GPT), and encoder-decoder (T5) transformer variants by their attention masking, training objective, and typical use case",
+      "skillTags": ["architectures", "transformer"]
+    },
+    {
+      "id": "r6-lo4",
+      "verb": "Explain",
+      "description": "Explain the transformer's quadratic attention bottleneck and name two architectural changes (e.g., grouped-query attention, sparse attention) that reduce it",
+      "skillTags": ["architectures", "transformer"]
+    }
+  ],
+  "prevItem": {
+    "type": "reading",
+    "id": "r5"
+  },
+  "nextItem": null,
+  "content": "## Overview\n\nThe transformer (Vaswani et al., 2017) replaced recurrence with self-attention and became the dominant architecture for sequence modeling. Its key properties:\n\n1. **Parallelizable** — no sequential dependency, processes all positions simultaneously\n2. **O(1) path length** between any two positions — direct long-range dependencies\n3. **Scalable** — empirical scaling laws show predictable gains from more data, compute, and parameters\n\nThe original transformer has an encoder and a decoder, each composed of stacked identical blocks.\n\n---\n\n## The Encoder Block\n\nEach encoder block applies two sub-layers, each wrapped with a **residual connection** and **layer normalization** (pre-norm shown, which is now more common than post-norm):\n\n```\n┌──────────────────────────────────────────────┐\n│  x  →  LayerNorm  →  MultiHead Self-Attention  →  (+x)  →  z  │\n│  z  →  LayerNorm  →  Feed-Forward Network       →  (+z)  →  y  │\n└──────────────────────────────────────────────┘\n```\n\n### Sub-layer 1: Multi-Head Self-Attention\n\nEach token attends to all other tokens in the sequence. For a sequence of $n$ tokens with $d_{\\text{model}}$-dimensional embeddings:\n\n$$\\text{Attn}(X) = \\text{MultiHead}(X, X, X)$$\n\nOutput shape: $(n \\times d_{\\text{model}})$ — same as input.\n\n### Sub-layer 2: Position-Wise Feed-Forward Network\n\nApplied independently to each token's representation:\n\n$$\\text{FFN}(\\mathbf{x}) = W_2\\, \\phi(W_1 \\mathbf{x} + \\mathbf{b}_1) + \\mathbf{b}_2$$\n\nwhere $W_1 \\in \\mathbb{R}^{d_{\\text{ff}} \\times d_{\\text{model}}}$, $W_2 \\in \\mathbb{R}^{d_{\\text{model}} \\times d_{\\text{ff}}}$, and $d_{\\text{ff}}$ is typically $4 \\times d_{\\text{model}}$.\n\nThe FFN is a two-layer MLP applied pointwise — each token is processed independently, without interaction between tokens. The attention layer handles all cross-token communication; the FFN processes each token's representation in isolation.\n\n**Parameter count per encoder block:** $4 d_{\\text{model}}^2$ (attention) $+ 2 \\cdot 4 d_{\\text{model}}^2$ (FFN) $= 12 d_{\\text{model}}^2$. For $d_{\\text{model}} = 768$ (BERT-base): ~7M parameters per block × 12 blocks = 85M parameters (plus embeddings).\n\n---\n\n## Positional Encoding\n\nSelf-attention is **permutation-equivariant**: shuffling the input tokens gives shuffled outputs. Without explicit position information, the transformer treats \"cat sat mat\" and \"mat sat cat\" identically.\n\n**Positional encodings** inject position information. Two strategies:\n\n### Sinusoidal (Original Transformer)\n\n$$\\text{PE}(\\text{pos}, 2i) = \\sin\\!\\left(\\text{pos} / 10000^{2i/d_{\\text{model}}}\\right)$$\n$$\\text{PE}(\\text{pos}, 2i{+}1) = \\cos\\!\\left(\\text{pos} / 10000^{2i/d_{\\text{model}}}\\right)$$\n\nAdded to token embeddings before the first layer. Fixed, not learned. Can generalize to sequence lengths not seen during training (different frequencies encode different scales of position).\n\n### Learned Absolute Positions\n\nA learnable embedding table indexed by position. BERT, GPT-2 use this. Cannot generalize beyond the training context length.\n\n### Rotary Position Embedding (RoPE)\n\nUsed by LLaMA, Mistral, and most modern LLMs. Rather than adding position encodings to embeddings, **rotates** the query and key vectors before the dot product:\n\n$$\\mathbf{q}_m \\cdot \\mathbf{k}_n = (R_m \\mathbf{q})^\\top (R_n \\mathbf{k}) = \\mathbf{q}^\\top R_{n-m} \\mathbf{k}$$\n\nThe attention score depends only on the **relative** position $(n - m)$, not absolute positions. This makes it naturally relative, enabling better length generalization.\n\n---\n\n## Decoder Block and Encoder-Decoder Interaction\n\nThe decoder block adds a **masked self-attention** sub-layer and a **cross-attention** sub-layer:\n\n```\n  x → LayerNorm → Masked Self-Attention → (+x) → z\n  z → LayerNorm → Cross-Attention(Q=z, K=encoder_out, V=encoder_out) → (+z) → w\n  w → LayerNorm → Feed-Forward Network → (+w) → y\n```\n\nMasked self-attention ensures the decoder cannot attend to future tokens (autoregressive). Cross-attention lets the decoder query the encoder's representations at each step.\n\n---\n\n## The Three Transformer Families\n\n### Encoder-Only (BERT, RoBERTa)\n\n- **Attention:** bidirectional self-attention (every token sees every other)\n- **Training objective:** Masked Language Modeling (predict masked tokens) + NSP\n- **Use cases:** classification, NER, question answering, sentence embeddings\n- **Representative:** BERT-base (110M), BERT-large (340M)\n\n### Decoder-Only (GPT series, LLaMA, Mistral, Gemma)\n\n- **Attention:** masked (causal) self-attention only\n- **Training objective:** next-token prediction (autoregressive language modeling)\n- **Use cases:** text generation, chat, code, reasoning\n- **Representative:** GPT-2 (1.5B), LLaMA 3 (8B–70B)\n\n### Encoder-Decoder (T5, BART, original transformer)\n\n- **Attention:** encoder has full self-attention; decoder has masked self-attention + cross-attention to encoder\n- **Training objective:** text-to-text (T5), denoising (BART), translation loss\n- **Use cases:** translation, summarization, structured prediction\n- **Representative:** T5-base (220M), mT5\n\n---\n\n## Scaling and Efficiency\n\n**Scaling laws (Kaplan et al., 2020; Hoffmann et al., 2022):** Model loss scales predictably as a power law with parameters, data, and compute. Doubling parameters roughly halves the loss at fixed compute — this motivated the rapid growth from GPT-2 (1.5B) to GPT-3 (175B).\n\n**Quadratic bottleneck:** Attention is $O(n^2)$ in both time and memory. Solutions:\n\n| Method | Idea | Used in |\n|---|---|---|\n| **Grouped-Query Attention (GQA)** | Share K/V heads across groups of Q heads | LLaMA 2/3, Mistral |\n| **Multi-Query Attention (MQA)** | Single K/V head shared by all Q heads | PaLM, Falcon |\n| **Sliding Window Attention** | Each token attends only to a local window | Mistral, Longformer |\n| **FlashAttention** | Rewrite attention to minimize HBM reads (kernel fusion) | Most modern training |\n\nFlashAttention does not change the mathematical output — it is a hardware-efficient reimplementation that reduces memory IO by fusing the softmax and value aggregation into a single kernel pass.\n\n---\n\n## PyTorch and TensorFlow\n\n**PyTorch** — full transformer, encoder-only, decoder-only:\n\n```python\nimport torch\nimport torch.nn as nn\n\n# Built-in full encoder-decoder transformer (Vaswani et al. architecture)\ntransformer = nn.Transformer(\n    d_model=512, nhead=8,\n    num_encoder_layers=6, num_decoder_layers=6,\n    dim_feedforward=2048, dropout=0.1,\n    batch_first=True,\n)\nsrc = torch.randn(2, 10, 512)   # (B, src_len, d_model)\ntgt = torch.randn(2,  7, 512)   # (B, tgt_len, d_model)\nout = transformer(src, tgt)     # (2, 7, 512)\n\n# Encoder-only model (BERT-style) — stack of TransformerEncoderLayers\nencoder_layer = nn.TransformerEncoderLayer(d_model=512, nhead=8,\n                                            dim_feedforward=2048,\n                                            batch_first=True, norm_first=True)  # pre-norm\nencoder = nn.TransformerEncoder(encoder_layer, num_layers=6)\nx   = torch.randn(2, 10, 512)\nout = encoder(x)                # (2, 10, 512)\n\n# Decoder-only (GPT-style) — causal mask prevents attending to future tokens\ndecoder_layer = nn.TransformerDecoderLayer(d_model=512, nhead=8,\n                                            batch_first=True, norm_first=True)\ndecoder = nn.TransformerDecoder(decoder_layer, num_layers=6)\nT      = 10\nmask   = nn.Transformer.generate_square_subsequent_mask(T)   # causal mask (T, T)\nout    = decoder(x, memory=x, tgt_mask=mask)                 # (2, 10, 512)\n\n# Sinusoidal positional encoding\nclass SinusoidalPE(nn.Module):\n    def __init__(self, d_model: int, max_len: int = 5000):\n        super().__init__()\n        pos = torch.arange(max_len).unsqueeze(1)              # (max_len, 1)\n        div = torch.exp(torch.arange(0, d_model, 2) * (-torch.log(torch.tensor(10000.0)) / d_model))\n        pe        = torch.zeros(1, max_len, d_model)\n        pe[0, :, 0::2] = torch.sin(pos * div)\n        pe[0, :, 1::2] = torch.cos(pos * div)\n        self.register_buffer('pe', pe)                        # not a parameter\n\n    def forward(self, x):\n        return x + self.pe[:, :x.size(1)]                     # broadcast over batch\n```\n\n**TensorFlow / Keras:**\n\n```python\nimport tensorflow as tf\n\n# Transformer encoder block using Keras layers (pre-norm)\nclass TransformerEncoderBlock(tf.keras.layers.Layer):\n    def __init__(self, d_model: int, num_heads: int, ffn_dim: int, dropout: float = 0.1):\n        super().__init__()\n        self.attn  = tf.keras.layers.MultiHeadAttention(num_heads, key_dim=d_model // num_heads)\n        self.ffn   = tf.keras.Sequential([\n            tf.keras.layers.Dense(ffn_dim, activation='gelu'),\n            tf.keras.layers.Dense(d_model),\n        ])\n        self.norm1 = tf.keras.layers.LayerNormalization()\n        self.norm2 = tf.keras.layers.LayerNormalization()\n        self.drop  = tf.keras.layers.Dropout(dropout)\n\n    def call(self, x, training=False):\n        # Pre-norm: x + SubLayer(LN(x))\n        x = x + self.drop(self.attn(self.norm1(x), self.norm1(x)), training=training)\n        x = x + self.drop(self.ffn(self.norm2(x)),                  training=training)\n        return x\n\n# Built-in high-level option via transformers library (Hugging Face)\n# from transformers import BertModel, GPT2Model, T5ForConditionalGeneration\n# model = GPT2Model.from_pretrained('gpt2')   # works in both PyTorch and TF\n```",
+  "equationBreakdowns": [
+    {
+      "label": "Transformer FFN Sub-layer",
+      "heading": "The Encoder Block",
+      "terms": [
+        {
+          "symbol": "W_1 \\mathbf{x} + \\mathbf{b}_1",
+          "name": "First linear projection",
+          "desc": "Projects each token's d_model-dimensional representation up to d_ff dimensions (typically 4× larger). Each token is processed independently — no communication between tokens here."
+        },
+        {
+          "symbol": "\\phi(\\cdot)",
+          "name": "Non-linearity",
+          "desc": "Originally ReLU; modern transformers use GELU (GPT-2, BERT) or SwiGLU (LLaMA). Acts pointwise — introduces non-linearity that the linear projections alone cannot provide."
+        },
+        {
+          "symbol": "W_2 (\\cdots)",
+          "name": "Second linear projection",
+          "desc": "Projects back down from d_ff to d_model. Together W1 and W2 form an MLP that expands and contracts each token's representation — often interpreted as key-value memory."
+        }
+      ]
+    },
+    {
+      "label": "RoPE Attention Score",
+      "heading": "Rotary Position Embedding",
+      "terms": [
+        {
+          "symbol": "R_m,\\, R_n",
+          "name": "Rotation matrices at positions m and n",
+          "desc": "Block-diagonal rotation matrices encoding the absolute positions. Applied to query and key vectors before the dot product."
+        },
+        {
+          "symbol": "\\mathbf{q}^\\top R_{n-m} \\mathbf{k}",
+          "name": "Relative position in the score",
+          "desc": "The rotation matrices cancel except for their difference — the attention score depends only on relative position (n−m), not on absolute positions m and n individually. This enables better length generalization."
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Vaswani et al. 2017",
+      "title": "Attention Is All You Need",
+      "url": "https://arxiv.org/abs/1706.03762"
+    },
+    {
+      "label": "Devlin et al. 2019",
+      "title": "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
+      "url": "https://arxiv.org/abs/1810.04805"
+    },
+    {
+      "label": "Dao et al. 2022",
+      "title": "FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness",
+      "url": "https://arxiv.org/abs/2205.14135"
+    }
+  ]
+}
