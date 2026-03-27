@@ -1,0 +1,92 @@
+{
+  "id": "q1",
+  "moduleId": "normalization",
+  "title": "Covariate Shift, BatchNorm & LayerNorm",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "type": "reading", "id": "r2" },
+  "nextItem": { "type": "reading", "id": "r3" },
+  "questions": [
+    {
+      "id": "q1_1",
+      "type": "multiple-choice",
+      "prompt": "Ioffe & Szegedy (2015) attributed BatchNorm's effectiveness to reducing **internal covariate shift**. Santurkar et al. (2018) challenged this. What did they actually find?",
+      "options": [
+        { "id": "a", "text": "BatchNorm does reduce internal covariate shift, and this is precisely why it helps training", "correct": false },
+        { "id": "b", "text": "BatchNorm's primary benefit is **loss landscape smoothing** — it reduces the β-smoothness of the loss, allowing larger learning rates and more stable gradients; covariate shift reduction is incidental", "correct": true },
+        { "id": "c", "text": "BatchNorm works by increasing gradient magnitude through each layer, accelerating convergence", "correct": false },
+        { "id": "d", "text": "BatchNorm reduces variance in the weight updates, acting equivalently to a lower learning rate", "correct": false }
+      ],
+      "explanation": "Santurkar et al. demonstrated that adding noise after BatchNorm layers — deliberately reintroducing covariate shift — did not negate BatchNorm's training benefits. This proved covariate shift reduction is not the mechanism. The real effect is geometric: BatchNorm makes the loss landscape more Lipschitz and β-smooth, so gradient steps are more predictive of actual loss changes, allowing 10–30× larger learning rates.",
+      "hint": "Consider what Santurkar et al. showed by adding noise *after* the BN layer during training."
+    },
+    {
+      "id": "q1_2",
+      "type": "multiple-choice",
+      "prompt": "PyTorch's `nn.BatchNorm2d` maintains a running mean via exponential moving average: `μ_run ← (1−m)μ_run + m·μ_batch`. The default `momentum=0.1`. What does this mean in practice?",
+      "options": [
+        { "id": "a", "text": "90% weight on the current batch statistic, 10% on history — the running mean tracks recent batches very closely", "correct": false },
+        { "id": "b", "text": "10% weight on the current batch statistic, 90% on history — the running mean is a slow-moving estimate that smooths over many batches", "correct": true },
+        { "id": "c", "text": "The momentum parameter has no effect on the running statistics — it only affects gradient updates", "correct": false },
+        { "id": "d", "text": "The running mean is reset to the current batch mean every 10 steps", "correct": false }
+      ],
+      "explanation": "PyTorch's `momentum=0.1` means $m = 0.1$ — each new batch contributes only 10% to the running mean, with 90% coming from the historical estimate. This is the **reverse** of the momentum convention used in optimizers (where `momentum=0.9` means 90% history). A value of 0.1 provides a stable running estimate that smooths over roughly $1/0.1 = 10$ batches.",
+      "hint": "In PyTorch's BN formula, momentum is the weight on the *new* batch statistic, not the weight on history — opposite to optimizer momentum convention."
+    },
+    {
+      "id": "q1_3",
+      "type": "multiple-choice",
+      "prompt": "You are training a large object detection model with 8 GPUs, each receiving a per-GPU batch size of **2** images. Standard `nn.BatchNorm2d` without synchronization is used. What problem arises, and what is the fix?",
+      "options": [
+        { "id": "a", "text": "Gradients from different GPUs conflict; fix by reducing the learning rate", "correct": false },
+        { "id": "b", "text": "Each GPU computes batch statistics from only 2 images — far too noisy for reliable normalization; fix by using `nn.SyncBatchNorm` to gather statistics across all 8 GPUs before normalizing", "correct": true },
+        { "id": "c", "text": "BatchNorm parameters `γ` and `β` become out of sync across GPUs; fix with gradient averaging", "correct": false },
+        { "id": "d", "text": "BatchNorm running statistics diverge across devices; fix by disabling BN during distributed training", "correct": false }
+      ],
+      "explanation": "Per-GPU batch size 2 means BN computes mean and variance from 2 feature vectors — an extremely noisy estimate. `nn.SyncBatchNorm` collects activations (or sufficient statistics) across all processes before computing the batch mean and variance, so the effective batch size for BN statistics is $2 \\times 8 = 16$ (better, though still small). Convert with `nn.SyncBatchNorm.convert_sync_batchnorm(model)` before wrapping with `DistributedDataParallel`.",
+      "hint": "BatchNorm statistics are computed per-GPU unless you explicitly synchronize them. What is the effective 'batch size' seen by each GPU's BN layer?"
+    },
+    {
+      "id": "q1_4",
+      "type": "multiple-choice",
+      "prompt": "Pre-activation BatchNorm places normalization **before** the activation: `BN → ReLU → Conv`. Post-activation places it after: `Conv → BN → ReLU`. What is the key advantage of pre-activation placement in very deep ResNets?",
+      "options": [
+        { "id": "a", "text": "Pre-activation BN allows the skip connection to carry a clean, un-normalized gradient all the way back — the identity shortcut bypasses every normalization and non-linearity", "correct": true },
+        { "id": "b", "text": "Pre-activation BN converges faster because normalization happens before the heaviest computation", "correct": false },
+        { "id": "c", "text": "Pre-activation placement eliminates the need for the learned `γ` and `β` parameters", "correct": false },
+        { "id": "d", "text": "Pre-activation BN prevents the running statistics from becoming stale in deep networks", "correct": false }
+      ],
+      "explanation": "In a post-activation ResNet, the residual path includes ReLU, which can zero out gradients. In pre-activation, the skip connection adds the *raw* pre-BN signal directly to the output — no activation or normalization sits on the identity path. This means the gradient can flow from the loss back through hundreds of blocks via the skip connections without passing through any non-linearities, which is essential for stable training of very deep networks (1000+ layers).",
+      "hint": "Focus on what sits on the **skip/identity branch** of the residual connection in each placement. What does the gradient see as it flows backward through that branch?"
+    },
+    {
+      "id": "q1_5",
+      "type": "multiple-choice",
+      "prompt": "RMSNorm removes two components of LayerNorm. Which two, and what is the practical consequence?",
+      "options": [
+        { "id": "a", "text": "Removes the learned `γ` scale and `β` shift; consequence: fewer parameters but reduced expressive power", "correct": false },
+        { "id": "b", "text": "Removes mean subtraction and the `β` shift parameter; consequence: ~15–20% fewer FLOPs and faster training, with negligible accuracy loss on LLM tasks", "correct": true },
+        { "id": "c", "text": "Removes the variance computation and `ε` stabilizer; consequence: numerically unstable for small activations", "correct": false },
+        { "id": "d", "text": "Removes the per-feature `γ` and the running statistics; consequence: no train/eval mode difference", "correct": false }
+      ],
+      "explanation": "LayerNorm computes mean $\\mu$, subtracts it, divides by standard deviation, then applies learned $\\gamma$ and $\\beta$. RMSNorm skips the mean subtraction entirely (normalizes by root-mean-square instead of standard deviation) and has no $\\beta$ shift — only a $\\gamma$ scale. The mean centering step provides minimal benefit in practice (re-centering can be absorbed by the next layer's bias) while costing ~15–20% of LayerNorm's compute. RMSNorm is now standard in LLaMA, Mistral, Gemma, and Falcon.",
+      "hint": "Compare the LayerNorm formula $\\hat{x}_i = (x_i - \\mu)/\\sigma \\cdot \\gamma_i + \\beta_i$ against RMSNorm $\\hat{x}_i = (x_i / \\text{RMS}) \\cdot \\gamma_i$. What's absent?"
+    },
+    {
+      "id": "q1_6",
+      "type": "code-completion",
+      "prompt": "Complete the RMSNorm forward pass — normalize by root-mean-square (no mean subtraction), then apply the learned scale `weight`:",
+      "codeTemplate": "import torch\nimport torch.nn as nn\n\nclass RMSNorm(nn.Module):\n    def __init__(self, dim: int, eps: float = 1e-6):\n        super().__init__()\n        self.eps = eps\n        self.weight = nn.Parameter(torch.ones(dim))\n\n    def forward(self, x: torch.Tensor) -> torch.Tensor:\n        # x: (..., dim)\n        rms = ___BLANK___\n        return (x / rms) * self.weight",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "torch.sqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)",
+        "(x.pow(2).mean(-1, keepdim=True) + self.eps).sqrt()",
+        "torch.sqrt((x ** 2).mean(-1, keepdim=True) + self.eps)",
+        "torch.sqrt(x.square().mean(-1, keepdim=True) + self.eps)"
+      ],
+      "explanation": "$\\text{RMS}(\\mathbf{x}) = \\sqrt{\\frac{1}{d}\\sum_j x_j^2 + \\varepsilon}$. Compute the mean of squared values along the last dimension (keepdim=True to broadcast correctly), add `eps` for numerical stability, then take the square root. No mean subtraction — that is the key difference from LayerNorm.",
+      "hint": "RMS = sqrt(mean(x²) + eps) along the last dimension. keepdim=True is needed so the result broadcasts over the feature dimension when dividing."
+    }
+  ]
+}

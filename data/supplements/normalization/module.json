@@ -67,6 +67,34 @@
       "dataPath": "data/supplements/normalization/drills/d2-groupnorm-adaptive-conditional.json"
     }
   ],
-  "quizzes": [],
-  "labs": []
+  "quizzes": [
+    {
+      "id": "q1",
+      "title": "Covariate Shift, BatchNorm & LayerNorm",
+      "questionCount": 6,
+      "estimatedMinutes": 10,
+      "dataPath": "data/supplements/normalization/quizzes/q1-covariate-shift-batchnorm-layernorm.json"
+    },
+    {
+      "id": "q2",
+      "title": "Weight Norm, GroupNorm & Adaptive Conditioning",
+      "questionCount": 6,
+      "estimatedMinutes": 10,
+      "dataPath": "data/supplements/normalization/quizzes/q2-weightnorm-groupnorm-adaptive.json"
+    }
+  ],
+  "labs": [
+    {
+      "id": "lab1",
+      "title": "Normalization Techniques in PyTorch",
+      "estimatedMinutes": 50,
+      "dataPath": "data/supplements/normalization/labs/lab1-pytorch.json"
+    },
+    {
+      "id": "lab2",
+      "title": "Normalization Techniques in TensorFlow",
+      "estimatedMinutes": 45,
+      "dataPath": "data/supplements/normalization/labs/lab2-tensorflow.json"
+    }
+  ]
 }

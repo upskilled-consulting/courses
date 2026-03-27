@@ -1,0 +1,91 @@
+{
+  "id": "q2",
+  "moduleId": "normalization",
+  "title": "Weight Norm, GroupNorm & Adaptive Conditioning",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "type": "reading", "id": "r5" },
+  "nextItem": { "type": "lab", "id": "lab1" },
+  "questions": [
+    {
+      "id": "q2_1",
+      "type": "multiple-choice",
+      "prompt": "Weight normalization reparameterizes each weight vector as $\\mathbf{w} = g \\cdot \\mathbf{v}/\\|\\mathbf{v}\\|$. What happens to the gradient with respect to the direction vector $\\mathbf{v}$ during backpropagation?",
+      "options": [
+        { "id": "a", "text": "The gradient is scaled by $g/\\|\\mathbf{v}\\|$ — larger magnitude vectors get smaller gradient updates", "correct": false },
+        { "id": "b", "text": "The gradient w.r.t. $\\mathbf{v}$ is automatically orthogonalized to $\\mathbf{v}$ — updates only rotate the direction, never change its magnitude", "correct": true },
+        { "id": "c", "text": "The gradient with respect to $\\mathbf{v}$ is identical to the gradient with respect to $\\mathbf{w}$", "correct": false },
+        { "id": "d", "text": "Gradients through the normalization $\\mathbf{v}/\\|\\mathbf{v}\\|$ vanish for unit vectors, requiring gradient clipping", "correct": false }
+      ],
+      "explanation": "The projection formula for the gradient on the unit sphere is $\\nabla_{\\mathbf{v}} = (I - \\hat{\\mathbf{v}}\\hat{\\mathbf{v}}^T) \\nabla_{\\mathbf{w}} / \\|\\mathbf{v}\\|$. The $(I - \\hat{\\mathbf{v}}\\hat{\\mathbf{v}}^T)$ term is a projection that removes any component parallel to $\\mathbf{v}$ — the result is always orthogonal to $\\mathbf{v}$. This decouples magnitude learning (through $g$) from direction learning (through $\\mathbf{v}$), giving more stable optimization geometry.",
+      "hint": "The gradient of a unit-norm vector $\\hat{v} = v/\\|v\\|$ with respect to $v$ projects out the component parallel to $v$ — what does that mean for the direction of the update?"
+    },
+    {
+      "id": "q2_2",
+      "type": "multiple-choice",
+      "prompt": "Spectral normalization divides each weight matrix by its spectral norm $\\sigma_1(W)$ (largest singular value). In WGAN, this is applied to the **discriminator only**. Why not the generator?",
+      "options": [
+        { "id": "a", "text": "The generator's weights are already constrained by the input noise distribution, making spectral norm redundant", "correct": false },
+        { "id": "b", "text": "WGAN's Kantorovich-Rubinstein duality requires the **critic** (discriminator) to be 1-Lipschitz; there is no such constraint on the generator", "correct": true },
+        { "id": "c", "text": "Applying spectral norm to the generator would prevent it from learning high-frequency details", "correct": false },
+        { "id": "d", "text": "Spectral normalization would make the generator output distribution uniform, collapsing diversity", "correct": false }
+      ],
+      "explanation": "The Wasserstein distance is defined via the Kantorovich-Rubinstein duality: $W(p, q) = \\sup_{\\|f\\|_L \\leq 1} \\mathbb{E}_p[f] - \\mathbb{E}_q[f]$. The critic $f$ must be 1-Lipschitz for this equality to hold — spectral normalization enforces this by constraining $\\sigma_1(W) \\leq 1$ per layer. The generator just maps noise to samples and has no Lipschitz requirement in the WGAN objective.",
+      "hint": "WGAN requires the critic to be Lipschitz-constrained because of the dual formulation of the Wasserstein distance. Does that duality impose any constraint on the generator?"
+    },
+    {
+      "id": "q2_3",
+      "type": "multiple-choice",
+      "prompt": "GroupNorm with $G = C$ groups (one group per channel) is equivalent to which normalization?",
+      "options": [
+        { "id": "a", "text": "BatchNorm — normalizes across the batch dimension", "correct": false },
+        { "id": "b", "text": "LayerNorm — normalizes across all channels per example", "correct": false },
+        { "id": "c", "text": "InstanceNorm — normalizes each channel independently per example over spatial dimensions", "correct": true },
+        { "id": "d", "text": "SpectralNorm — constrains per-channel Lipschitz constant", "correct": false }
+      ],
+      "explanation": "With $G = C$, every channel forms its own group of size 1 in the channel dimension. GroupNorm then normalizes each group over spatial dimensions $(H, W)$ independently per example — exactly the definition of InstanceNorm. Conversely, $G = 1$ puts all channels in one group and normalizes over all features per example, which is LayerNorm. GroupNorm unifies both, but notably does **not** subsume BatchNorm because it never normalizes across the batch dimension.",
+      "hint": "GroupNorm divides C channels into G groups and normalizes within each group over (H, W) per example. What happens when G = C — how large is each group?"
+    },
+    {
+      "id": "q2_4",
+      "type": "multiple-choice",
+      "prompt": "InstanceNorm is the standard normalization for neural style transfer but is **inappropriate** for image classification. Why?",
+      "options": [
+        { "id": "a", "text": "InstanceNorm is computationally too expensive for the large feature maps in classification networks", "correct": false },
+        { "id": "b", "text": "InstanceNorm normalizes per-channel statistics per image, removing contrast and texture information — which is exactly the 'style' to be discarded in style transfer, but is **discriminative content** needed for classification", "correct": true },
+        { "id": "c", "text": "InstanceNorm has no learnable parameters, so it cannot adapt to the class distribution", "correct": false },
+        { "id": "d", "text": "InstanceNorm depends on spatial dimensions, making it incompatible with global average pooling in classifiers", "correct": false }
+      ],
+      "explanation": "Style transfer wants to preserve the *content* (object structure) while replacing the *style* (color palette, texture). Per-channel mean and variance encode style — InstanceNorm removes them, leaving only structural information. In classification, the same operation destroys discriminative signals: two images of the same dog breed in different lighting become nearly identical after InstanceNorm, eliminating cues the classifier needs. The normalization is useful precisely *because* it discards style — but that makes it harmful when style-adjacent features carry class information.",
+      "hint": "Think about what per-channel statistics (mean and variance) represent in image feature maps. Is that information helpful or harmful for each task?"
+    },
+    {
+      "id": "q2_5",
+      "type": "multiple-choice",
+      "prompt": "Adaptive Instance Normalization (AdaIN) transfers style from a style image $x_s$ to a content image $x_c$. The formula is $\\sigma(x_s) \\cdot (x_c - \\mu(x_c)) / \\sigma(x_c) + \\mu(x_s)$. How many learned parameters does AdaIN itself have?",
+      "options": [
+        { "id": "a", "text": "2 per channel ($\\gamma$ and $\\beta$, as in standard InstanceNorm)", "correct": false },
+        { "id": "b", "text": "None — AdaIN has no learned parameters; the affine transform is computed directly from the style image's statistics at run time", "correct": true },
+        { "id": "c", "text": "One scalar temperature parameter that controls the strength of style transfer", "correct": false },
+        { "id": "d", "text": "Parameters equal to the number of style images in the training set", "correct": false }
+      ],
+      "explanation": "Standard InstanceNorm normalizes $x_c$ to zero mean and unit variance, then applies *fixed* learned $\\gamma$ and $\\beta$. AdaIN replaces those fixed parameters with statistics computed directly from the style image at forward-pass time: $\\gamma = \\sigma(x_s)$ and $\\beta = \\mu(x_s)$. Since the affine values come from the input rather than learned weights, AdaIN itself introduces zero new parameters — enabling arbitrary style transfer to any style image not seen during training.",
+      "hint": "Compare AdaIN to standard InstanceNorm. Where do the affine parameters γ and β come from in each case?"
+    },
+    {
+      "id": "q2_6",
+      "type": "code-completion",
+      "prompt": "Complete the AdaIN forward pass — normalize the content features, then shift and scale them using the style image's channel statistics:",
+      "codeTemplate": "import torch\n\ndef adain(content: torch.Tensor, style: torch.Tensor, eps: float = 1e-5) -> torch.Tensor:\n    \"\"\"\n    content, style: (B, C, H, W)\n    Returns content normalized to zero-mean unit-var, then re-scaled\n    to match style channel mean and variance.\n    \"\"\"\n    # Compute per-channel statistics over spatial dims\n    c_mean = content.mean(dim=[2, 3], keepdim=True)\n    c_std  = content.std(dim=[2, 3], keepdim=True) + eps\n    s_mean = style.mean(dim=[2, 3], keepdim=True)\n    s_std  = style.std(dim=[2, 3], keepdim=True) + eps\n\n    normalized = (content - c_mean) / c_std\n    return ___BLANK___",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "normalized * s_std + s_mean",
+        "s_std * normalized + s_mean",
+        "(normalized * s_std) + s_mean"
+      ],
+      "explanation": "AdaIN first normalizes the content features to zero mean and unit variance (removing content style), then re-scales by the style's standard deviation and re-centers by the style's mean — injecting the style's statistics while keeping the content's spatial structure. The formula is $\\sigma(x_s) \\cdot \\frac{x_c - \\mu(x_c)}{\\sigma(x_c)} + \\mu(x_s)$.",
+      "hint": "After normalizing, apply the style's statistics as an affine transform: scale by style std, shift by style mean — matching the AdaIN formula."
+    }
+  ]
+}
