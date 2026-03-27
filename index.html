@@ -96,15 +96,51 @@
 
   <footer class="platform-footer">
     <div class="footer-inner">
-      <span class="footer-copy">
-        © 2025 <a href="https://upskilled.consulting" target="_blank" rel="noopener">Upskilled Consulting</a>
-        &nbsp;·&nbsp;
-        <a href="https://nickmccarty.me" target="_blank" rel="noopener">Nicholas McCarty</a>
-      </span>
+
+      <div class="footer-brand">
+        <a href="#/" class="footer-logo-link" aria-label="Upskilled home">
+          <img src="assets/images/logo.png" alt="Upskilled" class="footer-logo"/>
+        </a>
+        <p class="footer-tagline">Free ML &amp; AI courses for practitioners.</p>
+        <nav class="footer-nav" aria-label="Course navigation">
+          <a href="#" class="footer-nav-link" data-path="/prereqs/linear-algebra">Linear Algebra</a>
+          <a href="#" class="footer-nav-link" data-path="/prereqs/matrix-algebra">Matrix Algebra</a>
+          <a href="#" class="footer-nav-link" data-path="/prereqs/calculus-foundations">Calculus</a>
+          <a href="#" class="footer-nav-link" data-path="/prereqs/probability-foundations">Probability</a>
+          <a href="#" class="footer-nav-link" data-path="/supplements/architectures">Architectures</a>
+          <a href="#" class="footer-nav-link" data-path="/supplements/activation-functions">Activation Functions</a>
+          <a href="#" class="footer-nav-link" data-path="/supplements/loss-functions">Loss Functions</a>
+          <a href="#" class="footer-nav-link" data-path="/supplements/optimizers">Optimizers</a>
+          <a href="#" class="footer-nav-link" data-path="/supplements/regularization">Regularization</a>
+          <a href="#" class="footer-nav-link" data-path="/supplements/normalization">Normalization</a>
+          <a href="#" class="footer-nav-link" data-path="/3dgs-compression">3D Gaussian Splatting</a>
+        </nav>
+        <span class="footer-copy">
+          © 2025 <a href="https://upskilled.consulting" target="_blank" rel="noopener">Upskilled Consulting</a>
+        </span>
+      </div>
+
+      <div class="footer-contact">
+        <p class="footer-contact-heading">Stay in Touch</p>
+        <p class="footer-contact-sub">New courses, research updates, and consulting work — straight to your inbox.</p>
+        <div id="footer-form-message"></div>
+        <form id="footer-contact-form" class="footer-form" novalidate>
+          <div class="footer-form-row">
+            <input type="text"  id="footer-name"  name="name"  placeholder="Name"  autocomplete="name"/>
+            <input type="email" id="footer-email" name="email" placeholder="Email" autocomplete="email" required/>
+            <button type="submit" id="footer-submit-btn" class="footer-submit-btn">Send</button>
+          </div>
+        </form>
+      </div>
+
     </div>
   </footer>
 
   <script src="assets/js/platform.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
+  <script src="assets/js/footer.js"></script>
 
   <!-- ── Search overlay ─────────────────────────────────────── -->
   <div class="search-overlay" id="searchOverlay" role="dialog" aria-modal="true" aria-label="Search">

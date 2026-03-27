@@ -288,25 +288,143 @@ img, svg { display: block; max-width: 100%; }
 
 .platform-footer {
   border-top: 1px solid var(--border);
-  padding: 18px 24px;
   background: var(--bg-nav);
   margin-top: auto;
+  padding: 48px 24px 0;
 }
 
 .footer-inner {
   max-width: 1200px;
   margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 56px;
+  padding-bottom: 40px;
 }
 
-.footer-copy {
-  font-size: 0.8rem;
-  color: var(--text-faint);
+/* Brand column */
+.footer-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
-.footer-copy a { color: var(--text-muted); }
-.footer-copy a:hover { color: var(--text); }
+
+.footer-logo-link {
+  display: inline-block;
+  opacity: 0.65;
+  transition: opacity 0.2s;
+}
+.footer-logo-link:hover { opacity: 1; }
+
+.footer-logo {
+  height: 30px;
+  width: auto;
+}
+
+.footer-tagline {
+  font-size: 0.78rem;
+  color: var(--text-faint);
+  letter-spacing: 0.02em;
+}
+
+.footer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+}
+
+.footer-nav a {
+  font-size: 0.78rem;
+  color: var(--text-faint);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.footer-nav a:hover { color: var(--text-muted); }
+
+.footer-copy {
+  font-size: 0.75rem;
+  color: var(--text-faint);
+  margin-top: 4px;
+}
+.footer-copy a { color: var(--text-faint); text-decoration: none; }
+.footer-copy a:hover { color: var(--text-muted); }
+
+/* Contact column */
+.footer-contact-heading {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.footer-contact-sub {
+  font-size: 0.8rem;
+  line-height: 1.7;
+  color: var(--text-faint);
+  margin-bottom: 16px;
+}
+
+.footer-form-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.footer-form-row input {
+  flex: 1;
+  min-width: 100px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.footer-form-row input::placeholder { color: var(--text-faint); }
+.footer-form-row input:focus { border-color: var(--border-strong); }
+
+.footer-submit-btn {
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 18px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-on-accent);
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+.footer-submit-btn:hover { background: var(--accent-hover); }
+.footer-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+#footer-form-message .message {
+  font-size: 0.78rem;
+  padding: 7px 12px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+#footer-form-message .message.success {
+  color: var(--success);
+  background: var(--success-bg);
+}
+#footer-form-message .message.error {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+@media (max-width: 640px) {
+  .footer-inner {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}
 
 /* ----------------------------------------------------------
    5. CATALOG VIEW
