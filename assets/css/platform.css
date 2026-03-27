@@ -3091,6 +3091,10 @@ img, svg { display: block; max-width: 100%; }
     right: 8px;
   }
 
+  .notation-modal-head {
+    padding-right: 52px;
+  }
+
   /* Stack symbol above body text — avoids wide KaTeX overflowing into adjacent column */
   .notation-entry {
     grid-template-columns: 1fr;
