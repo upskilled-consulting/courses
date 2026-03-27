@@ -74,6 +74,34 @@
       "dataPath": "data/supplements/regularization/drills/d2-augmentation-output-implicit.json"
     }
   ],
-  "quizzes": [],
-  "labs": []
+  "quizzes": [
+    {
+      "id": "q1",
+      "title": "Overfitting, Penalties, Dropout & Normalization",
+      "questionCount": 6,
+      "estimatedMinutes": 10,
+      "dataPath": "data/supplements/regularization/quizzes/q1-overfitting-penalties-dropout-normalization.json"
+    },
+    {
+      "id": "q2",
+      "title": "Augmentation, Output Regularizers & Implicit Regularization",
+      "questionCount": 6,
+      "estimatedMinutes": 10,
+      "dataPath": "data/supplements/regularization/quizzes/q2-augmentation-output-implicit.json"
+    }
+  ],
+  "labs": [
+    {
+      "id": "lab1",
+      "title": "Regularization in PyTorch",
+      "estimatedMinutes": 50,
+      "dataPath": "data/supplements/regularization/labs/lab1-pytorch.json"
+    },
+    {
+      "id": "lab2",
+      "title": "Regularization in TensorFlow",
+      "estimatedMinutes": 45,
+      "dataPath": "data/supplements/regularization/labs/lab2-tensorflow.json"
+    }
+  ]
 }

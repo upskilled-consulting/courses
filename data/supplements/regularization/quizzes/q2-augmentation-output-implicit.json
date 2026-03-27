@@ -1,0 +1,90 @@
+{
+  "id": "q2",
+  "moduleId": "regularization",
+  "title": "Augmentation, Output Regularizers & Implicit Regularization",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "type": "reading", "id": "r6" },
+  "nextItem": { "type": "lab", "id": "lab1" },
+  "questions": [
+    {
+      "id": "q2_1",
+      "type": "multiple-choice",
+      "prompt": "Mixup samples the blend ratio $\\lambda \\sim \\text{Beta}(\\alpha, \\alpha)$. As $\\alpha \\to \\infty$, the Beta distribution becomes a point mass at $0.5$. What does Mixup degenerate to in this limit?",
+      "options": [
+        { "id": "a", "text": "Always selects one of the two images unchanged (pure random crop)", "correct": false },
+        { "id": "b", "text": "Always blends at exactly $\\lambda = 0.5$ — equal pixel and label interpolation between every pair", "correct": true },
+        { "id": "c", "text": "Reverts to standard training with no augmentation", "correct": false },
+        { "id": "d", "text": "Behaves like CutMix, replacing a region rather than blending", "correct": false }
+      ],
+      "explanation": "$\\text{Beta}(\\alpha, \\alpha)$ is symmetric around $0.5$. As $\\alpha \\to \\infty$ its variance shrinks to zero and it concentrates at $0.5$. Every training example becomes a 50/50 blend of two randomly chosen images and their labels — neither original example survives intact. Small $\\alpha$ (e.g. 0.2) gives mostly near-pure examples with rare strong blends; large $\\alpha$ forces uniform mixing.",
+      "hint": "Beta(α, α) is bell-shaped, centred at 0.5. What happens to the width of that bell as α grows?"
+    },
+    {
+      "id": "q2_2",
+      "type": "multiple-choice",
+      "prompt": "A CutMix operation pastes a patch occupying **30%** of the image area from $x_j$ into $x_i$. The mixed label $\\tilde{y}$ is:",
+      "options": [
+        { "id": "a", "text": "$\\tilde{y} = 0.3\\,y_i + 0.7\\,y_j$", "correct": false },
+        { "id": "b", "text": "$\\tilde{y} = 0.7\\,y_i + 0.3\\,y_j$", "correct": true },
+        { "id": "c", "text": "$\\tilde{y} = y_i$ (dominant image keeps the full label)", "correct": false },
+        { "id": "d", "text": "$\\tilde{y} = 0.5\\,y_i + 0.5\\,y_j$ (always equal blend)", "correct": false }
+      ],
+      "explanation": "CutMix defines $\\lambda$ as the fraction of the image that is *retained* from $x_i$ — here $\\lambda = 1 - 0.3 = 0.7$. The label formula is $\\tilde{y} = \\lambda y_i + (1-\\lambda) y_j = 0.7\\,y_i + 0.3\\,y_j$. The proportion of pasted pixels from $x_j$ is $(1-\\lambda)$, consistent with: the more area comes from $x_j$, the more $y_j$ contributes to the label.",
+      "hint": "λ is defined as the fraction of the original image that *remains*, not the fraction that is cut. If 30% is replaced, what fraction is retained?"
+    },
+    {
+      "id": "q2_3",
+      "type": "multiple-choice",
+      "prompt": "With label smoothing $\\varepsilon = 0.1$ and $K = 10$ classes, what target probability is assigned to the **correct** class?",
+      "options": [
+        { "id": "a", "text": "$0.90$ &nbsp; (simply $1 - \\varepsilon$)", "correct": false },
+        { "id": "b", "text": "$0.91$ &nbsp; ($(1-\\varepsilon) + \\varepsilon/K$)", "correct": true },
+        { "id": "c", "text": "$0.01$ &nbsp; ($\\varepsilon / K$ only)", "correct": false },
+        { "id": "d", "text": "$1.00$ &nbsp; (correct class target is unchanged)", "correct": false }
+      ],
+      "explanation": "The smoothed target is $\\tilde{y}_k = (1-\\varepsilon)\\,y_k + \\varepsilon/K$. For the correct class $y_k = 1$: $\\tilde{y}_{k^*} = (1-0.1)\\cdot 1 + 0.1/10 = 0.9 + 0.01 = 0.91$. For each wrong class $y_k = 0$: $\\tilde{y}_k = 0 + 0.01 = 0.01$. The probabilities sum to $0.91 + 9 \\times 0.01 = 1$. The common mistake is forgetting that the correct class also receives its share of the smoothing mass $\\varepsilon/K$.",
+      "hint": "Apply the formula $\\tilde{y}_k = (1-\\varepsilon)y_k + \\varepsilon/K$ with $y_{k^*}=1$, $\\varepsilon=0.1$, $K=10$."
+    },
+    {
+      "id": "q2_4",
+      "type": "multiple-choice",
+      "prompt": "Both label smoothing and temperature scaling produce softer output distributions. A key practical difference is:",
+      "options": [
+        { "id": "a", "text": "Temperature scaling is applied during training; label smoothing is applied at inference only", "correct": false },
+        { "id": "b", "text": "Label smoothing modifies training targets and shapes the learned feature representations; temperature scaling only rescales logits after training and does not affect the model's weights or features", "correct": true },
+        { "id": "c", "text": "They are mathematically equivalent — setting $T = \\varepsilon$ makes temperature scaling identical to label smoothing", "correct": false },
+        { "id": "d", "text": "Label smoothing applies only to binary classification; temperature scaling applies to multi-class", "correct": false }
+      ],
+      "explanation": "Label smoothing changes what the model is optimised toward: it sees soft targets throughout training, which prevents logits from diverging to large values and produces feature clusters that are tighter and better separated. Temperature scaling ($T > 1$) is a post-hoc calibration technique: it divides the already-trained logits by $T$ without touching any weights. It cannot recover good calibration if the features themselves are poorly structured — it only rescales confidence.",
+      "hint": "Think about when each technique acts: during the learning process versus after training is already complete."
+    },
+    {
+      "id": "q2_5",
+      "type": "multiple-choice",
+      "prompt": "A 20-layer ReLU network is initialised with Xavier/Glorot: $\\text{Var}(w) = 2/(n_{\\text{in}} + n_{\\text{out}})$. What problem arises and what does He initialisation fix?",
+      "options": [
+        { "id": "a", "text": "Xavier produces too-large initial weights, causing gradient explosion; He uses smaller variance", "correct": false },
+        { "id": "b", "text": "ReLU zeroes out ~half of its inputs, which halves the variance at each layer; He compensates with $\\text{Var}(w) = 2/n_{\\text{in}}$, preserving signal magnitude through depth", "correct": true },
+        { "id": "c", "text": "Xavier assumes symmetric activations around zero; ReLU breaks this, causing biased gradients; He removes the symmetry constraint", "correct": false },
+        { "id": "d", "text": "Xavier uses the harmonic mean of $n_{\\text{in}}$ and $n_{\\text{out}}$, which underestimates the required variance for skip connections", "correct": false }
+      ],
+      "explanation": "Xavier is derived assuming the activation has zero mean and preserves variance symmetrically in both forward and backward passes. ReLU violates this: it zeroes half its inputs, so $\\text{Var}(\\text{ReLU}(z)) \\approx \\frac{1}{2}\\text{Var}(z)$. After 20 layers, activations shrink by a factor of $(1/2)^{20} \\approx 10^{-6}$. He initialization uses $\\text{Var}(w) = 2/n_{\\text{in}}$ — the extra factor of 2 exactly compensates for ReLU's variance-halving, keeping activations and gradients from vanishing across depth.",
+      "hint": "ReLU passes roughly half of its inputs (those > 0) and zeroes the rest. How does this affect the variance of the layer's output relative to its input?"
+    },
+    {
+      "id": "q2_6",
+      "type": "code-completion",
+      "prompt": "Apply spectral normalization to a `Conv2d` layer so that its Lipschitz constant is constrained to 1 — a standard technique for stabilising GAN discriminator training:",
+      "codeTemplate": "import torch.nn as nn\n\nconv = nn.Conv2d(64, 128, kernel_size=3, padding=1)\nconv_sn = ___BLANK___",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "nn.utils.spectral_norm(conv)",
+        "torch.nn.utils.spectral_norm(conv)"
+      ],
+      "explanation": "`nn.utils.spectral_norm(module)` wraps the module in-place, registering a forward hook that divides the weight matrix by its largest singular value (spectral norm $\\sigma_1(W)$) before each forward pass. This constrains the per-layer Lipschitz constant to $\\leq 1$, bounding how much the discriminator can amplify perturbations — which stabilises adversarial training and prevents gradient explosion in the discriminator.",
+      "hint": "PyTorch provides a utility function in `nn.utils` for this. It takes a module and returns the same module with the normalization hook attached."
+    }
+  ]
+}

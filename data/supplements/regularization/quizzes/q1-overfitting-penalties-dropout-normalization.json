@@ -1,0 +1,91 @@
+{
+  "id": "q1",
+  "moduleId": "regularization",
+  "title": "Overfitting, Penalties, Dropout & Normalization",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "type": "reading", "id": "r3" },
+  "nextItem": { "type": "reading", "id": "r4" },
+  "questions": [
+    {
+      "id": "q1_1",
+      "type": "multiple-choice",
+      "prompt": "In the bias-variance decomposition $E[(y - \\hat{f})^2] = \\text{Bias}^2 + \\text{Var} + \\sigma^2$, adding L2 regularization to a high-capacity model primarily reduces which term — and at what cost?",
+      "options": [
+        { "id": "a", "text": "Reduces irreducible noise $\\sigma^2$; no cost", "correct": false },
+        { "id": "b", "text": "Reduces variance; at the cost of increased bias", "correct": true },
+        { "id": "c", "text": "Reduces bias; at the cost of increased variance", "correct": false },
+        { "id": "d", "text": "Reduces both bias and variance equally", "correct": false }
+      ],
+      "explanation": "A high-capacity model has low bias (can fit the true function) but high variance (sensitive to which training samples it sees). L2 regularization shrinks weights toward zero, limiting model complexity and reducing variance — but the constrained model can no longer fit the training data as closely, so bias increases. This trade-off is the central tension the bias-variance decomposition captures.",
+      "hint": "Think about which term reflects sensitivity to the specific training set, versus systematic deviation from the true function."
+    },
+    {
+      "id": "q1_2",
+      "type": "multiple-choice",
+      "prompt": "L1 and L2 penalties both shrink weights toward zero, but only L1 drives weights to *exactly* zero, producing sparse solutions. What is the geometric reason?",
+      "options": [
+        { "id": "a", "text": "The L1 constraint region (a diamond/polytope) has corners on the coordinate axes; loss contours are most likely to be tangent at these corners, giving zero-valued coordinates", "correct": true },
+        { "id": "b", "text": "The L1 gradient magnitude is larger near zero, so the penalty pulls harder as weights approach zero", "correct": false },
+        { "id": "c", "text": "L1 is non-convex, causing optimization to skip over non-zero solutions", "correct": false },
+        { "id": "d", "text": "L1 penalizes the square root of weight magnitude, which has infinite slope at zero", "correct": false }
+      ],
+      "explanation": "The L2 constraint $\\|\\theta\\|_2 \\leq c$ is a sphere — smooth everywhere, so loss contours nearly always touch it at a non-axis point. The L1 constraint $\\|\\theta\\|_1 \\leq c$ is a diamond with sharp corners at the coordinate axes. Loss contours are likely to first intersect the feasible region exactly at a corner, where one or more weights are zero. This corner-tangency is why L1 systematically produces sparse solutions.",
+      "hint": "Draw the constraint regions in 2D: L2 is a circle, L1 is a rotated square. Where does an elliptical loss contour most likely touch each shape?"
+    },
+    {
+      "id": "q1_3",
+      "type": "multiple-choice",
+      "prompt": "Inverted dropout scales surviving activations by $1/(1-p)$ during training. What would go wrong if you omitted this scaling?",
+      "options": [
+        { "id": "a", "text": "Gradients would not flow through the dropped neurons, breaking backpropagation entirely", "correct": false },
+        { "id": "b", "text": "Test-time activations would be approximately $(1-p)\\times$ too large, since the network was trained with $p$ of its neurons absent but now all are present", "correct": true },
+        { "id": "c", "text": "The model would overfit more, because dropout would no longer reduce co-adaptation", "correct": false },
+        { "id": "d", "text": "Training would be unstable, but inference would be unaffected", "correct": false }
+      ],
+      "explanation": "Without the $1/(1-p)$ scale factor, a neuron that is present with probability $(1-p)$ contributes an expected activation of $(1-p)h$. At test time, all neurons are present, so each contributes $h$ — a factor of $1/(1-p)$ larger than what the downstream weights were trained to expect. Inverted dropout corrects this at training time so no correction is needed at inference.",
+      "hint": "Consider what a downstream neuron expects to receive on average during training versus what it actually receives at test time when all neurons are present."
+    },
+    {
+      "id": "q1_4",
+      "type": "multiple-choice",
+      "prompt": "Using Adam with an L2 penalty added to the loss (`loss + λ * sum(w²)`) is **not** equivalent to AdamW weight decay. What goes wrong with the naive approach?",
+      "options": [
+        { "id": "a", "text": "Adam accumulates gradient history, so old L2 gradients persist and cause divergence", "correct": false },
+        { "id": "b", "text": "Adam's per-parameter adaptive scaling divides the L2 gradient by the second-moment estimate, making the effective decay rate inconsistent across parameters — large-gradient parameters get less regularization", "correct": true },
+        { "id": "c", "text": "L2 penalty introduces a non-differentiable point at $w = 0$ that Adam cannot pass through", "correct": false },
+        { "id": "d", "text": "There is no difference; Adam and AdamW are equivalent when $\\lambda$ is small", "correct": false }
+      ],
+      "explanation": "Adam scales each parameter's update by $\\hat{m}_t / (\\sqrt{\\hat{v}_t} + \\epsilon)$. When L2 is folded into the loss, the penalty gradient $\\lambda w$ gets the same adaptive scaling — so frequently-updated parameters (large $\\hat{v}_t$) receive a proportionally smaller weight decay than rarely-updated ones. AdamW fixes this by applying the decay $-\\alpha\\lambda w$ directly to the parameter, bypassing the adaptive scaling, so every parameter decays at the same rate $\\lambda$.",
+      "hint": "Think about what Adam's denominator $\\sqrt{\\hat{v}_t}$ does to the effective step size of a parameter with large gradient history versus a small one."
+    },
+    {
+      "id": "q1_5",
+      "type": "multiple-choice",
+      "prompt": "You forget to call `model.eval()` before running a test-time forward pass through a BatchNorm layer. What happens?",
+      "options": [
+        { "id": "a", "text": "Dropout remains active, producing stochastic predictions", "correct": false },
+        { "id": "b", "text": "BatchNorm uses the current test batch's mean and variance instead of the training running averages, making each prediction depend on what other samples happen to be in the same batch", "correct": true },
+        { "id": "c", "text": "The running mean and variance are overwritten by the test batch statistics permanently", "correct": false },
+        { "id": "d", "text": "Nothing changes — BatchNorm uses running statistics regardless of eval mode", "correct": false }
+      ],
+      "explanation": "In training mode, BatchNorm normalises using the per-batch statistics $\\mu_B$ and $\\sigma^2_B$ and updates the running averages. In eval mode, it uses the stored running averages — fixed values that are independent of the current batch. Forgetting `model.eval()` means test predictions are not independent: they change depending on batch composition and size, which is especially problematic with batch size 1 (no meaningful batch statistics) or when comparing individual samples.",
+      "hint": "BatchNorm has two distinct operating modes. Which statistics does each mode use, and where do they come from?"
+    },
+    {
+      "id": "q1_6",
+      "type": "code-completion",
+      "prompt": "Complete the inverted dropout function — scale survivors so the expected activation equals the unmasked value, requiring no correction at test time:",
+      "codeTemplate": "import torch\n\ndef inverted_dropout(x: torch.Tensor, p: float, training: bool) -> torch.Tensor:\n    \"\"\"Apply inverted dropout. Returns x unchanged if not training or p == 0.\"\"\"\n    if not training or p == 0:\n        return x\n    mask = (torch.rand_like(x) > p).float()\n    return ___BLANK___",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "x * mask / (1 - p)",
+        "x * mask / (1.0 - p)",
+        "(x * mask) / (1 - p)"
+      ],
+      "explanation": "Each element is kept with probability $(1-p)$ and zeroed with probability $p$. Without scaling, the expected value of a kept element is $(1-p)h$ (since it's absent $(1-p)\\times$... wait: it's $h$ when kept, and the expected value is $(1-p)\\cdot h$). Dividing by $(1-p)$ restores the expectation to $h$, matching the unmasked forward pass. At test time, all neurons are present and no correction is needed.",
+      "hint": "A neuron survives with probability (1−p). To make E[output] = input, what factor compensates for the fraction of zeros in the mask?"
+    }
+  ]
+}
