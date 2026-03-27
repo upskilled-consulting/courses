@@ -1,0 +1,87 @@
+{
+  "id": "q2",
+  "moduleId": "architectures",
+  "title": "RNN, LSTM, Attention, and Transformer",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "type": "reading", "id": "r6" },
+  "nextItem": { "type": "lab", "id": "lab1" },
+  "questions": [
+    {
+      "id": "q2_1",
+      "type": "multiple-choice",
+      "prompt": "Gradient clipping (rescaling g when ‖g‖ > τ) addresses exploding gradients in RNNs. Why does it NOT fix the vanishing gradient problem?",
+      "options": [
+        { "id": "a", "text": "Clipping is only applied during inference, not training", "correct": false },
+        { "id": "b", "text": "Clipping rescales large gradients downward but cannot amplify gradients that are already near zero", "correct": true },
+        { "id": "c", "text": "Vanishing gradients only occur in feedforward networks, not RNNs", "correct": false },
+        { "id": "d", "text": "Clipping changes the direction of the gradient, which prevents useful learning", "correct": false }
+      ],
+      "explanation": "Clipping is a ceiling operation — it prevents gradient norms from growing beyond τ but does nothing when gradients are already tiny. Vanishing gradients require architectural solutions (LSTM gating, residual connections) that create paths where gradients can flow without multiplying through W_h at every step.",
+      "hint": "Think about what clipping does to a gradient that is already very small (e.g., 1e-8)."
+    },
+    {
+      "id": "q2_2",
+      "type": "multiple-choice",
+      "prompt": "In an LSTM, the cell state update c_t = f_t ⊙ c_{t-1} + i_t ⊙ c̃_t provides a 'gradient highway'. What makes this gradient path qualitatively different from a vanilla RNN's gradient path?",
+      "options": [
+        { "id": "a", "text": "The cell state uses tanh instead of sigmoid, which has better gradient properties", "correct": false },
+        { "id": "b", "text": "Gradients flow through element-wise multiplication by gate values, not matrix multiplication by W_h", "correct": true },
+        { "id": "c", "text": "The cell state is normalized by layer normalization at each step", "correct": false },
+        { "id": "d", "text": "The forget gate is initialized to 1, so gradients are always preserved", "correct": false }
+      ],
+      "explanation": "In a vanilla RNN, ∂h_{t+1}/∂h_t involves multiplication by W_h (full matrix). In the LSTM cell path, ∂c_t/∂c_{t-1} = f_t — just element-wise multiplication by the forget gate. If f_t ≈ 1, the gradient passes through nearly unchanged across many steps.",
+      "hint": "Compare ∂h_{t+1}/∂h_t in a vanilla RNN to ∂c_t/∂c_{t-1} in an LSTM."
+    },
+    {
+      "id": "q2_3",
+      "type": "multiple-choice",
+      "prompt": "Scaled dot-product attention divides QK^T by √d_k before the softmax. Why is this scaling necessary?",
+      "options": [
+        { "id": "a", "text": "To ensure attention weights sum to 1 across all query positions", "correct": false },
+        { "id": "b", "text": "To prevent the values V from dominating the attention output", "correct": false },
+        { "id": "c", "text": "Because dot products grow in variance with d_k, pushing softmax into near-zero gradient regions", "correct": true },
+        { "id": "d", "text": "To match the learning rate schedule used in transformer training", "correct": false }
+      ],
+      "explanation": "If q_i and k_i are independent with mean 0 and variance 1, their dot product q·k = Σq_i·k_i has variance d_k. Large dot products drive softmax into saturation where one weight ≈ 1 and all others ≈ 0, producing near-zero gradients. Dividing by √d_k restores unit variance regardless of d_k.",
+      "hint": "Consider what happens to the softmax when d_k is large and dot products are proportionally large."
+    },
+    {
+      "id": "q2_4",
+      "type": "multiple-choice",
+      "prompt": "A self-attention layer over a sequence of length n has what memory complexity?",
+      "options": [
+        { "id": "a", "text": "O(n) — linear in sequence length", "correct": false },
+        { "id": "b", "text": "O(n log n) — due to the softmax normalization", "correct": false },
+        { "id": "c", "text": "O(n²) — the full attention matrix must be materialized", "correct": true },
+        { "id": "d", "text": "O(n · d_model) — one vector per token", "correct": false }
+      ],
+      "explanation": "The attention matrix QK^T ∈ ℝ^{n×n} must be computed and stored before multiplying by V. This O(n²) memory cost is the primary bottleneck for long-context transformers — addressed by FlashAttention (kernel fusion to avoid materializing the full matrix) and sparse attention patterns.",
+      "hint": "The attention score matrix has one entry for every (query, key) pair."
+    },
+    {
+      "id": "q2_5",
+      "type": "multiple-choice",
+      "prompt": "Which positional encoding scheme naturally encodes *relative* position in the attention score — making attention between positions m and n depend only on m−n — enabling better length generalization?",
+      "options": [
+        { "id": "a", "text": "Sinusoidal absolute encodings (Vaswani et al. 2017)", "correct": false },
+        { "id": "b", "text": "Learned absolute position embeddings (BERT, GPT-2)", "correct": false },
+        { "id": "c", "text": "Rotary Position Embeddings (RoPE, used in LLaMA)", "correct": true },
+        { "id": "d", "text": "No positional encoding — transformers are permutation-equivariant by design", "correct": false }
+      ],
+      "explanation": "RoPE rotates the query and key vectors by an angle proportional to their absolute position. The dot product q_m · k_n then depends only on the relative offset (n−m), making position-dependent attention patterns naturally transferable to longer sequences. LLaMA, Mistral, and most modern decoder LLMs use RoPE.",
+      "hint": "The key property is that only the *relative* offset between positions affects the attention score."
+    },
+    {
+      "id": "q2_6",
+      "type": "code-completion",
+      "prompt": "Complete the causal (autoregressive) mask for scaled dot-product attention. Scores where future tokens would be attended to should be set to negative infinity before the softmax:",
+      "codeTemplate": "import torch\n# scores: (B, H, T, T) — raw attention logits\nT = scores.size(-1)\nmask = torch.triu(torch.ones(T, T, device=scores.device), diagonal=1).bool()\nscores = scores.masked_fill(___, float('-inf'))\nweights = torch.softmax(scores, dim=-1)",
+      "blankKey": "___",
+      "acceptedAnswers": ["mask", "mask == 1", "mask.bool()"],
+      "explanation": "torch.triu with diagonal=1 marks the upper triangle (future positions) as True. masked_fill replaces those positions with -inf, making softmax assign exactly 0 weight to future tokens — enforcing the autoregressive constraint.",
+      "hint": "mask is already a boolean tensor where True marks positions to fill with -inf."
+    }
+  ]
+}

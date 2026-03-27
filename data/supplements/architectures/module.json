@@ -74,6 +74,34 @@
       "dataPath": "data/supplements/architectures/drills/d2-rnn-attention-transformer.json"
     }
   ],
-  "quizzes": [],
-  "labs": []
+  "quizzes": [
+    {
+      "id": "q1",
+      "title": "MLP, CNN, and ResNet",
+      "questionCount": 6,
+      "estimatedMinutes": 10,
+      "dataPath": "data/supplements/architectures/quizzes/q1-mlp-cnn-resnet.json"
+    },
+    {
+      "id": "q2",
+      "title": "RNN, LSTM, Attention, and Transformer",
+      "questionCount": 6,
+      "estimatedMinutes": 10,
+      "dataPath": "data/supplements/architectures/quizzes/q2-rnn-lstm-attention-transformer.json"
+    }
+  ],
+  "labs": [
+    {
+      "id": "lab1",
+      "title": "Neural Network Architectures in PyTorch",
+      "estimatedMinutes": 60,
+      "dataPath": "data/supplements/architectures/labs/lab1-pytorch.json"
+    },
+    {
+      "id": "lab2",
+      "title": "Neural Network Architectures in TensorFlow",
+      "estimatedMinutes": 55,
+      "dataPath": "data/supplements/architectures/labs/lab2-tensorflow.json"
+    }
+  ]
 }

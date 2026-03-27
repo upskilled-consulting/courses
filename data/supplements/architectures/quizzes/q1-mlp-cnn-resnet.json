@@ -1,0 +1,87 @@
+{
+  "id": "q1",
+  "moduleId": "architectures",
+  "title": "MLP, CNN, and ResNet",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "type": "reading", "id": "r2" },
+  "nextItem": { "type": "reading", "id": "r3" },
+  "questions": [
+    {
+      "id": "q1_1",
+      "type": "multiple-choice",
+      "prompt": "What happens when you stack multiple linear layers (no activation functions) in an MLP?",
+      "options": [
+        { "id": "a", "text": "The network gains additional expressive power from increased depth", "correct": false },
+        { "id": "b", "text": "The stack collapses to a single linear transformation, adding no expressive power", "correct": true },
+        { "id": "c", "text": "Gradients vanish because the Jacobians are rank-deficient", "correct": false },
+        { "id": "d", "text": "The network learns hierarchical features despite the lack of non-linearity", "correct": false }
+      ],
+      "explanation": "Without non-linearities, W₂(W₁x + b₁) + b₂ = W'x + b' — a single affine map. Depth only adds expressivity when combined with non-linear activations.",
+      "hint": "Think about what matrix multiplication of multiple matrices simplifies to."
+    },
+    {
+      "id": "q1_2",
+      "type": "multiple-choice",
+      "prompt": "A 3×3 convolution is applied with stride 2 and padding 1 to a 224×224 input. What is the output spatial size?",
+      "options": [
+        { "id": "a", "text": "224×224", "correct": false },
+        { "id": "b", "text": "113×113", "correct": false },
+        { "id": "c", "text": "112×112", "correct": true },
+        { "id": "d", "text": "111×111", "correct": false }
+      ],
+      "explanation": "H_out = ⌊(H_in + 2P − K) / S⌋ + 1 = ⌊(224 + 2 − 3) / 2⌋ + 1 = ⌊223/2⌋ + 1 = 111 + 1 = 112.",
+      "hint": "Use the formula H_out = ⌊(H_in + 2P − K) / S⌋ + 1."
+    },
+    {
+      "id": "q1_3",
+      "type": "multiple-choice",
+      "prompt": "Compared to a standard 3×3 convolution, a depthwise separable convolution achieves approximately what parameter reduction?",
+      "options": [
+        { "id": "a", "text": "2× fewer parameters", "correct": false },
+        { "id": "b", "text": "4× fewer parameters", "correct": false },
+        { "id": "c", "text": "8× fewer parameters", "correct": true },
+        { "id": "d", "text": "16× fewer parameters", "correct": false }
+      ],
+      "explanation": "The reduction factor is 1/C_out + 1/K². For large C_out this approaches 1/K² = 1/9 ≈ 8×. MobileNet and EfficientNet exploit this to build lightweight vision models.",
+      "hint": "The reduction factor is approximately 1/K² for large output channel counts."
+    },
+    {
+      "id": "q1_4",
+      "type": "multiple-choice",
+      "prompt": "The 'degradation problem' — where a 56-layer plain CNN has **higher training error** than a 20-layer plain CNN on CIFAR-10 — is caused by:",
+      "options": [
+        { "id": "a", "text": "Overfitting: the 56-layer network has too many parameters for the dataset", "correct": false },
+        { "id": "b", "text": "Vanishing and exploding gradients through many sequential multiplicative operations", "correct": true },
+        { "id": "c", "text": "Insufficient model capacity to represent the training data distribution", "correct": false },
+        { "id": "d", "text": "Batch normalization introducing noise that corrupts deep layer representations", "correct": false }
+      ],
+      "explanation": "This was degradation in *training* error, not test error — ruling out overfitting. Gradients must multiply through 56 weight matrices during backprop; even mild shrinkage or growth compounds exponentially, preventing effective learning in early layers.",
+      "hint": "The error is on the *training* set, so it cannot be overfitting."
+    },
+    {
+      "id": "q1_5",
+      "type": "multiple-choice",
+      "prompt": "In a ResNet residual block y = F(x) + x, what preserves gradient flow even when ∂F/∂x ≈ 0?",
+      "options": [
+        { "id": "a", "text": "The batch normalization inside F(x)", "correct": false },
+        { "id": "b", "text": "The identity shortcut, which contributes +I to the Jacobian ∂y/∂x", "correct": true },
+        { "id": "c", "text": "The ReLU activation applied after the addition", "correct": false },
+        { "id": "d", "text": "The 1×1 projection convolution used when dimensions change", "correct": false }
+      ],
+      "explanation": "∂y/∂x = ∂F/∂x + I. Even if the residual branch ∂F/∂x ≈ 0 (e.g., near initialization), the identity term keeps ∂y/∂x ≈ I — gradients flow unimpeded through the skip path. This is the 'gradient highway'.",
+      "hint": "Differentiate y = F(x) + x with respect to x."
+    },
+    {
+      "id": "q1_6",
+      "type": "code-completion",
+      "prompt": "Complete the forward method of a ResNet basic block. The conv_block applies two 3×3 convolutions with BN. Fill in the return statement to apply the residual connection:",
+      "codeTemplate": "def forward(self, x):\n    out = self.conv_block(x)\n    return ___",
+      "blankKey": "___",
+      "acceptedAnswers": ["F.relu(out + x)", "torch.relu(out + x)", "out + x"],
+      "explanation": "The residual connection adds the input x to the sub-layer output before the final activation: F.relu(out + x). If spatial dimensions differ, a projection shortcut (1×1 conv) replaces the bare x.",
+      "hint": "Add the input x to the block output, then apply ReLU."
+    }
+  ]
+}

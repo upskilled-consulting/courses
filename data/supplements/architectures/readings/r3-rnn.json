@@ -30,8 +30,8 @@
     }
   ],
   "prevItem": {
-    "type": "reading",
-    "id": "r2"
+    "type": "quiz",
+    "id": "q1"
   },
   "nextItem": {
     "type": "reading",
