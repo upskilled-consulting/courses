@@ -311,15 +311,15 @@ img, svg { display: block; max-width: 100%; }
 
 .footer-logo-link {
   display: inline-block;
-  opacity: 0.65;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: rgba(100, 200, 180, 1);
+  text-decoration: none;
+  opacity: 0.8;
   transition: opacity 0.2s;
 }
 .footer-logo-link:hover { opacity: 1; }
-
-.footer-logo {
-  height: 30px;
-  width: auto;
-}
 
 .footer-tagline {
   font-size: 0.78rem;
@@ -335,19 +335,19 @@ img, svg { display: block; max-width: 100%; }
 
 .footer-nav a {
   font-size: 0.78rem;
-  color: var(--text-faint);
+  color: rgba(100, 200, 180, 0.75);
   text-decoration: none;
   transition: color 0.2s;
 }
-.footer-nav a:hover { color: var(--text-muted); }
+.footer-nav a:hover { color: rgba(100, 200, 180, 1); }
 
 .footer-copy {
   font-size: 0.75rem;
   color: var(--text-faint);
   margin-top: 4px;
 }
-.footer-copy a { color: var(--text-faint); text-decoration: none; }
-.footer-copy a:hover { color: var(--text-muted); }
+.footer-copy a { color: rgba(100, 200, 180, 0.75); text-decoration: none; }
+.footer-copy a:hover { color: rgba(100, 200, 180, 1); }
 
 /* Contact column */
 .footer-contact-heading {

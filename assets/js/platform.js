@@ -460,6 +460,8 @@ function showError(root, msg) {
 // ── CATALOG VIEW ─────────────────────────────────────────────
 async function renderCatalog(params, root) {
   setBreadcrumb([]);
+  const _fab = document.getElementById('notationFab');
+  if (_fab) _fab.style.display = 'none';
   showLoading(root);
 
   let platform;
@@ -1740,7 +1742,10 @@ function addNotationTerms(terms, sourceTitle, sourceUrl) {
 
 function renderNotationFab() {
   const fab = document.getElementById('notationFab');
-  if (fab) fab.style.display = Notation.index.length ? 'flex' : 'none';
+  if (!fab) return;
+  const currentPath = window.location.pathname.slice(BASE_PATH.length) || '/';
+  const onHome = currentPath === '/' || currentPath === '';
+  fab.style.display = (!onHome && Notation.index.length) ? 'flex' : 'none';
 }
 
 function openNotationModal() {
