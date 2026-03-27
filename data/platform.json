@@ -157,7 +157,7 @@
           "id": "3dgs-compression",
           "type": "course",
           "title": "3D Gaussian Splatting: Compression & Optimization",
-          "description": "A practitioner's deep dive into 3DGS representations — rendering mathematics, evaluation methodology, compaction strategies, grid-based sorting, and learned encoding. 8 modules, 5 labs, 10 quizzes.",
+          "description": "A practitioner's deep dive into 3DGS representations — rendering mathematics, evaluation methodology, compaction strategies, grid-based sorting, and learned encoding. 8 modules, 9 labs, 17 quizzes.",
           "level": "Advanced",
           "estimatedHours": 20,
           "moduleCount": 8,
