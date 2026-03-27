@@ -2952,12 +2952,13 @@ img, svg { display: block; max-width: 100%; }
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(0,0,0,0.5);
   transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  position: relative;
 }
 .notation-modal-head {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px 20px;
+  padding: 16px 48px 16px 20px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
@@ -2981,17 +2982,26 @@ img, svg { display: block; max-width: 100%; }
   border-color: var(--accent);
 }
 .notation-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--text-muted);
+  color: var(--text-faint);
   display: flex;
   align-items: center;
-  padding: 4px;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
   border-radius: 6px;
-  flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
+  z-index: 1;
 }
-.notation-close-btn:hover { color: var(--text); }
+.notation-close-btn:hover {
+  color: var(--text);
+  background: var(--bg-card);
+}
 
 /* ── Notation list ────────────────────────────────────────── */
 .notation-list {
@@ -3073,13 +3083,12 @@ img, svg { display: block; max-width: 100%; }
     transform: translateY(0);
   }
 
-  /* Larger close button touch target */
+  /* Larger close button touch target on mobile */
   .notation-close-btn {
-    min-width: 44px;
-    min-height: 44px;
-    justify-content: center;
-    padding: 0;
-    margin: -8px -4px;
+    width: 44px;
+    height: 44px;
+    top: 8px;
+    right: 8px;
   }
 
   /* Stack symbol above body text — avoids wide KaTeX overflowing into adjacent column */
