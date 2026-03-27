@@ -29,18 +29,18 @@
   "equationBreakdowns": [
     {
       "label": "Exponential Derivative",
-      "heading": "d/dx[e^x] = e^x",
+      "heading": "The Natural Exponential Function",
       "terms": [
         {
           "symbol": "e^x",
           "name": "The natural exponential",
-          "desc": "The unique function that equals its own derivative. The base e ≈ 2.718 is defined precisely so this holds. With the chain rule: d/dx[e^{g(x)}] = g'(x)·e^{g(x)}."
+          "desc": "The unique function that equals its own derivative. The base $e \\approx 2.718$ is defined precisely so this holds. With the chain rule: $\\frac{d}{dx}[e^{g(x)}] = g'(x)\\,e^{g(x)}$."
         }
       ]
     },
     {
       "label": "Sigmoid Derivative",
-      "heading": "σ'(x) = σ(x)(1 − σ(x))",
+      "heading": "Deriving the Sigmoid Derivative",
       "terms": [
         {
           "symbol": "\\sigma(x)",
@@ -50,7 +50,44 @@
         {
           "symbol": "1 - \\sigma(x)",
           "name": "Complement",
-          "desc": "The gap between the activation and 1. The product σ(1−σ) is maximized at σ=0.5 (giving 0.25) and approaches 0 near the saturation regions σ≈0 or σ≈1 — the vanishing gradient regime."
+          "desc": "The gap between the activation and 1. The product $\\sigma(1-\\sigma)$ is maximized at $\\sigma = 0.5$ (giving 0.25) and approaches 0 near the saturation regions $\\sigma \\approx 0$ or $\\sigma \\approx 1$ — the vanishing gradient regime."
+        }
+      ]
+    },
+    {
+      "label": "Cross-Entropy Loss",
+      "heading": "Cross-Entropy Loss and the Log Derivative",
+      "terms": [
+        {
+          "symbol": "-y\\ln\\hat{p}",
+          "name": "Loss when $y = 1$",
+          "desc": "When the true label is 1, only this term survives: $-\\ln\\hat{p}$. As $\\hat{p} \\to 0$ (confidently wrong), $-\\ln\\hat{p} \\to \\infty$. As $\\hat{p} \\to 1$ (correct), the loss approaches 0. The log penalty makes being wrong by a lot much worse than being wrong by a little."
+        },
+        {
+          "symbol": "-(1-y)\\ln(1-\\hat{p})",
+          "name": "Loss when $y = 0$",
+          "desc": "When the true label is 0, only this term survives: $-\\ln(1-\\hat{p})$. The roles flip — predicting $\\hat{p} \\approx 1$ (confidently wrong) incurs infinite loss. Together, both terms cover both classes with a single symmetric formula."
+        }
+      ]
+    },
+    {
+      "label": "Cross-Entropy Gradient",
+      "heading": "Cross-Entropy Loss and the Log Derivative",
+      "terms": [
+        {
+          "symbol": "\\mathcal{L}",
+          "name": "Cross-entropy loss",
+          "desc": "$-y\\ln\\hat{p} - (1-y)\\ln(1-\\hat{p})$. The log ensures that being confidently wrong (e.g. $\\hat{p} \\approx 0$ when $y=1$) produces a very large loss — the penalty is unbounded as confidence in the wrong answer grows."
+        },
+        {
+          "symbol": "-1/\\hat{p}",
+          "name": "Gradient of log loss",
+          "desc": "When $y = 1$, the loss is $-\\ln\\hat{p}$ and its gradient w.r.t. $\\hat{p}$ is $-1/\\hat{p}$. Tiny $\\hat{p}$ means a massive gradient — a strong corrective signal when the model is confidently wrong."
+        },
+        {
+          "symbol": "\\hat{p} - y",
+          "name": "Gradient w.r.t. pre-activation",
+          "desc": "After applying the chain rule through the sigmoid, the gradient w.r.t. $z$ simplifies to prediction minus label. This clean form — no sigmoid terms remaining — is why cross-entropy paired with sigmoid is the standard choice for binary classification."
         }
       ]
     }

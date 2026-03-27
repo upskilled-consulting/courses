@@ -985,7 +985,10 @@ function injectBreakdownsIntoContent(contentEl, breakdowns) {
     const wholeWord = (hay, needle) => hay === needle
       || hay.startsWith(needle + ' ') || hay.endsWith(' ' + needle)
       || hay.includes(' ' + needle + ' ');
-    if (wholeWord(hn, ln) || wholeWord(ln, hn)) return 1;
+    // Only score 1 when the heading *contains* the query as a whole word.
+    // The reverse (query contains heading as prefix) falls through to word-overlap,
+    // so that "The Chain Rule" heading doesn't steal "The Chain Rule and Backpropagation" query.
+    if (wholeWord(hn, ln)) return 1;
     const hw = new Set(hn.split(' ').filter(w => w.length > 2 && !stop.has(w)));
     const lw = ln.split(' ').filter(w => w.length > 2 && !stop.has(w));
     if (!lw.length) return 0;
@@ -1783,8 +1786,8 @@ function renderNotationList(query) {
     return `<div class="notation-entry">
       <div class="notation-sym">${sym}</div>
       <div class="notation-body">
-        <div class="notation-name">${_escHtml(e.name)}</div>
-        <div class="notation-desc">${_escHtml(e.desc)}</div>
+        <div class="notation-name">${renderInlineMath(e.name)}</div>
+        <div class="notation-desc">${renderInlineMath(e.desc)}</div>
         ${srcs ? `<div class="notation-sources">from: ${srcs}</div>` : ''}
       </div>
     </div>`;

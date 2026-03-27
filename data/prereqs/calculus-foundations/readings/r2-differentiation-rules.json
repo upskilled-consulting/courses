@@ -29,33 +29,70 @@
   "equationBreakdowns": [
     {
       "label": "Product Rule",
-      "heading": "Differentiating f(x)·g(x)",
+      "heading": "The Product Rule",
       "terms": [
         {
           "symbol": "f'(x)\\,g(x)",
           "name": "First factor differentiated",
-          "desc": "The derivative of the first factor, multiplied by the second factor unchanged. Captures how much the product changes due to f changing."
+          "desc": "The derivative of the first factor, multiplied by the second factor unchanged. Captures how much the product changes due to $f$ changing."
         },
         {
           "symbol": "f(x)\\,g'(x)",
           "name": "Second factor differentiated",
-          "desc": "The first factor unchanged, multiplied by the derivative of the second. Captures how much the product changes due to g changing. Both terms are needed."
+          "desc": "The first factor unchanged, multiplied by the derivative of the second. Captures how much the product changes due to $g$ changing. Both terms are needed."
         }
       ]
     },
     {
       "label": "Quotient Rule",
-      "heading": "Differentiating f(x)/g(x)",
+      "heading": "The Quotient Rule",
       "terms": [
         {
           "symbol": "f'g - fg'",
-          "name": "Numerator (mnemonic: low d-high minus high d-low)",
-          "desc": "Order matters: f' times g (the denominator) minus f times g'. Reversed order gives the wrong sign."
+          "name": "Numerator",
+          "desc": "Order matters: $f'$ times $g$ (the denominator) minus $f$ times $g'$. Reversed order gives the wrong sign — a common error."
         },
         {
           "symbol": "[g(x)]^2",
           "name": "Denominator squared",
-          "desc": "The denominator of the original fraction, squared. This ensures the quotient rule is consistent with the product rule applied to f · (1/g)."
+          "desc": "The denominator of the original fraction, squared. This ensures the quotient rule is consistent with the product rule applied to $f \\cdot (1/g)$."
+        }
+      ]
+    },
+    {
+      "label": "L2 Weight Penalty",
+      "heading": "Why This Matters for ML",
+      "terms": [
+        {
+          "symbol": "\\frac{\\lambda}{2}w^2",
+          "name": "L2 penalty term",
+          "desc": "The regularization term added to the loss. The $\\frac{1}{2}$ is purely for convenience — it cancels the 2 the power rule produces, leaving a clean gradient."
+        },
+        {
+          "symbol": "\\lambda",
+          "name": "Regularization strength",
+          "desc": "Controls how hard the penalty pushes weights toward zero. Larger $\\lambda$ means more aggressive shrinkage at every update step."
+        },
+        {
+          "symbol": "\\lambda w",
+          "name": "Weight decay gradient",
+          "desc": "The gradient is simply $\\lambda$ times the weight itself. Combined with the gradient descent update, each step subtracts $\\eta \\lambda w$ — shrinking the weight by a fraction of its current value."
+        }
+      ]
+    },
+    {
+      "label": "MSE Gradient",
+      "heading": "Why This Matters for ML",
+      "terms": [
+        {
+          "symbol": "\\hat{y} - y",
+          "name": "Prediction error",
+          "desc": "The residual: how far the prediction is from the target. This is what the loss is trying to drive toward zero."
+        },
+        {
+          "symbol": "2(\\hat{y} - y)",
+          "name": "Gradient magnitude",
+          "desc": "Proportional to the error. Large mistakes produce large gradients that push the prediction strongly toward the target; small mistakes produce gentle updates. MSE naturally self-scales with the size of the error."
         }
       ]
     }

@@ -50,7 +50,7 @@
     },
     {
       "label": "Power Rule",
-      "heading": "Differentiating x^n",
+      "heading": "The Power Rule",
       "terms": [
         {
           "symbol": "n",
@@ -61,6 +61,27 @@
           "symbol": "x^{n-1}",
           "name": "Reduced power",
           "desc": "The exponent decreases by one. Each application of the power rule drops the exponent by 1."
+        }
+      ]
+    },
+    {
+      "label": "Gradient Descent Update",
+      "heading": "Why This Matters for ML",
+      "terms": [
+        {
+          "symbol": "w",
+          "name": "Weight parameter",
+          "desc": "A single learnable parameter being updated. In a real network, every weight and bias gets its own update simultaneously."
+        },
+        {
+          "symbol": "\\eta",
+          "name": "Learning rate",
+          "desc": "A small positive scalar (e.g. 0.01) controlling how large a step to take. Too large and the update overshoots; too small and training is slow."
+        },
+        {
+          "symbol": "\\frac{\\partial \\mathcal{L}}{\\partial w}",
+          "name": "Gradient",
+          "desc": "How much the loss increases per unit increase in $w$. The minus sign means we step in the downhill direction — opposite to the gradient."
         }
       ]
     }

@@ -29,7 +29,7 @@
   "equationBreakdowns": [
     {
       "label": "Linear Approximation",
-      "heading": "First-Order Taylor Approximation",
+      "heading": "Linear Approximation",
       "terms": [
         {
           "symbol": "f(x_0)",
@@ -45,7 +45,7 @@
     },
     {
       "label": "Gradient Descent Update",
-      "heading": "x ← x − η·f'(x)",
+      "heading": "Gradient Descent",
       "terms": [
         {
           "symbol": "\\eta",

@@ -29,33 +29,97 @@
   "equationBreakdowns": [
     {
       "label": "Definite Integral via Riemann Sum",
-      "heading": "∫_a^b f(x) dx",
+      "heading": "Riemann Sums",
       "terms": [
         {
           "symbol": "f(x_i^*)",
           "name": "Function value at sample point",
-          "desc": "The height of the rectangle in the ith subinterval. Any choice of sample point within the subinterval gives the same limit."
+          "desc": "The height of the rectangle in the $i$th subinterval. Any choice of sample point within the subinterval gives the same limit."
         },
         {
           "symbol": "\\Delta x",
           "name": "Subinterval width",
-          "desc": "The width (b−a)/n of each rectangle. As n→∞, Δx→0 and the sum converges to the exact area."
+          "desc": "The width $(b-a)/n$ of each rectangle. As $n \\to \\infty$, $\\Delta x \\to 0$ and the sum converges to the exact area."
         }
       ]
     },
     {
       "label": "Fundamental Theorem of Calculus",
-      "heading": "∫_a^b f(x) dx = F(b) − F(a)",
+      "heading": "The Fundamental Theorem of Calculus",
       "terms": [
         {
           "symbol": "F",
-          "name": "Antiderivative of f",
-          "desc": "Any function whose derivative is f. Finding F converts the integration problem into two evaluations. F is unique up to an additive constant C, which cancels in F(b)−F(a)."
+          "name": "Antiderivative of $f$",
+          "desc": "Any function whose derivative is $f$. Finding $F$ converts the integration problem into two evaluations. $F$ is unique up to an additive constant $C$, which cancels in $F(b) - F(a)$."
         },
         {
           "symbol": "F(b) - F(a)",
           "name": "Net change",
-          "desc": "The accumulated value from a to b. This is the integral of the rate of change — analogous to: total distance = ∫(speed)dt."
+          "desc": "The accumulated value from $a$ to $b$. This is the integral of the rate of change — analogous to: total distance $= \\int(\\text{speed})\\,dt$."
+        }
+      ]
+    },
+    {
+      "label": "Probability via Integration",
+      "heading": "Why This Matters for ML",
+      "terms": [
+        {
+          "symbol": "f(x)",
+          "name": "Probability density function",
+          "desc": "Unlike discrete probabilities, $f(x)$ is not itself a probability — it is a density. The probability of $X$ falling in any region is the integral of $f$ over that region. The total integral over all of $\\mathbb{R}$ must equal 1."
+        },
+        {
+          "symbol": "\\int_a^b f(x)\\,dx",
+          "name": "Probability of falling in $[a, b]$",
+          "desc": "The area under the density curve between $a$ and $b$. This is how all continuous probabilities are computed — including confidence intervals, $p$-values, and the normalizing constants of Bayesian posteriors."
+        }
+      ]
+    },
+    {
+      "label": "Expected Value",
+      "heading": "Why This Matters for ML",
+      "terms": [
+        {
+          "symbol": "\\mathbb{E}[X]",
+          "name": "Expected value",
+          "desc": "The average value of $X$ under its distribution — the continuous analogue of a weighted sum. In ML, expectations appear everywhere: average loss over a dataset, policy gradients in RL, the ELBO in variational inference."
+        },
+        {
+          "symbol": "x \\cdot f(x)",
+          "name": "Value weighted by density",
+          "desc": "Each value $x$ is weighted by how probable it is (its density $f(x)$). Regions where $f$ is large contribute more to the average. Integrating over all $x$ sums these weighted contributions."
+        }
+      ]
+    },
+    {
+      "label": "Entropy",
+      "heading": "Why This Matters for ML",
+      "terms": [
+        {
+          "symbol": "H",
+          "name": "Differential entropy",
+          "desc": "Measures the average uncertainty or information content of a continuous distribution. High entropy means the distribution is spread out (uncertain); low entropy means it is peaked (certain). Maximizing entropy subject to constraints gives the Gaussian — the maximum-entropy distribution for a given mean and variance."
+        },
+        {
+          "symbol": "-f(x)\\ln f(x)",
+          "name": "Local entropy contribution",
+          "desc": "Each point contributes $-f(x)\\ln f(x)$ to total entropy: negative because $\\ln f(x) < 0$ when $f(x) < 1$. The sign ensures $H \\geq 0$ for well-behaved distributions. Cross-entropy loss in classification is the discrete version of this integral."
+        }
+      ]
+    },
+    {
+      "label": "KL Divergence",
+      "heading": "Why This Matters for ML",
+      "terms": [
+        {
+          "symbol": "D_{\\text{KL}}(p \\| q)",
+          "name": "KL divergence",
+          "desc": "A measure of how different distribution $p$ is from distribution $q$. Not symmetric: $D_{\\text{KL}}(p\\|q) \\neq D_{\\text{KL}}(q\\|p)$. Zero iff $p = q$ everywhere. Appears in VAE losses, information theory, and any model trained by minimizing cross-entropy."
+        },
+        {
+          "symbol": "\\ln \\frac{p(x)}{q(x)}",
+          "name": "Log probability ratio",
+          "desc": "Positive when $p(x) > q(x)$ (model $q$ underestimates this region), negative when $p(x) < q(x)$. Weighting by $p(x)$ and integrating gives the average log-ratio under the true distribution — a measure of information lost by using $q$ to approximate $p$."
         }
       ]
     }

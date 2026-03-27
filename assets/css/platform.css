@@ -949,8 +949,8 @@ img, svg { display: block; max-width: 100%; }
 /* Display math */
 .reading-content .katex-display {
   margin: 1.4rem 0;
-  overflow: visible;
-  padding: 4px 0;
+  overflow-x: auto;
+  padding: 4px 0 8px;
 }
 
 /* Equation breakdown cards */
@@ -2892,7 +2892,7 @@ img, svg { display: block; max-width: 100%; }
   color: var(--text);
   padding-top: 2px;
   min-width: 0;
-  overflow: hidden;
+  overflow-x: clip;
 }
 .notation-name {
   font-size: 0.85rem;
@@ -3148,8 +3148,7 @@ img, svg { display: block; max-width: 100%; }
 .drill-card-back li   { margin: 0.2em 0; }
 .drill-card-back strong { color: var(--accent-light); }
 .drill-card-back em   { color: var(--text-muted); }
-/* KaTeX — never show scrollbars anywhere on the platform */
-.katex-display,
+/* KaTeX — keep inline math visible; display math in readings scrolls horizontally */
 .katex-display > .katex,
 .katex { overflow: visible; }
 

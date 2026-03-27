@@ -29,33 +29,85 @@
   "equationBreakdowns": [
     {
       "label": "Chain Rule",
-      "heading": "Differentiating f(g(x))",
+      "heading": "The Chain Rule",
       "terms": [
         {
           "symbol": "f'(g(x))",
           "name": "Derivative of the outer function",
-          "desc": "Differentiate f with respect to its argument, but evaluate at g(x) — the actual input to f. The inner function stays unchanged here."
+          "desc": "Differentiate $f$ with respect to its argument, but evaluate at $g(x)$ — the actual input to $f$. The inner function stays unchanged here."
         },
         {
           "symbol": "g'(x)",
           "name": "Derivative of the inner function",
-          "desc": "The derivative of the inner function with respect to x. This is the multiplicative correction for how fast the inner function itself is changing."
+          "desc": "The derivative of the inner function with respect to $x$. This is the multiplicative correction for how fast the inner function itself is changing."
         }
       ]
     },
     {
       "label": "Leibniz Chain Rule",
-      "heading": "dy/dx = (dy/du)(du/dx)",
+      "heading": "The Chain Rule",
       "terms": [
         {
           "symbol": "dy/du",
           "name": "Output sensitivity to intermediate variable",
-          "desc": "How much y changes per unit change in u — the local derivative at the outer layer."
+          "desc": "How much $y$ changes per unit change in $u$ — the local derivative at the outer layer."
         },
         {
           "symbol": "du/dx",
-          "name": "Intermediate variable sensitivity to input",
-          "desc": "How much u changes per unit change in x — the local derivative at the inner layer. Multiplying the two gives the total sensitivity of y to x."
+          "name": "Intermediate sensitivity to input",
+          "desc": "How much $u$ changes per unit change in $x$ — the local derivative at the inner layer. Multiplying the two gives the total sensitivity of $y$ to $x$."
+        }
+      ]
+    },
+    {
+      "label": "Two-Layer Network",
+      "heading": "The Chain Rule and Backpropagation",
+      "terms": [
+        {
+          "symbol": "W_1 x + b_1",
+          "name": "First-layer pre-activation $z_1$",
+          "desc": "Linear transformation of the input: the weights $W_1$ scale and rotate $x$, and bias $b_1$ shifts the result before the activation fires."
+        },
+        {
+          "symbol": "f_1(\\cdot)",
+          "name": "Hidden activation",
+          "desc": "Non-linear function applied element-wise to $z_1$, producing the hidden representation $a_1$ passed to the next layer."
+        },
+        {
+          "symbol": "f_2(W_2 a_1 + b_2)",
+          "name": "Output layer",
+          "desc": "Second linear transformation followed by the output activation — e.g. softmax for classification, or identity for regression — producing the prediction $\\hat{y}$."
+        }
+      ]
+    },
+    {
+      "label": "Backpropagation Chain",
+      "heading": "The Chain Rule and Backpropagation",
+      "terms": [
+        {
+          "symbol": "\\frac{\\partial \\mathcal{L}}{\\partial \\hat{y}}",
+          "name": "Output error signal",
+          "desc": "How the loss changes with the prediction — the first link in the chain, computed directly from the loss function (e.g. $2(\\hat{y}-y)$ for MSE)."
+        },
+        {
+          "symbol": "\\frac{\\partial \\hat{y}}{\\partial z_2}",
+          "name": "Output activation derivative",
+          "desc": "How the final activation responds to its pre-activation $z_2$. This is $f_2'(z_2)$."
+        },
+        {
+          "symbol": "\\frac{\\partial z_2}{\\partial a_1}",
+          "name": "Second-layer weights",
+          "desc": "How the hidden representation is weighted into the next layer. This equals $W_2$ — the pre-activation is linear in $a_1$."
+        },
+        {
+          "symbol": "\\frac{\\partial a_1}{\\partial z_1}",
+          "name": "Hidden activation derivative",
+          "desc": "How the hidden activation responds to its pre-activation. This is $f_1'(z_1)$ — the key factor in vanishing gradients: if $f_1'$ is near zero, the gradient signal dies here."
+        },
+        {
+          "symbol": "\\frac{\\partial z_1}{\\partial W_1}",
+          "name": "Input to first layer",
+          "desc": "How the first-layer pre-activation relates to the weights. Since $z_1 = W_1 x + b_1$, this equals $x$ — the input itself."
         }
       ]
     }
