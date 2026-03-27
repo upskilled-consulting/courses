@@ -26,6 +26,7 @@
   <!-- hljs theme is embedded in platform.css (custom per-theme) -->
   <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
   <link rel="stylesheet" href="assets/css/platform.css"/>
+  <link rel="stylesheet" href="assets/css/consent.css"/>
   <!-- Three.js (for SH visualizer) -->
   <script type="importmap">
   {
@@ -197,5 +198,50 @@
       <div class="para-popup-text" id="paraPopupText"></div>
     </div>
   </div>
+
+  <!-- ── Consent banner ──────────────────────────────────────── -->
+  <div id="consent-banner" hidden>
+    <p class="consent-text">
+      We use Google Analytics to understand how people use this site, and localStorage to save your quiz and lab progress.
+      No accounts, no ads, no other data collection.
+      <button class="consent-privacy-btn">Privacy Policy</button>
+    </p>
+    <div class="consent-actions">
+      <button id="consent-accept" class="consent-btn">Accept</button>
+      <button id="consent-decline" class="consent-btn">Decline</button>
+    </div>
+  </div>
+
+  <!-- ── Privacy policy modal ────────────────────────────────── -->
+  <div id="privacy-modal" hidden>
+    <div id="privacy-modal-overlay">
+      <div class="privacy-modal-box">
+        <button class="privacy-modal-close" id="privacy-modal-close" aria-label="Close">&times;</button>
+        <h2>Privacy Policy</h2>
+        <p class="privacy-updated">Last updated: March 2026</p>
+
+        <h3>What we collect</h3>
+        <ul>
+          <li><strong>Analytics</strong> — if you consent, we use Google Analytics (GA4) to collect anonymized data about page views, session duration, and general geographic region. See <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's privacy policy</a> for details.</li>
+          <li><strong>Progress data</strong> — quiz and lab progress is stored locally in your browser via localStorage. This data never leaves your device and is never transmitted to any server.</li>
+        </ul>
+
+        <h3>What we don't collect</h3>
+        <ul>
+          <li>No names, emails, or account information from course visitors.</li>
+          <li>No advertising or sale of data to third parties.</li>
+          <li>No tracking beyond Google Analytics.</li>
+        </ul>
+
+        <h3>Your choices</h3>
+        <p>You can decline or withdraw analytics consent at any time by clicking Decline in the banner. You can clear your progress data by clearing localStorage for this site in your browser settings.</p>
+
+        <h3>Contact</h3>
+        <p><a href="mailto:get@upskilled.consulting">get@upskilled.consulting</a></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/consent.js"></script>
 </body>
 </html>

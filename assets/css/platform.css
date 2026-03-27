@@ -420,6 +420,9 @@ img, svg { display: block; max-width: 100%; }
 }
 
 @media (max-width: 640px) {
+  .platform-footer {
+    padding-bottom: 80px;
+  }
   .footer-inner {
     grid-template-columns: 1fr;
     gap: 32px;
