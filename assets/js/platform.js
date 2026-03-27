@@ -403,6 +403,7 @@ function matchRoute(hash) {
 
 function navigate(path) {
   history.pushState(null, '', BASE_PATH + path);
+  window.scrollTo(0, 0);
   handleRoute();
 }
 
@@ -430,6 +431,7 @@ function handleRoute() {
 }
 
 window.addEventListener('popstate', handleRoute);
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 window.addEventListener('DOMContentLoaded', handleRoute);
 
 // ── Breadcrumb ───────────────────────────────────────────────
