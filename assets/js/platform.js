@@ -436,6 +436,16 @@ window.addEventListener('DOMContentLoaded', handleRoute);
 
 // ── Breadcrumb ───────────────────────────────────────────────
 function setBreadcrumb(parts) {
+  if (parts && parts.length > 0) {
+    const pageTitle = parts[parts.length - 1].label;
+    document.title = `${pageTitle} — Upskilled`;
+    if (typeof gtag === 'function') {
+      gtag('event', 'page_view', {
+        page_title: document.title,
+        page_path: window.location.pathname
+      });
+    }
+  }
   const bc = document.getElementById('navBreadcrumb');
   if (!bc) return;
   if (!parts || parts.length === 0) { bc.innerHTML = ''; return; }
