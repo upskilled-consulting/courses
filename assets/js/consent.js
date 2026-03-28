@@ -50,6 +50,10 @@
         setConsent('accepted');
         banner.hidden = true;
         loadGA();
+        // Fire after loadGA so gtag is available
+        setTimeout(function () {
+          if (typeof gtag === 'function') gtag('event', 'consent_choice', { choice: 'accepted' });
+        }, 500);
       });
 
       document.getElementById('consent-decline').addEventListener('click', function () {

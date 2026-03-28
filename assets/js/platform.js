@@ -407,6 +407,11 @@ function navigate(path) {
   handleRoute();
 }
 
+// ── Analytics helper ─────────────────────────────────────────
+function gaEvent(name, params) {
+  if (typeof gtag === 'function') gtag('event', name, params);
+}
+
 function handleRoute() {
   // Migrate legacy hash URLs: /#/course/foo/module/bar → /foo/bar
   if (window.location.hash.startsWith('#/')) {
@@ -895,6 +900,12 @@ async function renderModuleOverview(params, root) {
     { label: modEntry.title },
   ]);
 
+  gaEvent('module_enter', {
+    module_title: modEntry.title,
+    course_title: courseManifest.title,
+    course_id: id
+  });
+
   const storageKey = `${id}_${mid}`;
   const base = `/${id}/${mid}`;
 
@@ -1249,6 +1260,45 @@ async function renderReading(params, root) {
 
   setSearchContext('reading', { reading, module, seg, courseRef });
 
+  // reading_complete — fires when user clicks Next off this reading
+  if (nextItem) {
+    root.querySelector('.reading-nav-btn.next')?.addEventListener('click', () => {
+      gaEvent('reading_complete', {
+        reading_title: reading.title,
+        module_title: isCourse ? modEntry.title : module.title,
+        course_id: id
+      });
+    });
+  }
+
+  // outbound_link — fires when a reference link is opened
+  root.querySelectorAll('a[target="_blank"]').forEach(a => {
+    a.addEventListener('click', () => {
+      gaEvent('outbound_link', {
+        link_url: a.href,
+        link_text: a.textContent.trim().slice(0, 100),
+        source_reading: reading.title
+      });
+    });
+  });
+
+  // scroll_depth — fires at 25 / 50 / 75 / 100% milestones
+  {
+    const fired = new Set();
+    const onScroll = () => {
+      const el = document.scrollingElement || document.documentElement;
+      const pct = Math.round(((el.scrollTop + el.clientHeight) / el.scrollHeight) * 100);
+      for (const m of [25, 50, 75, 100]) {
+        if (!fired.has(m) && pct >= m) {
+          fired.add(m);
+          gaEvent('scroll_depth', { depth_pct: m, reading_title: reading.title, course_id: id });
+        }
+      }
+      if (fired.size === 4) window.removeEventListener('scroll', onScroll);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+  }
+
   // Scroll to section if arriving from syllabus topic click
   const scrollTarget = sessionStorage.getItem('upskilled:scrollTo');
   if (scrollTarget) {
@@ -1507,6 +1557,13 @@ function renderQuizBody(params, root, module, quiz) {
     el.addEventListener('click', () => navigate(el.dataset.nav))
   );
 
+  gaEvent('quiz_start', {
+    quiz_title: quiz.title,
+    module_title: modTitle,
+    course_id: id,
+    question_count: quiz.questions.length
+  });
+
   // Hint toggles
   root.querySelectorAll('.hint-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1538,6 +1595,15 @@ function renderQuizBody(params, root, module, quiz) {
 
     saveQuizResult(storageKey, qid, score, passed);
     const updatedRecord = store.get(`quiz:${storageKey}`)?.[qid];
+
+    gaEvent('quiz_complete', {
+      quiz_title: quiz.title,
+      module_title: modTitle,
+      course_id: id,
+      score_pct: Math.round(score * 100),
+      passed,
+      attempt_number: updatedRecord?.attempts || 1
+    });
 
     root.querySelector('#quizActions').innerHTML = '';
 
@@ -1612,6 +1678,12 @@ async function renderLab(params, root) {
   ]);
 
   markLabVisited(storageKey, lid);
+
+  gaEvent('lab_start', {
+    lab_title: lab.title,
+    module_title: modTitle,
+    course_id: id
+  });
 
   const readingUrl = r => isCourse ? `/${id}/${mid}/reading/${r.id}` : `/${seg}/${id}/reading/${r.id}`;
   const quizUrl   = q => isCourse ? `/${id}/${mid}/quiz/${q.id}`    : `/${seg}/${id}/quiz/${q.id}`;
@@ -1716,6 +1788,16 @@ async function renderLab(params, root) {
     el.addEventListener('click', () => navigate(el.dataset.nav))
   );
 
+  if (lab.nextItem) {
+    root.querySelector('.reading-nav-btn.next')?.addEventListener('click', () => {
+      gaEvent('lab_complete', {
+        lab_title: lab.title,
+        module_title: modTitle,
+        course_id: id
+      });
+    });
+  }
+
   highlightCode(root);
 
   setSearchContext('lab', { lab, module, seg, courseRef });
@@ -1764,6 +1846,7 @@ function openNotationModal() {
   const modal = document.getElementById('notationOverlay');
   if (!modal) return;
   modal.classList.add('is-open');
+  gaEvent('notation_open', { page_path: window.location.pathname });
   const field = document.getElementById('notationSearchField');
   if (field) {
     field.value = '';
@@ -1825,8 +1908,16 @@ function initNotation() {
   document.getElementById('notationOverlay')?.addEventListener('click', e => {
     if (e.target === e.currentTarget) closeNotationModal();
   });
+  let _notationSearchTimer;
   document.getElementById('notationSearchField')?.addEventListener('input', e => {
-    renderNotationList(e.target.value);
+    const q = e.target.value;
+    renderNotationList(q);
+    clearTimeout(_notationSearchTimer);
+    if (q.trim().length >= 2) {
+      _notationSearchTimer = setTimeout(() => {
+        gaEvent('notation_search', { search_term: q.trim() });
+      }, 600);
+    }
   });
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && document.getElementById('notationOverlay')?.classList.contains('is-open')) {
@@ -2210,6 +2301,7 @@ function runSearch(query) {
   }
 
   renderSearchResults(results.slice(0, 30), query, list);
+  gaEvent('search_query', { search_term: query, result_count: results.length });
 }
 
 function renderSearchResults(results, query, list) {
@@ -2715,6 +2807,14 @@ async function renderDrill(params, root) {
 
   function showSummary() {
     const knownNow = Object.values(progress).filter(b => b === 2).length;
+    gaEvent('drill_complete', {
+      deck_title: deck.title,
+      module_title: module.title,
+      course_id: id,
+      correct: sessionProgress.correct,
+      again: sessionProgress.again,
+      known_pct: Math.round((knownNow / cards.length) * 100)
+    });
     root.querySelector('.drill-session').innerHTML = `
       <div class="drill-summary">
         <h2>Session complete</h2>
