@@ -401,7 +401,10 @@ function matchRoute(hash) {
   return null;
 }
 
+let _currentAudio = null;
+
 function navigate(path) {
+  if (_currentAudio) { _currentAudio.pause(); _currentAudio = null; }
   history.pushState(null, '', BASE_PATH + path);
   window.scrollTo(0, 0);
   handleRoute();
@@ -410,6 +413,87 @@ function navigate(path) {
 // ── Analytics helper ─────────────────────────────────────────
 function gaEvent(name, params) {
   if (typeof gtag === 'function') gtag('event', name, params);
+}
+
+// ── Audio widget ─────────────────────────────────────────────
+
+function initAudioWidget(root, src) {
+  const widget = root.querySelector('#audioWidget');
+  if (!widget) return;
+
+  if (_currentAudio) { _currentAudio.pause(); _currentAudio = null; }
+
+  const audio = new Audio(src);
+  audio.preload = 'metadata';
+  _currentAudio = audio;
+
+  const playBtn   = widget.querySelector('.audio-play-btn');
+  const iconPlay  = widget.querySelector('.audio-icon-play');
+  const iconPause = widget.querySelector('.audio-icon-pause');
+  const track     = widget.querySelector('.audio-progress-track');
+  const fill      = widget.querySelector('.audio-progress-fill');
+  const thumb     = widget.querySelector('.audio-progress-thumb');
+  const currentEl = widget.querySelector('.audio-current');
+  const durationEl= widget.querySelector('.audio-duration');
+  const speedBtn  = widget.querySelector('.audio-speed-btn');
+
+  const speeds = [0.75, 1, 1.25, 1.5, 1.75, 2];
+  let speedIdx = 1;
+
+  function fmt(s) {
+    s = Math.floor(s || 0);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  }
+
+  function setPlaying(playing) {
+    widget.classList.toggle('is-playing', playing);
+    iconPlay.style.display  = playing ? 'none' : '';
+    iconPause.style.display = playing ? '' : 'none';
+    playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+  }
+
+  function updateProgress() {
+    const pct = (audio.currentTime / audio.duration * 100) || 0;
+    fill.style.width = pct + '%';
+    thumb.style.left = pct + '%';
+    currentEl.textContent = fmt(audio.currentTime);
+  }
+
+  audio.addEventListener('loadedmetadata', () => {
+    durationEl.textContent = fmt(audio.duration);
+  });
+  audio.addEventListener('timeupdate', updateProgress);
+  audio.addEventListener('play',  () => setPlaying(true));
+  audio.addEventListener('pause', () => setPlaying(false));
+  audio.addEventListener('ended', () => { setPlaying(false); audio.currentTime = 0; updateProgress(); });
+
+  playBtn.addEventListener('click', () => {
+    audio.paused ? audio.play() : audio.pause();
+  });
+
+  // Seek on click
+  function seek(e) {
+    const rect = track.getBoundingClientRect();
+    audio.currentTime = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * audio.duration;
+  }
+  track.addEventListener('click', seek);
+
+  // Drag to seek
+  let dragging = false;
+  track.addEventListener('pointerdown', e => {
+    dragging = true; track.setPointerCapture(e.pointerId); seek(e);
+  });
+  track.addEventListener('pointermove', e => { if (dragging) seek(e); });
+  track.addEventListener('pointerup',   () => { dragging = false; });
+
+  // Speed cycling
+  speedBtn.addEventListener('click', () => {
+    speedIdx = (speedIdx + 1) % speeds.length;
+    const s = speeds[speedIdx];
+    audio.playbackRate = s;
+    speedBtn.textContent = s === 1 ? '1×' : s + '×';
+    speedBtn.classList.toggle('is-active', s !== 1);
+  });
 }
 
 function handleRoute() {
@@ -1204,6 +1288,30 @@ async function renderReading(params, root) {
         <div class="reading-meta-row">
           <span>${reading.estimatedMinutes} min read</span>
         </div>
+        ${reading.audio ? `
+        <div class="audio-widget" id="audioWidget">
+          <button class="audio-play-btn" aria-label="Play">
+            <svg class="audio-icon-play" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="5,3 19,12 5,21"/></svg>
+            <svg class="audio-icon-pause" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+          </button>
+          <div class="audio-mid">
+            <div class="audio-progress-track" role="slider" aria-label="Seek" tabindex="0">
+              <div class="audio-progress-fill"></div>
+              <div class="audio-progress-thumb"></div>
+            </div>
+            <div class="audio-time-row">
+              <span class="audio-current">0:00</span>
+              <span class="audio-duration">—</span>
+            </div>
+          </div>
+          <button class="audio-speed-btn" aria-label="Playback speed">1×</button>
+          <a class="audio-download-btn" href="${BASE_PATH}/${reading.audio}" download aria-label="Download audio">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
+              <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>
+            </svg>
+          </a>
+        </div>` : ''}
         ${losHTML}
         <div class="reading-content" id="readingContent">
           ${contentHTML}
@@ -1231,6 +1339,11 @@ async function renderReading(params, root) {
   root.querySelectorAll('[data-nav]').forEach(el => {
     el.addEventListener('click', () => navigate(el.dataset.nav));
   });
+
+  // Audio widget
+  if (reading.audio) {
+    initAudioWidget(root, BASE_PATH + '/' + reading.audio);
+  }
 
   // Inject equation breakdown cards inline with their sections
   injectBreakdownsIntoContent(

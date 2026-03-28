@@ -1,6 +1,7 @@
 {
   "id": "r4",
   "moduleId": "calculus-foundations",
+  "audio": "assets/audio/exponents-logarithms-and-their-derivatives.m4a",
   "title": "Exponentials, Logarithms, and Their Derivatives",
   "estimatedMinutes": 15,
   "learningObjectives": [

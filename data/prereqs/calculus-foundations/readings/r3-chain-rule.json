@@ -1,6 +1,7 @@
 {
   "id": "r3",
   "moduleId": "calculus-foundations",
+  "audio": "assets/audio/chain-rule.m4a",
   "title": "The Chain Rule",
   "estimatedMinutes": 15,
   "learningObjectives": [

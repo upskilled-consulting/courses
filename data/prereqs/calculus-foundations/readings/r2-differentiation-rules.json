@@ -1,6 +1,7 @@
 {
   "id": "r2",
   "moduleId": "calculus-foundations",
+  "audio": "assets/audio/differentiation-rules.m4a",
   "title": "Differentiation Rules",
   "estimatedMinutes": 14,
   "learningObjectives": [

@@ -1,6 +1,7 @@
 {
   "id": "r5",
   "moduleId": "calculus-foundations",
+  "audio": "assets/audio/optimization-and-linear-approximation.m4a",
   "title": "Optimization and Linear Approximation",
   "estimatedMinutes": 16,
   "learningObjectives": [

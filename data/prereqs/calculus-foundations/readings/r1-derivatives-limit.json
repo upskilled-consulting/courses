@@ -1,6 +1,7 @@
 {
   "id": "r1",
   "moduleId": "calculus-foundations",
+  "audio": "assets/audio/derivatives.m4a",
   "title": "Derivatives: Rate of Change and the Limit",
   "estimatedMinutes": 15,
   "learningObjectives": [
