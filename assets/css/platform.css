@@ -33,7 +33,7 @@
   /* Accent */
   --accent:        #1776a4;
   --accent-hover:  #1e8ec0;
-  --accent-light:  #63aac9;
+  --accent-light:  #4fb8d4;
   --accent-deep:   #1a3c75;
   --accent-teal:   #2a5757;
 
@@ -108,8 +108,8 @@
   /* Accent */
   --accent:        #b1aad1;
   --accent-hover:  #9e96c2;
-  --accent-light:  #c8d9f0;
-  --accent-deep:   #1776a4;
+  --accent-light:  #1776a4;
+  --accent-deep:   #1a3c75;
   --accent-teal:   #2a5757;
 
   /* Borders & shadows */
