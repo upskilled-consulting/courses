@@ -1121,8 +1121,7 @@ async function renderReading(params, root) {
     { label: reading.title },
   ]);
 
-  // Mark as read
-  markReadingRead(storageKey, rid);
+  // Mark as read only after user scrolls past 90% of the page
 
   // Equation breakdowns
   const breakdownsHTML = (reading.equationBreakdowns || []).filter(bd => bd && bd.terms).map(bd => {
@@ -1194,6 +1193,12 @@ async function renderReading(params, root) {
         ${sidebarItems}
       </aside>
       <div class="reading-main">
+        <button class="reading-copy-btn" id="readingCopyBtn" title="Copy as Markdown" aria-label="Copy page as Markdown">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          <span class="reading-copy-label">Copy MD</span>
+        </button>
         <div class="reading-kicker">${kickerLabel} · ${isCourse ? modEntry.title : module.title}</div>
         <h1 class="reading-title">${reading.title}</h1>
         <div class="reading-meta-row">
@@ -1210,6 +1215,17 @@ async function renderReading(params, root) {
         </div>
       </div>
     </div>`;
+
+  // Copy-as-Markdown button
+  root.querySelector('#readingCopyBtn')?.addEventListener('click', () => {
+    navigator.clipboard.writeText(reading.content || '').then(() => {
+      const label = root.querySelector('.reading-copy-label');
+      if (label) {
+        label.textContent = 'Copied!';
+        setTimeout(() => { label.textContent = 'Copy MD'; }, 2000);
+      }
+    });
+  });
 
   // Wire nav
   root.querySelectorAll('[data-nav]').forEach(el => {
@@ -1282,7 +1298,7 @@ async function renderReading(params, root) {
     });
   });
 
-  // scroll_depth — fires at 25 / 50 / 75 / 100% milestones
+  // scroll_depth GA events + mark-as-read at 90%
   {
     const fired = new Set();
     const onScroll = () => {
@@ -1294,7 +1310,11 @@ async function renderReading(params, root) {
           gaEvent('scroll_depth', { depth_pct: m, reading_title: reading.title, course_id: id });
         }
       }
-      if (fired.size === 4) window.removeEventListener('scroll', onScroll);
+      if (!fired.has('read') && pct >= 90) {
+        fired.add('read');
+        markReadingRead(storageKey, rid);
+      }
+      if (fired.size === 5) window.removeEventListener('scroll', onScroll);
     };
     window.addEventListener('scroll', onScroll, { passive: true });
   }
@@ -1595,6 +1615,10 @@ function renderQuizBody(params, root, module, quiz) {
 
     saveQuizResult(storageKey, qid, score, passed);
     const updatedRecord = store.get(`quiz:${storageKey}`)?.[qid];
+
+    if (passed && typeof confetti === 'function') {
+      confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+    }
 
     gaEvent('quiz_complete', {
       quiz_title: quiz.title,
