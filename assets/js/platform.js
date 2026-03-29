@@ -524,15 +524,14 @@ if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 window.addEventListener('DOMContentLoaded', handleRoute);
 
 // ── Breadcrumb ───────────────────────────────────────────────
-function setBreadcrumb(parts) {
+function setBreadcrumb(parts, contentType) {
   if (parts && parts.length > 0) {
     const pageTitle = parts[parts.length - 1].label;
     document.title = `${pageTitle} — Upskilled`;
     if (typeof gtag === 'function') {
-      gtag('event', 'page_view', {
-        page_title: pageTitle,
-        page_path: window.location.pathname
-      });
+      const pvParams = { page_title: pageTitle, page_path: window.location.pathname };
+      if (contentType) pvParams.content_type = contentType;
+      gtag('event', 'page_view', pvParams);
     }
   }
   const bc = document.getElementById('navBreadcrumb');
@@ -560,7 +559,7 @@ function showError(root, msg) {
 
 // ── CATALOG VIEW ─────────────────────────────────────────────
 async function renderCatalog(params, root) {
-  setBreadcrumb([]);
+  setBreadcrumb([], 'catalog');
   const _fab = document.getElementById('notationFab');
   if (_fab) _fab.style.display = 'none';
   showLoading(root);
@@ -668,7 +667,7 @@ async function renderCourseOverview(params, root) {
   setBreadcrumb([
     { label: 'Catalog', href: '/' },
     { label: module.title },
-  ]);
+  ], 'course_overview');
 
   const readingsHTML = module.readings.map((r, i) => {
     const done = isReadingRead(module.id, r.id);
@@ -841,7 +840,9 @@ async function renderCourseHome(params, root) {
   setBreadcrumb([
     { label: 'Catalog', href: '/' },
     { label: courseManifest.title },
-  ]);
+  ], 'course_home');
+
+  gaEvent('course_enter', { course_title: courseManifest.title, course_id: id });
 
   const threshold = courseManifest.unlockThreshold || 0.6;
 
@@ -982,7 +983,7 @@ async function renderModuleOverview(params, root) {
     { label: 'Catalog', href: '/' },
     { label: courseManifest.title, href: `/${id}` },
     { label: modEntry.title },
-  ]);
+  ], 'module');
 
   gaEvent('module_enter', {
     module_title: modEntry.title,
@@ -1203,7 +1204,7 @@ async function renderReading(params, root) {
     { label: 'Catalog', href: '/' },
     ...(isCourse ? [{ label: courseManifest.title, href: `/${id}` }, { label: modEntry.title, href: overviewUrl }] : [{ label: module.title, href: overviewUrl }]),
     { label: reading.title },
-  ]);
+  ], 'reading');
 
   // Mark as read only after user scrolls past 90% of the page
 
@@ -1345,6 +1346,14 @@ async function renderReading(params, root) {
     initAudioWidget(root, BASE_PATH + '/' + reading.audio);
   }
 
+  // reading_start + enter-time for time-on-page calculation
+  const _readingEnterTime = Date.now();
+  gaEvent('reading_start', {
+    reading_title: reading.title,
+    module_title: isCourse ? modEntry.title : module.title,
+    course_id: id
+  });
+
   // Inject equation breakdown cards inline with their sections
   injectBreakdownsIntoContent(
     root.querySelector('#readingContent'),
@@ -1395,7 +1404,8 @@ async function renderReading(params, root) {
       gaEvent('reading_complete', {
         reading_title: reading.title,
         module_title: isCourse ? modEntry.title : module.title,
-        course_id: id
+        course_id: id,
+        time_on_page_sec: Math.round((Date.now() - _readingEnterTime) / 1000)
       });
     });
   }
@@ -1605,7 +1615,7 @@ async function renderQuiz(params, root) {
     { label: 'Catalog', href: '/' },
     ...(isCourse ? [{ label: courseManifest.title, href: `/${id}` }, { label: modEntry.title, href: overviewUrl }] : [{ label: module.title, href: overviewUrl }]),
     { label: quiz.title },
-  ]);
+  ], 'quiz');
 
   renderQuizBody(params, root, module, quiz);
 }
@@ -1812,7 +1822,7 @@ async function renderLab(params, root) {
     { label: 'Catalog', href: '/' },
     ...(isCourse ? [{ label: courseManifest.title, href: `/${id}` }, { label: modEntry.title, href: overviewUrl }] : [{ label: module.title, href: overviewUrl }]),
     { label: lab.title },
-  ]);
+  ], 'lab');
 
   markLabVisited(storageKey, lid);
 
@@ -2780,7 +2790,7 @@ async function renderSyllabus(params, root) {
     { label: 'Catalog', href: '/' },
     { label: courseManifest.title, href: `/${id}` },
     { label: 'Syllabus' },
-  ]);
+  ], 'syllabus');
 
   const threshold = courseManifest.unlockThreshold || 0.6;
 
@@ -2845,7 +2855,7 @@ async function renderDrill(params, root) {
     { label: 'Catalog', href: '/' },
     { label: module.title, href: backUrl },
     { label: deck.title },
-  ]);
+  ], 'drill');
 
   const cards = deck.cards || [];
   const progress = getDrillProgress(module.id, did);
@@ -3104,7 +3114,7 @@ async function renderPrereqSyllabus(params, root) {
     { label: 'Catalog', href: '/' },
     { label: module.title, href: `/${seg}/${id}` },
     { label: 'Syllabus' },
-  ]);
+  ], 'syllabus');
 
   const accent = module.color || '#2a5757';
   const base   = `/${seg}/${id}`;
