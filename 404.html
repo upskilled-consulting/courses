@@ -5,10 +5,14 @@
   <title>Redirecting…</title>
   <script>
     // GitHub Pages SPA redirect trick.
-    // Stores the full path in sessionStorage and sends the browser to index.html,
-    // which reads it back and restores the URL via history.replaceState.
+    // On github.io (no custom domain) the repo name is the first path segment,
+    // so index.html lives at /reponame/ not /.
+    // On a custom domain, index.html lives at /.
+    var base = window.location.hostname.endsWith('.github.io')
+      ? '/' + window.location.pathname.split('/')[1] + '/'
+      : '/';
     var path = window.location.pathname + window.location.search + window.location.hash;
-    window.location.replace('/?r=' + encodeURIComponent(path));
+    window.location.replace(base + '?r=' + encodeURIComponent(path));
   </script>
 </head>
 <body></body>
