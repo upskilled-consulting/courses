@@ -940,6 +940,7 @@ img, svg { display: block; max-width: 100%; }
   letter-spacing: -0.03em;
   line-height: 1.2;
   color: var(--text);
+  margin-top: 16px;
   margin-bottom: 6px;
 }
 
