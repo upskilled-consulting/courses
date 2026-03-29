@@ -772,7 +772,7 @@ async function renderCourseOverview(params, root) {
           <span class="meta-pill ${levelClass}">${module.level}</span>
           <span class="meta-pill">${module.estimatedHours}h estimated</span>
           <span class="meta-pill">${module.readings.length} readings</span>
-          ${(module.quizzes || []).length ? `<span class="meta-pill">${module.quizzes.length} quiz</span>` : ''}
+          ${(module.quizzes || []).length ? `<span class="meta-pill">${module.quizzes.length} quiz${module.quizzes.length !== 1 ? 'zes' : ''}</span>` : ''}
           ${labCount ? `<span class="meta-pill">${labCount} lab${labCount !== 1 ? 's' : ''}</span>` : ''}
           ${drillCount ? `<span class="meta-pill">${drillCount} drill deck${drillCount !== 1 ? 's' : ''}</span>` : ''}
         </div>

@@ -1,6 +1,7 @@
 {
   "id": "r6",
   "moduleId": "calculus-foundations",
+  "audio": "assets/audio/integration-and-the-fundamental-theorem.m4a",
   "title": "Integration and the Fundamental Theorem",
   "estimatedMinutes": 15,
   "learningObjectives": [
