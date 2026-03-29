@@ -530,7 +530,7 @@ function setBreadcrumb(parts) {
     document.title = `${pageTitle} — Upskilled`;
     if (typeof gtag === 'function') {
       gtag('event', 'page_view', {
-        page_title: document.title,
+        page_title: pageTitle,
         page_path: window.location.pathname
       });
     }
