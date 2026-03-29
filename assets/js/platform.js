@@ -497,6 +497,14 @@ function initAudioWidget(root, src) {
 }
 
 function handleRoute() {
+  // GitHub Pages SPA: 404.html encodes the original path as ?r=
+  // Handle it here (after all assets have loaded) so relative URLs in
+  // <link>/<script> tags resolve correctly against the document's fetch URL.
+  const _rParam = new URLSearchParams(window.location.search).get('r');
+  if (_rParam) {
+    history.replaceState(null, '', _rParam);
+  }
+
   // Migrate legacy hash URLs: /#/course/foo/module/bar → /foo/bar
   if (window.location.hash.startsWith('#/')) {
     const clean = window.location.hash.slice(1)
