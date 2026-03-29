@@ -5,12 +5,11 @@
   <title>Redirecting…</title>
   <script>
     // GitHub Pages SPA redirect trick.
-    // On github.io (no custom domain) the repo name is the first path segment,
-    // so index.html lives at /reponame/ not /.
-    // On a custom domain, index.html lives at /.
-    var base = window.location.hostname.endsWith('.github.io')
-      ? '/' + window.location.pathname.split('/')[1] + '/'
-      : '/';
+    // index.html lives at the repo root, which may be a sub-path of the domain
+    // (e.g. /courses/ on upskilled.consulting). Extract the first path segment as
+    // the base so the redirect always lands on the right index.html.
+    var seg = window.location.pathname.split('/')[1];
+    var base = seg ? '/' + seg + '/' : '/';
     var path = window.location.pathname + window.location.search + window.location.hash;
     window.location.replace(base + '?r=' + encodeURIComponent(path));
   </script>
