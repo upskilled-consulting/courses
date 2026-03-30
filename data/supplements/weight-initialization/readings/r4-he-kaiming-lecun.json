@@ -1,0 +1,71 @@
+{
+  "id": "r4",
+  "moduleId": "weight-initialization",
+  "title": "He / Kaiming & LeCun Initialization",
+  "estimatedMinutes": 15,
+  "learningObjectives": [
+    {
+      "id": "r4-lo1",
+      "verb": "Explain",
+      "description": "Explain why ReLU violates Xavier's linear approximation assumption and derive the corrected variance formula Var(W) = 2 / fan_in",
+      "skillTags": ["weight-initialization", "variance-scaling"]
+    },
+    {
+      "id": "r4-lo2",
+      "verb": "Distinguish",
+      "description": "Distinguish fan_in mode from fan_out mode in kaiming_normal_ and state when each is appropriate",
+      "skillTags": ["weight-initialization"]
+    },
+    {
+      "id": "r4-lo3",
+      "verb": "Apply",
+      "description": "Apply kaiming_normal_ and kaiming_uniform_ in PyTorch and HeNormal / HeUniform in TensorFlow for ReLU and LeakyReLU networks",
+      "skillTags": ["weight-initialization"]
+    },
+    {
+      "id": "r4-lo4",
+      "verb": "Identify",
+      "description": "Identify when to use LeCun initialization instead of He and explain its role in SELU self-normalization",
+      "skillTags": ["weight-initialization"]
+    }
+  ],
+  "prevItem": { "type": "quiz", "id": "q1" },
+  "nextItem": { "type": "reading", "id": "r5" },
+  "content": "## Why Xavier Fails for ReLU\n\nXavier's derivation assumed that the activation function is approximately linear at $z = 0$, so it does not change the variance of the signal passing through it.\n\nReLU violates this assumption: it sets exactly half its inputs to zero (for a zero-mean pre-activation, $P(z > 0) = 0.5$). This means ReLU halves the effective fan-in:\n\n$$\\text{Var}(\\text{ReLU}(z)) = \\frac{1}{2} \\text{Var}(z)$$\n\nWith Xavier initialization ($\\text{Var}(w) = 2 / (\\text{fan\\_in} + \\text{fan\\_out})$), each ReLU layer halves the signal variance. In a 50-layer network, the signal is $0.5^{50} \\approx 10^{-15}$ times its original magnitude. Training stalls.\n\n## The He Correction\n\nHe et al. (2015) corrected the variance formula specifically for ReLU. Starting from the forward-pass constraint:\n\n$$\\text{Var}(z^{(l)}) = \\text{Var}(z^{(l-1)})$$\n\nand accounting for ReLU's halving effect:\n\n$$\\frac{1}{2} \\cdot \\text{fan\\_in} \\cdot \\text{Var}(w) = 1 \\quad \\Longrightarrow \\quad \\text{Var}(w) = \\frac{2}{\\text{fan\\_in}}$$\n\nNote that Xavier uses $2 / (\\text{fan\\_in} + \\text{fan\\_out})$; He uses $2 / \\text{fan\\_in}$. For a square layer where fan-in equals fan-out, He initialization uses exactly **twice** the variance of Xavier.\n\n## He Normal\n\n`torch.nn.init.kaiming_normal_(tensor, a=0, mode='fan_in', nonlinearity='leaky_relu')`\n`tf.keras.initializers.HeNormal()`\n\n$$w \\sim \\mathcal{N}\\!\\left(0,\\, \\sigma^2\\right), \\quad \\sigma = \\sqrt{\\frac{2}{(1 + a^2) \\cdot \\text{fan\\_in}}}$$\n\nwhere $a$ is the slope of the negative part of the activation (0 for ReLU, 0.01 for LeakyReLU with default slope).\n\n**PyTorch:**\n```python\nimport torch\nimport torch.nn as nn\n\nw = torch.empty(256, 128)\n\n# He Normal for ReLU (a=0, mode='fan_in')\nnn.init.kaiming_normal_(w, a=0, mode='fan_in', nonlinearity='relu')\n# std = sqrt(2 / 128) ≈ 0.125\n\n# He Normal for LeakyReLU with slope 0.01\nnn.init.kaiming_normal_(w, a=0.01, mode='fan_in', nonlinearity='leaky_relu')\n\n# Apply to a ReLU network\ndef init_he(m):\n    if isinstance(m, (nn.Linear, nn.Conv2d)):\n        nn.init.kaiming_normal_(m.weight, nonlinearity='relu')\n        if m.bias is not None:\n            nn.init.zeros_(m.bias)\n\nmodel = nn.Sequential(\n    nn.Conv2d(3, 64, 3, padding=1), nn.ReLU(),\n    nn.Conv2d(64, 128, 3, padding=1), nn.ReLU(),\n    nn.Linear(128, 10)\n)\nmodel.apply(init_he)\n```\n\n**TensorFlow:**\n```python\nimport tensorflow as tf\n\n# HeNormal for Dense\ndense = tf.keras.layers.Dense(256,\n    kernel_initializer=tf.keras.initializers.HeNormal(),\n    bias_initializer='zeros')\n\n# HeNormal for Conv2D\nconv = tf.keras.layers.Conv2D(64, 3, padding='same',\n    kernel_initializer=tf.keras.initializers.HeNormal())\n\n# Standalone\nhe_n = tf.keras.initializers.HeNormal()\nw = he_n(shape=(128, 256))\n```\n\n## He Uniform\n\n`torch.nn.init.kaiming_uniform_(tensor, a=0, mode='fan_in', nonlinearity='leaky_relu')`\n`tf.keras.initializers.HeUniform()`\n\n$$w \\sim \\mathcal{U}[-\\text{bound},\\, \\text{bound}], \\quad \\text{bound} = \\sqrt{3} \\cdot \\sqrt{\\frac{2}{(1 + a^2) \\cdot \\text{fan\\_in}}}$$\n\n**PyTorch:**\n```python\nnn.init.kaiming_uniform_(w, a=0, mode='fan_in', nonlinearity='relu')\n# bound = sqrt(3) * sqrt(2/128) ≈ 0.2165\n```\n\n**TensorFlow:**\n```python\ndense = tf.keras.layers.Dense(256,\n    kernel_initializer=tf.keras.initializers.HeUniform())\n```\n\n## fan_in vs fan_out Mode\n\nThe `mode` parameter controls which dimension the variance is normalized by:\n\n| Mode | Formula | Stabilizes |\n|------|---------|------------|\n| `fan_in` (default) | $\\text{Var}(w) = 2 / \\text{fan\\_in}$ | Forward pass — activation variance |\n| `fan_out` | $\\text{Var}(w) = 2 / \\text{fan\\_out}$ | Backward pass — gradient variance |\n\n**fan_in** is the standard choice for most feedforward networks: it ensures activations don't explode or collapse going forward. **fan_out** may be preferable when the backward pass is the primary concern (e.g., in very deep networks with many more outputs than inputs per layer).\n\n```python\n# fan_in: normalize by inputs (stabilizes forward pass)\nnn.init.kaiming_normal_(w, mode='fan_in', nonlinearity='relu')\n\n# fan_out: normalize by outputs (stabilizes backward pass)\nnn.init.kaiming_normal_(w, mode='fan_out', nonlinearity='relu')\n```\n\n## The a Parameter — Generalizing to LeakyReLU\n\nThe derivation of He initialization assumed ReLU zeroes exactly half the inputs. For LeakyReLU with negative slope $\\alpha$, the effective variance is:\n\n$$\\text{Var}(\\text{LeakyReLU}(z)) = \\frac{1 + \\alpha^2}{2} \\cdot \\text{Var}(z)$$\n\nThe corrected formula replaces the factor 2 with $(1 + a^2)$:\n\n$$\\text{Var}(w) = \\frac{2}{(1 + a^2) \\cdot \\text{fan\\_in}}$$\n\nFor ReLU: $a = 0$, so the formula reduces to $2 / \\text{fan\\_in}$. For LeakyReLU with slope 0.01: $a = 0.01$, which barely changes the result.\n\n```python\n# ReLU: a=0\nnn.init.kaiming_normal_(w, a=0, nonlinearity='relu')\n\n# LeakyReLU with slope 0.2\nnn.init.kaiming_normal_(w, a=0.2, nonlinearity='leaky_relu')\n```\n\n## LeCun Initialization\n\n`tf.keras.initializers.LecunNormal()` / `tf.keras.initializers.LecunUniform()`\n\nLeCun initialization uses $\\text{Var}(w) = 1 / \\text{fan\\_in}$ — half the variance of He. It was designed for **SELU** (Scaled Exponential Linear Unit), which is a self-normalizing activation: with LeCun initialization, a deep SELU network maintains approximately unit Gaussian activations throughout training without BatchNorm.\n\n$$\\sigma_{\\text{LeCun}} = \\sqrt{\\frac{1}{\\text{fan\\_in}}}, \\qquad \\text{bound}_{\\text{LeCun}} = \\sqrt{\\frac{3}{\\text{fan\\_in}}}$$\n\nNote that LeCun normal uses **truncated normal** internally in Keras.\n\n**PyTorch** has no built-in LeCun initializer; implement it directly:\n```python\nimport math\n\nw = torch.empty(256, 128)\nstd = math.sqrt(1.0 / 128)          # LeCun normal\nnn.init.normal_(w, mean=0, std=std)\n\nbound = math.sqrt(3.0 / 128)        # LeCun uniform\nnn.init.uniform_(w, a=-bound, b=bound)\n```\n\n**TensorFlow:**\n```python\n# LeCun Normal — use with SELU\ndense_selu = tf.keras.layers.Dense(256, activation='selu',\n    kernel_initializer=tf.keras.initializers.LecunNormal())\n\n# LeCun Uniform\ndense_selu_u = tf.keras.layers.Dense(256, activation='selu',\n    kernel_initializer=tf.keras.initializers.LecunUniform())\n\n# Standalone\nlecun_n = tf.keras.initializers.LecunNormal()\nw = lecun_n(shape=(128, 256))\n```\n\n## VarianceScaling — The Unified Abstraction\n\nTensorFlow's `VarianceScaling` initializer is the common base for GlorotUniform, GlorotNormal, HeNormal, HeUniform, LecunNormal, and LecunUniform. Understanding it clarifies the relationship between all three:\n\n```python\n# GlorotUniform = VarianceScaling(scale=1, mode='fan_avg', distribution='uniform')\n# GlorotNormal  = VarianceScaling(scale=1, mode='fan_avg', distribution='truncated_normal')\n# HeNormal      = VarianceScaling(scale=2, mode='fan_in',  distribution='truncated_normal')\n# HeUniform     = VarianceScaling(scale=2, mode='fan_in',  distribution='uniform')\n# LecunNormal   = VarianceScaling(scale=1, mode='fan_in',  distribution='truncated_normal')\n# LecunUniform  = VarianceScaling(scale=1, mode='fan_in',  distribution='uniform')\n\n# Directly:\nvs = tf.keras.initializers.VarianceScaling(\n    scale=2.0,\n    mode='fan_in',\n    distribution='truncated_normal'\n)  # equivalent to HeNormal\n```\n\nThe `scale` parameter directly multiplies the variance: `scale=1` → LeCun, `scale=2` → He, `scale=1` with `fan_avg` → Xavier.\n\n## Comparison\n\n| Initializer | $\\text{Var}(w)$ | Activation | PyTorch | TF |\n|------------|----------------|-----------|---------|----|\n| Xavier normal | $2 / (f_{in} + f_{out})$ | sigmoid, tanh, linear | `xavier_normal_` | `GlorotNormal` |\n| Xavier uniform | same | same | `xavier_uniform_` | `GlorotUniform` |\n| He normal | $2 / f_{in}$ | ReLU, LeakyReLU | `kaiming_normal_` | `HeNormal` |\n| He uniform | same | same | `kaiming_uniform_` | `HeUniform` |\n| LeCun normal | $1 / f_{in}$ | SELU | *(manual)* | `LecunNormal` |\n| LeCun uniform | same | SELU | *(manual)* | `LecunUniform` |",
+  "equationBreakdowns": [
+    {
+      "label": "He variance formula",
+      "terms": [
+        {
+          "symbol": "\\text{Var}(w) = \\frac{2}{(1 + a^2) \\cdot \\text{fan\\_in}}",
+          "name": "He weight variance",
+          "desc": "Accounts for ReLU zeroing half its inputs (factor of 2), generalized to LeakyReLU with slope a"
+        },
+        {
+          "symbol": "a",
+          "name": "Negative slope",
+          "desc": "0 for ReLU, 0.01 (or chosen value) for LeakyReLU; appears squared because variance is always positive"
+        },
+        {
+          "symbol": "\\text{fan\\_in}",
+          "name": "Fan-in",
+          "desc": "Number of input units; used in fan_in mode (default, stabilizes forward pass)"
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "He et al. (2015) — Delving Deep into Rectifiers",
+      "title": "Introduced kaiming/He initialization; derived the factor-of-2 correction for ReLU and achieved first superhuman performance on ImageNet with a 1000-layer network",
+      "url": null,
+      "note": "Introduced kaiming/He initialization; derived the factor-of-2 correction for ReLU and achieved first superhuman performance on ImageNet with a 1000-layer network"
+    },
+    {
+      "label": "Klambauer et al. (2017) — Self-Normalizing Neural Networks",
+      "title": "Introduced SELU and prescribed LeCun initialization as the required weight initialization for self-normalization",
+      "url": null,
+      "note": "Introduced SELU and prescribed LeCun initialization as the required weight initialization for self-normalization"
+    }
+  ]
+}

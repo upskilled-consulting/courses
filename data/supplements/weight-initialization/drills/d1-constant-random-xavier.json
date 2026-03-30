@@ -1,0 +1,69 @@
+{
+  "id": "d1",
+  "moduleId": "weight-initialization",
+  "title": "Constant, Random & Xavier",
+  "description": "Flashcards covering the symmetry problem, constant/identity initializers, random distribution initializers, and Xavier/Glorot initialization — formulas, failure modes, and PyTorch/TF usage.",
+  "estimatedMinutes": 10,
+  "cards": [
+    {
+      "id": "c01",
+      "front": "**The symmetry problem** — what causes it and why it makes training fail",
+      "back": "**Cause:** When all weights in a layer are initialized to the same value (e.g. all zeros), every neuron computes the same output and receives the same gradient.\n\n**Result:** All weights in the layer update identically on every step — neurons remain indistinguishable forever. A 512-neuron layer behaves like a 1-neuron layer.\n\n**Fix:** Initialize weights from a *random distribution* so different neurons start from different values and can learn different features.\n\n*Biases are exempt — they are per-neuron and don't cause symmetry across neurons in the same layer.*"
+    },
+    {
+      "id": "c02",
+      "front": "**Signal explosion vs signal collapse** — how initialization scale causes each",
+      "back": "For a linear layer with $n$ inputs and weights $w \\sim \\mathcal{N}(0, \\sigma^2)$:\n\n$$\\text{Var}(z) = n \\cdot \\sigma^2 \\cdot \\text{Var}(x)$$\n\n| Scenario | Effect after $L$ layers |\n|----------|------------------------|\n| $\\sigma^2 \\gg 1/n$ | Variance $\\propto (n\\sigma^2)^L \\to \\infty$ — **explosion** |\n| $\\sigma^2 \\ll 1/n$ | Variance $\\propto (n\\sigma^2)^L \\to 0$ — **collapse** |\n| $\\sigma^2 = 1/n$ | Variance preserved — **stable** |\n\n*All variance-scaling initializers target $\\sigma^2 \\approx 1/n$ (or a scaled version of it).*"
+    },
+    {
+      "id": "c03",
+      "front": "**zeros_, ones_, constant_** — appropriate uses",
+      "back": "| Initializer | Safe for weights? | Safe for biases? | Notes |\n|------------|-------------------|-----------------|-------|\n| `zeros_` | **No** — symmetry problem | Yes | Default for biases |\n| `ones_` | **No** — symmetry + explosion | For $\\gamma$ in BatchNorm | BatchNorm weight init |\n| `constant_` | **No** — symmetry | Sometimes | Output bias to log-prior |\n\n*PyTorch: `nn.init.zeros_(tensor)` etc.*\n*TF: `tf.keras.initializers.Zeros()` etc.*\n\nUsing `ones_` for BatchNorm's $\\gamma$ (weight) and `zeros_` for $\\beta$ (bias) is standard — this makes the normalized layer act as identity at initialization."
+    },
+    {
+      "id": "c04",
+      "front": "**eye_** and **dirac_** — what they produce and when to use them",
+      "back": "**`eye_(tensor)`** — initializes a 2D matrix as the identity matrix $I$. Use for square Linear layers that should start as a passthrough (e.g. adapter layers in fine-tuning).\n\n**`dirac_(tensor, groups=1)`** — PyTorch only. Initializes a conv weight tensor as a Dirac delta: 1 at the spatial center, 0 elsewhere, so each output channel is a copy of the corresponding input channel. Requires `out_channels == in_channels`.\n\n*Both create an identity-like mapping at initialization — the layer starts by doing nothing and learns to deviate from passthrough.*\n\n*TF equivalent for `dirac_`: no built-in; implement manually.*"
+    },
+    {
+      "id": "c05",
+      "front": "**uniform_** vs **normal_** — formulas and when to set scale manually",
+      "back": "**Uniform** $w \\sim \\mathcal{U}[a, b]$:\n- Variance = $(b-a)^2/12$\n- For stability: $b - a = 2\\sqrt{3/n}$\n- *PyTorch:* `nn.init.uniform_(w, a=-bound, b=bound)`\n- *TF:* `RandomUniform(minval=-bound, maxval=bound)`\n\n**Normal** $w \\sim \\mathcal{N}(0, \\sigma^2)$:\n- For stability: $\\sigma = 1/\\sqrt{n}$\n- *PyTorch:* `nn.init.normal_(w, mean=0, std=std)`\n- *TF:* `RandomNormal(mean=0.0, stddev=std)`\n\n*The naïve defaults (U[0,1] and N(0,1)) are rarely correct for weight matrices — always compute the appropriate scale from fan_in.*"
+    },
+    {
+      "id": "c06",
+      "front": "**Truncated normal** — how it differs from normal and why Transformers prefer it",
+      "back": "Draws from $\\mathcal{N}(\\mu, \\sigma^2)$ but **resamples any value outside $[a, b]$** (default: $[\\mu - 2\\sigma,\\, \\mu + 2\\sigma]$).\n\n**Benefit:** Eliminates extreme outlier weights that can cause large activation spikes in the first forward pass — especially dangerous in wide Transformer layers where one outlier weight reaches many downstream neurons.\n\n**Usage:**\n- *PyTorch:* `nn.init.trunc_normal_(w, mean=0, std=0.02)` — clips at ±0.04\n- *TF:* `TruncatedNormal(mean=0.0, stddev=0.02)` — clips at ±2σ automatically\n\n*Keras HeNormal, GlorotNormal, and LecunNormal all use truncated normal internally.*\n\n*ViT, BERT, and most modern Transformer implementations use `trunc_normal_(std=0.02)`.*"
+    },
+    {
+      "id": "c07",
+      "front": "**Xavier / Glorot** — the two constraints and the resulting formula",
+      "back": "**Goal:** preserve both forward-pass variance and backward-pass variance.\n\n| Direction | Constraint | Condition |\n|-----------|-----------|----------|\n| Forward | $\\text{Var}(z^{(l)}) = \\text{Var}(z^{(l-1)})$ | $n_{in} \\cdot \\text{Var}(w) = 1$ |\n| Backward | $\\text{Var}(\\nabla) = \\text{Var}(\\nabla_{prev})$ | $n_{out} \\cdot \\text{Var}(w) = 1$ |\n\n**Compromise** (harmonic mean):\n$$\\text{Var}(w) = \\frac{2}{n_{in} + n_{out}} = \\frac{2}{\\text{fan\\_in} + \\text{fan\\_out}}$$\n\n**Xavier normal:** $\\sigma = \\sqrt{2 / (f_{in} + f_{out})}$\n\n**Xavier uniform:** $a = \\sqrt{6 / (f_{in} + f_{out})}$, draws from $\\mathcal{U}[-a, a]$\n\n*Assumes near-linear activation. Breaks down for ReLU — use He instead.*"
+    },
+    {
+      "id": "c08",
+      "front": "**Xavier uniform vs Xavier normal** — which to use?",
+      "back": "| Variant | Distribution | PyTorch | TF/Keras |\n|---------|-------------|---------|----------|\n| Xavier uniform | $\\mathcal{U}[-a, a]$ | `xavier_uniform_` | `GlorotUniform` |\n| Xavier normal | $\\mathcal{N}(0, \\sigma^2)$ | `xavier_normal_` | `GlorotNormal` |\n\nBoth target the same variance. The difference in practice is small:\n- **Uniform** is bounded — no outliers, slightly lighter tails\n- **Normal** can produce rare large values — mitigated if using TF's truncated-normal version\n\n**TF default for Dense and Conv:** GlorotUniform\n**PyTorch default for Linear and Conv:** kaiming_uniform_ (not Xavier)\n\n*For most sigmoid/tanh feedforward networks, either works well. Uniform is the safer default.*"
+    },
+    {
+      "id": "c09",
+      "front": "**gain parameter in xavier_uniform_/xavier_normal_** — what it is and when to change it",
+      "back": "The `gain` parameter scales the computed limits or std:\n$$a = \\text{gain} \\cdot \\sqrt{\\frac{6}{f_{in} + f_{out}}}, \\qquad \\sigma = \\text{gain} \\cdot \\sqrt{\\frac{2}{f_{in} + f_{out}}}$$\n\nIt compensates for the fact that some activations contract or expand variance by a known amount:\n\n| Activation | Recommended gain |\n|-----------|------------------|\n| Linear, sigmoid | 1.0 |\n| Tanh | $5/3 \\approx 1.667$ |\n| ReLU | $\\sqrt{2} \\approx 1.414$ |\n| LeakyReLU | varies with slope |\n\n*PyTorch helper:* `nn.init.calculate_gain('tanh')` returns 5/3\n\n*Note: for ReLU, it is better practice to use He initialization directly rather than Xavier with gain=√2.*"
+    },
+    {
+      "id": "c10",
+      "front": "**When to use Xavier vs He vs LeCun** — decision by activation",
+      "back": "| Activation | Use |\n|-----------|-----|\n| Sigmoid, Tanh | **Xavier / Glorot** |\n| Linear (no activation) | **Xavier / Glorot** |\n| ReLU, ReLU6 | **He / Kaiming** |\n| LeakyReLU, PReLU | **He** (set `a` to negative slope) |\n| GELU, SiLU, Mish | **He** (empirically good; slightly more principled than Xavier) |\n| SELU | **LeCun** (required for self-normalization) |\n| RNN hidden-to-hidden | **Orthogonal** |\n| Embeddings | `normal_(std=0.02)` or `uniform_(-0.05, 0.05)` |"
+    },
+    {
+      "id": "c11",
+      "front": "PyTorch: apply Xavier uniform to all `nn.Linear` layers in a model",
+      "back": "```python\nimport torch.nn as nn\n\ndef init_weights(m):\n    if isinstance(m, nn.Linear):\n        nn.init.xavier_uniform_(m.weight)\n        nn.init.zeros_(m.bias)\n\nmodel.apply(init_weights)\n```\n\n`model.apply(fn)` recursively visits every submodule and calls `fn` on it.\n\n*For Xavier normal: replace `xavier_uniform_` with `xavier_normal_`.*\n*For He normal (ReLU): use `kaiming_normal_(m.weight, nonlinearity='relu')` instead.*"
+    },
+    {
+      "id": "c12",
+      "front": "TF/Keras: set Xavier uniform and He normal via `kernel_initializer`",
+      "back": "```python\nimport tensorflow as tf\n\n# Xavier uniform (the DEFAULT for Dense/Conv in Keras)\ndense_xavier = tf.keras.layers.Dense(256,\n    kernel_initializer='glorot_uniform',\n    bias_initializer='zeros')\n\n# He normal (for ReLU networks)\ndense_he = tf.keras.layers.Dense(256, activation='relu',\n    kernel_initializer='he_normal',\n    bias_initializer='zeros')\n\n# With explicit class (supports seed and other options)\ndense_he2 = tf.keras.layers.Dense(256,\n    kernel_initializer=tf.keras.initializers.HeNormal(seed=42))\n```\n\n*String shorthands: `'glorot_uniform'`, `'glorot_normal'`, `'he_normal'`, `'he_uniform'`, `'lecun_normal'`*"
+    }
+  ]
+}

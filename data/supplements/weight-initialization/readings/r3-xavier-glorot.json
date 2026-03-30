@@ -1,0 +1,80 @@
+{
+  "id": "r3",
+  "moduleId": "weight-initialization",
+  "title": "Xavier / Glorot Initialization",
+  "estimatedMinutes": 15,
+  "learningObjectives": [
+    {
+      "id": "r3-lo1",
+      "verb": "Derive",
+      "description": "Derive the Xavier variance formula from the requirement that forward-pass and backward-pass variance are both preserved, arriving at Var(W) = 2 / (fan_in + fan_out)",
+      "skillTags": ["weight-initialization", "variance-scaling"]
+    },
+    {
+      "id": "r3-lo2",
+      "verb": "Distinguish",
+      "description": "Distinguish xavier_uniform_ from xavier_normal_ and state the variance of each in terms of fan_in and fan_out",
+      "skillTags": ["weight-initialization"]
+    },
+    {
+      "id": "r3-lo3",
+      "verb": "Apply",
+      "description": "Apply xavier_uniform_ and xavier_normal_ in PyTorch and GlorotUniform / GlorotNormal in TensorFlow, including setting the gain parameter",
+      "skillTags": ["weight-initialization"]
+    },
+    {
+      "id": "r3-lo4",
+      "verb": "Explain",
+      "description": "Explain why Xavier initialization assumes near-linear activations and therefore breaks down for ReLU networks",
+      "skillTags": ["weight-initialization", "variance-scaling"]
+    }
+  ],
+  "prevItem": { "type": "reading", "id": "r2" },
+  "nextItem": { "type": "quiz", "id": "q1" },
+  "content": "## The Two Constraints\n\nXavier initialization (Glorot & Bengio, 2010) is the first principled answer to the question: *what variance should weights have?* It derives the answer from two simultaneous requirements.\n\n**Constraint 1 — forward pass:** For the variance of activations to remain constant across layers:\n\n$$\\text{Var}(h^{(l)}) = \\text{Var}(h^{(l-1)}) \\quad \\Longrightarrow \\quad n_{l-1} \\cdot \\text{Var}(w) = 1$$\n\nwhere $n_{l-1}$ is the fan-in (number of inputs to the layer).\n\n**Constraint 2 — backward pass:** For gradient variance to remain constant:\n\n$$\\text{Var}\\!\\left(\\frac{\\partial \\mathcal{L}}{\\partial h^{(l-1)}}\\right) = \\text{Var}\\!\\left(\\frac{\\partial \\mathcal{L}}{\\partial h^{(l)}}\\right) \\quad \\Longrightarrow \\quad n_l \\cdot \\text{Var}(w) = 1$$\n\nwhere $n_l$ is the fan-out (number of outputs).\n\nThese two constraints are incompatible unless fan-in equals fan-out. Xavier resolves the tension by taking their harmonic mean:\n\n$$\\text{Var}(w) = \\frac{2}{n_{l-1} + n_l} = \\frac{2}{\\text{fan\\_in} + \\text{fan\\_out}}$$\n\n## The Linear Approximation Assumption\n\nThe derivation above treats the activation function as if it were linear around $z = 0$. This is approximately true for **sigmoid** and **tanh** in their active region (both have derivative $\\approx 1$ at $z = 0$), but it is badly violated by **ReLU**, which zeros out exactly half its inputs on average. The next reading (He/Kaiming) corrects for this.\n\n## Xavier Uniform\n\n`torch.nn.init.xavier_uniform_(tensor, gain=1.0)` / `tf.keras.initializers.GlorotUniform()`\n\nDraws from a uniform distribution symmetric around zero, scaled so that $\\text{Var}(w) = 2 / (\\text{fan\\_in} + \\text{fan\\_out})$:\n\n$$w \\sim \\mathcal{U}\\!\\left[-a,\\, a\\right], \\quad a = \\text{gain} \\cdot \\sqrt{\\frac{6}{\\text{fan\\_in} + \\text{fan\\_out}}}$$\n\nThe factor of $\\sqrt{6}$ comes from the relationship between the variance of $\\mathcal{U}[-a, a]$ and $a$: $\\text{Var}(\\mathcal{U}[-a,a]) = a^2 / 3$, so solving $a^2 / 3 = 2 / (\\text{fan\\_in} + \\text{fan\\_out})$ gives $a = \\sqrt{6 / (\\text{fan\\_in} + \\text{fan\\_out})}$.\n\n**PyTorch:**\n```python\nimport torch\nimport torch.nn as nn\n\nw = torch.empty(256, 128)  # fan_out=256, fan_in=128\n\n# Uniform: draws from U[-a, a], a = sqrt(6 / (128+256)) = sqrt(6/384) ≈ 0.125\nnn.init.xavier_uniform_(w, gain=1.0)\n\n# With gain for tanh (recommended: 5/3)\nnn.init.xavier_uniform_(w, gain=nn.init.calculate_gain('tanh'))\n\n# Apply to a full model\ndef init_xavier(m):\n    if isinstance(m, nn.Linear):\n        nn.init.xavier_uniform_(m.weight)\n        nn.init.zeros_(m.bias)\n\nmodel = nn.Sequential(\n    nn.Linear(128, 256), nn.Tanh(),\n    nn.Linear(256, 128), nn.Tanh(),\n    nn.Linear(128, 10)\n)\nmodel.apply(init_xavier)\n```\n\n**TensorFlow:**\n```python\nimport tensorflow as tf\n\n# GlorotUniform is the DEFAULT kernel initializer for Dense and Conv layers\ndense = tf.keras.layers.Dense(256)   # already uses GlorotUniform\n\n# Explicit\ndense = tf.keras.layers.Dense(256,\n    kernel_initializer=tf.keras.initializers.GlorotUniform(),\n    bias_initializer='zeros')\n\n# Standalone\nglorot_u = tf.keras.initializers.GlorotUniform()\nw = glorot_u(shape=(128, 256))\n```\n\n## Xavier Normal\n\n`torch.nn.init.xavier_normal_(tensor, gain=1.0)` / `tf.keras.initializers.GlorotNormal()`\n\nSame variance target, drawn from a truncated normal distribution:\n\n$$w \\sim \\mathcal{N}\\!\\left(0,\\, \\sigma^2\\right), \\quad \\sigma = \\text{gain} \\cdot \\sqrt{\\frac{2}{\\text{fan\\_in} + \\text{fan\\_out}}}$$\n\n(Keras uses truncated normal internally; PyTorch uses a standard normal.)\n\n**PyTorch:**\n```python\nw = torch.empty(256, 128)\nnn.init.xavier_normal_(w, gain=1.0)\n# std ≈ sqrt(2 / 384) ≈ 0.0723\n```\n\n**TensorFlow:**\n```python\nglorot_n = tf.keras.initializers.GlorotNormal()\nw = glorot_n(shape=(128, 256))\n\ndense = tf.keras.layers.Dense(256,\n    kernel_initializer=tf.keras.initializers.GlorotNormal())\n```\n\n## The gain Parameter\n\nPyTorch exposes a `gain` multiplier that scales the computed limits or standard deviation. It accounts for the fact that some activation functions contract or expand variance by a known amount:\n\n```python\n# PyTorch gain values by activation\nprint(nn.init.calculate_gain('linear'))      # 1.0\nprint(nn.init.calculate_gain('sigmoid'))     # 1.0\nprint(nn.init.calculate_gain('tanh'))        # 1.6667  (5/3)\nprint(nn.init.calculate_gain('relu'))        # 1.4142  (sqrt(2))\nprint(nn.init.calculate_gain('leaky_relu'))  # ≈ 1.4141 (varies with slope)\n```\n\nFor most use cases with sigmoid or tanh, gain=1.0 is appropriate. For ReLU, you should use He initialization instead of Xavier with gain.\n\n## Uniform vs Normal: Which to Choose?\n\nIn practice, the difference is small. Xavier uniform is slightly more conservative (bounded range), while Xavier normal can produce occasional larger values. The key factors:\n\n- **Xavier uniform** (GlorotUniform): default for most frameworks, slightly lower variance in practice\n- **Xavier normal** (GlorotNormal): preferred in some Transformer architectures\n\n## When to Use Xavier\n\n| Scenario | Appropriate? |\n|----------|--------------|\n| Linear layers with sigmoid or tanh | Yes — this is the primary use case |\n| Linear layers with no activation | Yes — linear approximation holds exactly |\n| Convolutional layers with sigmoid/tanh | Yes |\n| Linear/conv layers with ReLU | No — use He/Kaiming instead |\n| RNN weight matrices | Partially — orthogonal is often better for hidden-to-hidden |\n| Embedding layers | No — normal or truncated normal with small std |\n\n## Quick Reference\n\n| Variant | Formula | PyTorch | TF/Keras |\n|---------|---------|---------|----------|\n| Xavier uniform | $\\mathcal{U}[-a, a],\\; a = \\text{gain}\\sqrt{6/(f_{in}+f_{out})}$ | `xavier_uniform_` | `GlorotUniform` |\n| Xavier normal | $\\mathcal{N}(0, \\sigma^2),\\; \\sigma = \\text{gain}\\sqrt{2/(f_{in}+f_{out})}$ | `xavier_normal_` | `GlorotNormal` |",
+  "equationBreakdowns": [
+    {
+      "label": "Xavier variance formula",
+      "terms": [
+        {
+          "symbol": "\\text{Var}(w) = \\frac{2}{\\text{fan\\_in} + \\text{fan\\_out}}",
+          "name": "Xavier weight variance",
+          "desc": "Compromise between forward-pass stability (needs 1/fan_in) and backward-pass stability (needs 1/fan_out)"
+        },
+        {
+          "symbol": "\\text{fan\\_in}",
+          "name": "Fan-in",
+          "desc": "Number of input units to the layer (e.g. 128 for a Linear(128, 256) layer)"
+        },
+        {
+          "symbol": "\\text{fan\\_out}",
+          "name": "Fan-out",
+          "desc": "Number of output units from the layer (e.g. 256 for a Linear(128, 256) layer)"
+        }
+      ]
+    },
+    {
+      "label": "Xavier uniform bound",
+      "terms": [
+        {
+          "symbol": "a = \\text{gain} \\cdot \\sqrt{\\frac{6}{\\text{fan\\_in} + \\text{fan\\_out}}}",
+          "name": "Uniform bound",
+          "desc": "Half-width of the uniform distribution; derived from Var(U[-a,a]) = a²/3 = 2/(fan_in+fan_out)"
+        },
+        {
+          "symbol": "\\text{gain}",
+          "name": "Gain",
+          "desc": "Activation-specific scaling factor; 1.0 for linear/sigmoid, 5/3 for tanh, √2 for ReLU"
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Glorot & Bengio (2010) — Understanding the Difficulty of Training Deep Feedforward Neural Networks",
+      "title": "Introduced Xavier initialization with the fan-in/fan-out variance derivation",
+      "url": null,
+      "note": "Introduced Xavier initialization with the fan-in/fan-out variance derivation; empirically validated on sigmoid and tanh networks"
+    }
+  ]
+}

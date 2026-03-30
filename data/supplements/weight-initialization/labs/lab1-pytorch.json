@@ -1,0 +1,17 @@
+{
+  "id": "lab1",
+  "moduleId": "weight-initialization",
+  "title": "Weight Initialization in PyTorch",
+  "estimatedMinutes": 50,
+  "prevItem": { "type": "quiz", "id": "q2" },
+  "nextItem": { "type": "lab", "id": "lab2" },
+  "colabUrl": null,
+  "objectives": [
+    "Apply every torch.nn.init function from scratch and verify the resulting mean, variance, and shape of initialized tensors",
+    "Run a variance propagation experiment: measure activation variance at every layer of a 20-layer MLP under zeros_, N(0,1), Xavier, and He initialization",
+    "Demonstrate the symmetry problem empirically: train an MLP with all-zero weights and show that all neurons remain identical throughout training",
+    "Compare convergence speed and final accuracy of Xavier vs He initialization on a 10-layer ReLU MLP trained on MNIST",
+    "Implement orthogonal initialization for the hidden-to-hidden weights of a vanilla RNN and show numerically that W_hh^T @ W_hh ≈ I"
+  ],
+  "description": "## Lab Overview\n\nThis notebook makes every formula from the readings concrete and experimentally verifiable. You will instrument forward passes to measure activation statistics, compare initialization strategies on real training runs, and build intuition for why the right starting point matters.\n\n### Sections\n\n| Section | Content |\n|---------|---------|\n| 1 | **All torch.nn.init functions** — apply each, verify with `.mean()`, `.var()`, shape checks |\n| 2 | **Variance propagation experiment** — 20-layer linear network, measure Var(activation) at each layer under zeros, N(0,1), Xavier, He |\n| 3 | **The symmetry problem** — train an MLP with zeros init; plot per-neuron weight evolution to show they never diverge |\n| 4 | **Xavier vs He on a ReLU MLP** — 10-layer network on MNIST; plot loss curves, final test accuracy, activation histograms at each layer |\n| 5 | **Orthogonal RNN** — initialize hidden-to-hidden weights with orthogonal_; verify W.T @ W ≈ I; compare gradient norms across timesteps with and without orthogonal init |\n| 6 | **PyTorch defaults audit** — inspect the actual initialized weights of nn.Linear, nn.Conv2d, nn.Embedding, nn.LSTM, and nn.BatchNorm2d; verify they match the documented defaults |"
+}

@@ -1,0 +1,91 @@
+{
+  "id": "q1",
+  "moduleId": "weight-initialization",
+  "title": "Initialization Fundamentals",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "type": "reading", "id": "r3" },
+  "nextItem": { "type": "reading", "id": "r4" },
+  "questions": [
+    {
+      "id": "q1_1",
+      "type": "multiple-choice",
+      "prompt": "A network has two hidden layers with 256 neurons each. All weights in both layers are initialized to zero. What happens during training?",
+      "options": [
+        { "id": "a", "text": "Training proceeds normally — zero weights are a neutral starting point that the optimizer can move away from", "correct": false },
+        { "id": "b", "text": "Every neuron in each layer learns the same function, so the layers behave as if they each had a single neuron", "correct": true },
+        { "id": "c", "text": "Gradients explode because all 256 neurons add identical contributions", "correct": false },
+        { "id": "d", "text": "The network converges more slowly but reaches the same solution as random initialization", "correct": false }
+      ],
+      "explanation": "Zero initialization causes the symmetry problem. Every neuron in a layer has identical weights, produces identical outputs, and receives identical gradients — they all update identically. At every step, they remain identical. 256 neurons with zero init behave exactly like 1 neuron. The only way to break symmetry is to start from different points, which requires random initialization.",
+      "hint": "If every neuron starts identical, they receive identical gradients. What happens to the diversity of neurons after an update?"
+    },
+    {
+      "id": "q1_2",
+      "type": "multiple-choice",
+      "prompt": "Weights are initialized from $\\mathcal{N}(0, 1)$ in a 100-layer network where each layer has 512 inputs. Approximately what is the variance of activations at layer 100, assuming no activation function?",
+      "options": [
+        { "id": "a", "text": "$512^{100}$ — activations explode to an astronomically large number", "correct": true },
+        { "id": "b", "text": "$1$ — variance is preserved because the weights have unit variance", "correct": false },
+        { "id": "c", "text": "$1/512$ — variance shrinks because 512 weights average out", "correct": false },
+        { "id": "d", "text": "$0$ — activations collapse because many weights cancel", "correct": false }
+      ],
+      "explanation": "For a linear layer with $n$ inputs and $\\mathcal{N}(0,1)$ weights: $\\text{Var}(z) = n \\cdot \\text{Var}(w) \\cdot \\text{Var}(h) = 512 \\cdot 1 \\cdot \\text{Var}(h)$. Each layer multiplies the variance by 512. After 100 layers: $512^{100} \\approx 10^{271}$. This is why naïve $\\mathcal{N}(0,1)$ initialization fails — the stability condition $\\sigma^2 = 1/n = 1/512$ is violated.",
+      "hint": "Each layer multiplies the variance by $n \\cdot \\sigma^2 = 512 \\cdot 1 = 512$. What does multiplying by 512 one hundred times give?"
+    },
+    {
+      "id": "q1_3",
+      "type": "multiple-choice",
+      "prompt": "Which of the following is a legitimate use of `nn.init.zeros_()` or `tf.keras.initializers.Zeros()`?",
+      "options": [
+        { "id": "a", "text": "Initializing the weight matrix of an nn.Linear layer", "correct": false },
+        { "id": "b", "text": "Initializing the bias vector of an nn.Linear layer", "correct": true },
+        { "id": "c", "text": "Initializing the weight matrix of an nn.Conv2d layer", "correct": false },
+        { "id": "d", "text": "Initializing the embedding table of an nn.Embedding layer", "correct": false }
+      ],
+      "explanation": "Zero initialization is safe for **biases** because the bias is a single additive scalar per neuron — there is no symmetry to break between neurons via the bias term. The weight matrix is responsible for differentiating between neurons; the bias just shifts the activation threshold. Zero bias init means the initial decision boundary passes through the origin, which is a reasonable default.",
+      "hint": "The symmetry problem applies when multiple neurons share the same role. Biases are per-neuron, not shared."
+    },
+    {
+      "id": "q1_4",
+      "type": "multiple-choice",
+      "prompt": "Xavier initialization uses the variance formula $\\text{Var}(w) = 2 / (\\text{fan\\_in} + \\text{fan\\_out})$. For a `Linear(128, 256)` layer, what is the standard deviation for Xavier normal initialization?",
+      "options": [
+        { "id": "a", "text": "$\\sqrt{2 / 384} \\approx 0.072$", "correct": true },
+        { "id": "b", "text": "$\\sqrt{2 / 128} \\approx 0.125$", "correct": false },
+        { "id": "c", "text": "$\\sqrt{6 / 384} \\approx 0.125$", "correct": false },
+        { "id": "d", "text": "$\\sqrt{2 / 256} \\approx 0.088$", "correct": false }
+      ],
+      "explanation": "For `Linear(128, 256)`: fan_in = 128, fan_out = 256, fan_in + fan_out = 384. Xavier normal standard deviation = $\\sqrt{2 / 384} \\approx 0.072$. The uniform variant uses the bound $\\sqrt{6 / 384} \\approx 0.125$, which gives the same variance (since $\\text{Var}(\\mathcal{U}[-a, a]) = a^2/3$).",
+      "hint": "Xavier normal: $\\sigma = \\sqrt{2 / (\\text{fan\\_in} + \\text{fan\\_out})} = \\sqrt{2 / 384}$."
+    },
+    {
+      "id": "q1_5",
+      "type": "multiple-choice",
+      "prompt": "Truncated normal initialization is preferred over standard normal initialization in Transformer models (e.g. ViT) primarily because:",
+      "options": [
+        { "id": "a", "text": "It has a higher variance, which helps attention weights spread more broadly at initialization", "correct": false },
+        { "id": "b", "text": "It eliminates extreme outlier values (beyond ±2σ) that can cause initialization-time activation spikes", "correct": true },
+        { "id": "c", "text": "It is faster to compute since it avoids the exponential function in the Gaussian PDF", "correct": false },
+        { "id": "d", "text": "It sets all values greater than σ to exactly σ, making the initialization more deterministic", "correct": false }
+      ],
+      "explanation": "Truncated normal resamples any value that falls outside $[\\text{mean} \\pm 2\\sigma]$ (by default), eliminating the tails of the Gaussian. In very wide Transformer layers, a small fraction of large-magnitude weights can cause the first forward pass to produce extreme attention logits, destabilizing softmax. Truncating at ±2σ prevents this without changing the mean or most of the distribution. The TF Keras HeNormal and LecunNormal initializers use truncated normal internally for this reason.",
+      "hint": "Think about what happens in a wide layer (e.g. 768 inputs) when even one or two weights are very large."
+    },
+    {
+      "id": "q1_6",
+      "type": "code-completion",
+      "prompt": "Complete the code to apply Xavier uniform initialization to all `nn.Linear` weight matrices and zero-initialize all biases in `model`:",
+      "codeTemplate": "import torch.nn as nn\n\ndef init_weights(m):\n    if isinstance(m, nn.Linear):\n        nn.init.___BLANK___(m.weight)\n        nn.init.zeros_(m.bias)\n\nmodel.apply(init_weights)",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "xavier_uniform_",
+        "xavier_uniform_(m.weight",
+        "xavier_uniform_(m.weight, gain=1.0"
+      ],
+      "explanation": "`nn.init.xavier_uniform_` initializes the tensor in-place using the uniform variant of Xavier/Glorot initialization. The trailing underscore is PyTorch's convention for in-place operations. `model.apply(fn)` recursively visits every submodule and applies `fn` — a clean way to initialize all layers of a model with consistent settings.",
+      "hint": "PyTorch in-place init functions end with an underscore. Xavier's uniform variant is `xavier_uniform_`."
+    }
+  ]
+}

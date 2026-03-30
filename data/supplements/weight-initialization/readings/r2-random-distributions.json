@@ -1,0 +1,60 @@
+{
+  "id": "r2",
+  "moduleId": "weight-initialization",
+  "title": "Random Distribution Initializations",
+  "estimatedMinutes": 12,
+  "learningObjectives": [
+    {
+      "id": "r2-lo1",
+      "verb": "Apply",
+      "description": "Apply uniform_, normal_, trunc_normal_, and sparse_ in PyTorch and their TF equivalents with appropriate scale parameters",
+      "skillTags": ["weight-initialization"]
+    },
+    {
+      "id": "r2-lo2",
+      "verb": "Explain",
+      "description": "Explain why naïve N(0, 1) initialization fails in deep networks and derive the correct standard deviation for a stable forward pass",
+      "skillTags": ["weight-initialization", "variance-scaling"]
+    },
+    {
+      "id": "r2-lo3",
+      "verb": "Distinguish",
+      "description": "Distinguish truncated normal from standard normal initialization and state the practical benefit of truncating at ±2σ",
+      "skillTags": ["weight-initialization"]
+    }
+  ],
+  "prevItem": { "type": "reading", "id": "r1" },
+  "nextItem": { "type": "reading", "id": "r3" },
+  "content": "## The Scale Problem\n\nDrawing weights from a random distribution breaks symmetry — different neurons start with different values, so they learn different features. But the choice of distribution and, crucially, its **scale** determines whether the network trains at all.\n\nFor a single linear layer $z = Wx$ with $n$ inputs, if $w_{ij} \\sim \\mathcal{N}(0, \\sigma^2)$ independently:\n\n$$\\text{Var}(z_j) = n \\cdot \\sigma^2 \\cdot \\text{Var}(x)$$\n\nTo preserve variance across layers ($\\text{Var}(z) \\approx \\text{Var}(x)$):\n\n$$\\sigma^2 = \\frac{1}{n}$$\n\nThis is the key constraint. The three generic random initializers below are agnostic to activation functions — they let you set $\\sigma$ (or the range) directly. The variance-scaling initializers in the next two readings derive $\\sigma$ automatically from the layer dimensions and activation function.\n\n## uniform — Uniform Distribution\n\n`torch.nn.init.uniform_(tensor, a=0, b=1)` / `tf.keras.initializers.RandomUniform(minval=-0.05, maxval=0.05)`\n\nDraws each weight independently from $\\mathcal{U}[a, b]$. The variance of $\\mathcal{U}[a, b]$ is $(b - a)^2 / 12$, so to achieve $\\text{Var}(w) = 1/n$ you need $b - a = \\sqrt{12/n} = 2\\sqrt{3/n}$.\n\nThe PyTorch default (`a=0, b=1`) is almost never appropriate directly — it initializes weights to values in $[0, 1]$, which is far too large for most layers and produces positive-only weights (breaking zero-centering). Always set `a` and `b` explicitly.\n\n**PyTorch:**\n```python\nimport torch\nimport torch.nn as nn\n\nw = torch.empty(256, 128)\n\n# Naïve (almost never correct)\nnn.init.uniform_(w, a=0, b=1)\n\n# Correct scale for stable forward pass with fan_in=128\nimport math\nbound = math.sqrt(3.0 / 128)   # ≈ 0.153\nnn.init.uniform_(w, a=-bound, b=bound)\n```\n\n**TensorFlow:**\n```python\nimport tensorflow as tf\nimport math\n\nfan_in = 128\nbound = math.sqrt(3.0 / fan_in)\n\nuniform_init = tf.keras.initializers.RandomUniform(minval=-bound, maxval=bound)\nw = uniform_init(shape=(256, 128))\n\n# In a layer\ndense = tf.keras.layers.Dense(256,\n    kernel_initializer=tf.keras.initializers.RandomUniform(minval=-0.05, maxval=0.05))\n```\n\n## normal — Gaussian Distribution\n\n`torch.nn.init.normal_(tensor, mean=0, std=1)` / `tf.keras.initializers.RandomNormal(mean=0.0, stddev=0.05)`\n\nDraws weights from $\\mathcal{N}(\\mu, \\sigma^2)$. The natural choice for weight initialization — the Gaussian is isotropic, zero-centered by default, and has well-understood properties under linear transformations.\n\nThe PyTorch default `std=1` and Keras default `stddev=0.05` are both reasonable **only** if you know the fan-in. For a 128-input layer with variance stability: $\\sigma = 1/\\sqrt{128} \\approx 0.088$.\n\n**PyTorch:**\n```python\nimport math\n\nw = torch.empty(256, 128)\n\n# Explicit scale\nnn.init.normal_(w, mean=0, std=0.01)   # small std — common in early practice\n\n# Variance-stable scale\nstd = 1.0 / math.sqrt(128)\nnn.init.normal_(w, mean=0, std=std)\n```\n\n**TensorFlow:**\n```python\nfan_in = 128\nstd = 1.0 / math.sqrt(fan_in)\n\nnormal_init = tf.keras.initializers.RandomNormal(mean=0.0, stddev=std)\nw = normal_init(shape=(256, 128))\n```\n\n## trunc_normal — Truncated Normal\n\n`torch.nn.init.trunc_normal_(tensor, mean=0, std=1, a=-2, b=2)` / `tf.keras.initializers.TruncatedNormal(mean=0.0, stddev=0.05)`\n\nDraws from $\\mathcal{N}(\\mu, \\sigma^2)$ but rejects and resamples any value outside $[a, b]$ (PyTorch: defaults to $[\\text{mean} - 2\\sigma, \\text{mean} + 2\\sigma]$). This eliminates extreme outliers that can cause spikes in activation variance early in training.\n\nTruncated normal is the **default distribution in TF's VarianceScaling initializer**, and therefore the default underlying distribution for GlorotNormal, HeNormal, and LecunNormal in Keras. It is increasingly preferred over standard normal for Transformer architectures (ViT, BERT) because it prevents initialization-time outlier activations.\n\n**PyTorch:**\n```python\nw = torch.empty(256, 128)\n\n# Default: clips at ±2 std from mean\nnn.init.trunc_normal_(w, mean=0, std=0.02)   # clips at [-0.04, 0.04]\n\n# Custom clip range\nnn.init.trunc_normal_(w, mean=0, std=0.02, a=-0.06, b=0.06)\n\n# Common in ViT-style models\npos_embed = torch.empty(1, 196, 768)\nnn.init.trunc_normal_(pos_embed, std=0.02)\n```\n\n**TensorFlow:**\n```python\n# TruncatedNormal clips at ±2 std automatically\ntrunc_init = tf.keras.initializers.TruncatedNormal(mean=0.0, stddev=0.02)\nw = trunc_init(shape=(256, 128))\n\ndense = tf.keras.layers.Dense(256,\n    kernel_initializer=tf.keras.initializers.TruncatedNormal(stddev=0.02))\n```\n\n## sparse — Sparse Random Initialization\n\n`torch.nn.init.sparse_(tensor, sparsity, std=0.01)` *(PyTorch only)*\n\nInitializes the weight matrix so that a fraction `sparsity` of the weights in each column are set to exactly zero; the remaining weights are drawn from $\\mathcal{N}(0, \\text{std}^2)$. This promotes sparse connectivity at initialization and is inspired by biological neural networks where each neuron connects to only a fraction of upstream neurons.\n\nSparse initialization is primarily used with very large weight matrices (e.g., wide feedforward layers) where full connectivity at initialization may be too rich a starting point.\n\n**PyTorch:**\n```python\nw = torch.empty(1000, 500)\n\n# 90% of weights in each column = 0; rest from N(0, 0.01^2)\nnn.init.sparse_(w, sparsity=0.9, std=0.01)\n\n# Inspect sparsity\nzero_fraction = (w == 0).float().mean()\nprint(f\"Zero fraction: {zero_fraction:.3f}\")   # ≈ 0.900\n```\n\n**TensorFlow:** No built-in equivalent. A similar effect:\n```python\nimport numpy as np\n\ndef sparse_initializer(shape, sparsity=0.9, std=0.01, dtype=tf.float32):\n    values = np.random.normal(0, std, shape)\n    mask = np.random.uniform(0, 1, shape) < sparsity\n    values[mask] = 0.0\n    return tf.constant(values, dtype=dtype)\n```\n\n## Choosing a Standard Deviation\n\nIf you use uniform or normal initialization directly (rather than delegating to Xavier or He), use this reference:\n\n| Goal | $\\sigma$ for normal | bound for uniform |\n|------|--------------------|-----------------|\n| Variance-stable (forward) | $1 / \\sqrt{\\text{fan\\_in}}$ | $\\sqrt{3 / \\text{fan\\_in}}$ |\n| Variance-stable (backward) | $1 / \\sqrt{\\text{fan\\_out}}$ | $\\sqrt{3 / \\text{fan\\_out}}$ |\n| LeCun (SELU) | $1 / \\sqrt{\\text{fan\\_in}}$ | same as forward |\n| Xavier (sigmoid/tanh) | $\\sqrt{2 / (\\text{fan\\_in} + \\text{fan\\_out})}$ | $\\sqrt{6 / (\\text{fan\\_in} + \\text{fan\\_out})}$ |\n| He (ReLU) | $\\sqrt{2 / \\text{fan\\_in}}$ | $\\sqrt{6 / \\text{fan\\_in}}$ |\n\nThe last two rows are precisely what Xavier and He compute automatically — the readings that follow derive them from first principles.",
+  "equationBreakdowns": [
+    {
+      "label": "Variance propagation and the stability condition",
+      "terms": [
+        {
+          "symbol": "\\text{Var}(z_j) = n \\cdot \\sigma^2 \\cdot \\text{Var}(x)",
+          "name": "Output variance",
+          "desc": "Variance of a linear layer output with $n$ inputs, weight variance $\\sigma^2$, and input variance Var(x)"
+        },
+        {
+          "symbol": "\\sigma^2 = 1/n",
+          "name": "Stability condition",
+          "desc": "Weight variance required so that Var(z) = Var(x) — signal does not grow or shrink through the layer"
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Dosovitskiy et al. (2020) — An Image is Worth 16×16 Words (ViT)",
+      "title": "Uses truncated normal with std=0.02 for all weight and positional embedding initializations",
+      "url": null,
+      "note": "Uses truncated normal with std=0.02 for all weight and positional embedding initializations"
+    },
+    {
+      "label": "Martens (2010) — Deep Learning via Hessian-free Optimization",
+      "title": "Introduced sparse initialization motivated by biological connectivity patterns",
+      "url": null,
+      "note": "Introduced sparse initialization motivated by biological connectivity patterns"
+    }
+  ]
+}

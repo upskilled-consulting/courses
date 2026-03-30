@@ -1,0 +1,76 @@
+{
+  "id": "r0",
+  "moduleId": "weight-initialization",
+  "title": "Why Initialization Matters",
+  "estimatedMinutes": 12,
+  "learningObjectives": [
+    {
+      "id": "r0-lo1",
+      "verb": "Explain",
+      "description": "Explain the symmetry problem and why initializing all weights to the same value causes every neuron in a layer to learn the same function",
+      "skillTags": ["weight-initialization", "training-dynamics"]
+    },
+    {
+      "id": "r0-lo2",
+      "verb": "Describe",
+      "description": "Describe how activation variance propagates through a deep network and what happens when it explodes or collapses",
+      "skillTags": ["weight-initialization", "variance-scaling"]
+    },
+    {
+      "id": "r0-lo3",
+      "verb": "Identify",
+      "description": "Identify the three failure modes of bad initialization — signal collapse, signal explosion, and symmetry — and link each to a class of initializer",
+      "skillTags": ["weight-initialization", "training-dynamics"]
+    },
+    {
+      "id": "r0-lo4",
+      "verb": "Distinguish",
+      "description": "Distinguish the four main categories of initializer (constant, random, variance-scaling, structured) and state the primary use case for each",
+      "skillTags": ["weight-initialization"]
+    }
+  ],
+  "prevItem": null,
+  "nextItem": { "type": "reading", "id": "r1" },
+  "content": "## The Weight Initialization Problem\n\nBefore training begins, every weight in a neural network must be assigned a starting value. That choice determines:\n\n- Whether the forward pass produces meaningful activations or collapses to zero\n- Whether gradients flow cleanly backward or explode and vanish\n- How quickly — and sometimes whether — the network converges at all\n\nInitialization is not a minor implementation detail. It is the first decision that shapes the entire trajectory of training.\n\n## Failure Mode 1 — The Symmetry Problem\n\nSuppose you initialize all weights in a layer to the same value — say, zero.\n\nEvery neuron in the layer receives identical inputs and produces identical outputs. During backpropagation, every neuron receives identical gradients. On the next update, every weight changes by the same amount. The neurons remain identical — forever.\n\nThis is the **symmetry problem**: neurons that start identical stay identical. A layer with 512 neurons behaves like a layer with 1. All that capacity is wasted.\n\n$$h_j^{(l)} = \\sigma\\!\\left(\\sum_i w_{ij}^{(l)} h_i^{(l-1)} + b_j^{(l)}\\right)$$\n\nIf $w_{ij}^{(l)} = c$ for all $i, j$, then $h_j^{(l)}$ is identical for all $j$. The gradients $\\partial \\mathcal{L} / \\partial w_{ij}^{(l)}$ are also identical, so weights update in lockstep. Symmetry is preserved throughout training.\n\n**The fix**: break symmetry by initializing weights from a random distribution so that different neurons start from different points.\n\n## Failure Mode 2 — Signal Collapse\n\nRandom initialization fixes symmetry, but the scale of the random values matters enormously.\n\nConsider a deep network with $L$ layers, each applying $z^{(l)} = W^{(l)} h^{(l-1)}$ (no activation for simplicity). If weights are drawn from $\\mathcal{N}(0, \\sigma^2)$, the variance of the output at layer $l$ is:\n\n$$\\text{Var}(z_j^{(l)}) = n_{l-1} \\cdot \\sigma^2 \\cdot \\text{Var}(h^{(l-1)})$$\n\nwhere $n_{l-1}$ is the number of inputs (fan-in). For a 50-layer network with $n = 500$ and $\\sigma = 0.01$:\n\n$$\\text{Var}(z^{(50)}) = (500 \\cdot 0.0001)^{50} = 0.05^{50} \\approx 10^{-85}$$\n\nActivations become numerically zero. No gradient can flow. Training is dead on arrival.\n\n## Failure Mode 3 — Signal Explosion\n\nThe opposite happens if $\\sigma$ is too large. With $\\sigma = 1$ and $n = 500$:\n\n$$\\text{Var}(z^{(50)}) = (500 \\cdot 1)^{50} = 500^{50} \\approx 10^{134}$$\n\nActivations overflow to NaN within the first forward pass.\n\n## The Goldilocks Condition\n\nFor variance to be stable across layers, we need:\n\n$$n_{l-1} \\cdot \\sigma^2 \\approx 1 \\quad \\Longrightarrow \\quad \\sigma^2 \\approx \\frac{1}{n_{l-1}}$$\n\nThis is the core insight behind every variance-scaling initializer. Xavier, He, and LeCun all derive from this condition — they differ in what activation function they account for and whether they consider fan-in, fan-out, or both.\n\n## The Same Logic Applies to Gradients\n\nThe backward pass has the same structure. The gradient of the loss w.r.t. layer $l-1$ is:\n\n$$\\frac{\\partial \\mathcal{L}}{\\partial h^{(l-1)}} = W^{(l)\\top} \\frac{\\partial \\mathcal{L}}{\\partial z^{(l)}}$$\n\nFor gradient variance to be stable, we need:\n\n$$n_l \\cdot \\sigma^2 \\approx 1 \\quad \\Longrightarrow \\quad \\sigma^2 \\approx \\frac{1}{n_l}$$\n\nwhere $n_l$ is the fan-out (number of outputs). Forward and backward stability impose different constraints on $\\sigma^2$ — Xavier resolves the tension by using their harmonic mean.\n\n## The Four Categories of Initializer\n\n| Category | Examples | Primary Use |\n|----------|----------|-------------|\n| **Constant** | zeros, ones, constant, eye, dirac | Biases, identity residuals, specialized conv layers |\n| **Random** | uniform, normal, truncated normal, sparse | Generic starting points when scale is set externally |\n| **Variance-scaling** | Xavier/Glorot, He/Kaiming, LeCun | Default for weights in Linear and Conv layers |\n| **Structured** | Orthogonal | RNN hidden-to-hidden weights; deep linear networks |\n\nThe readings that follow cover each category in detail — formulas, code, and when to reach for each one.",
+  "equationBreakdowns": [
+    {
+      "label": "Variance propagation through a linear layer",
+      "terms": [
+        {
+          "symbol": "\\text{Var}(z_j^{(l)})",
+          "name": "Output variance",
+          "desc": "Variance of pre-activations at layer $l$, assuming independent inputs and weights"
+        },
+        {
+          "symbol": "n_{l-1}",
+          "name": "Fan-in",
+          "desc": "Number of input units feeding into layer $l$; acts as a multiplier on variance"
+        },
+        {
+          "symbol": "\\sigma^2",
+          "name": "Weight variance",
+          "desc": "Variance of the weight distribution used for initialization"
+        },
+        {
+          "symbol": "\\text{Var}(h^{(l-1)})",
+          "name": "Input variance",
+          "desc": "Variance of activations arriving from the previous layer"
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Glorot & Bengio (2010) — Understanding the Difficulty of Training Deep Feedforward Neural Networks",
+      "title": "First systematic study of initialization and variance propagation; introduced Xavier initialization",
+      "url": null,
+      "note": "First systematic study of initialization and variance propagation; introduced Xavier initialization"
+    },
+    {
+      "label": "He et al. (2015) — Delving Deep into Rectifiers",
+      "title": "Extended the variance analysis to ReLU networks; introduced He/Kaiming initialization",
+      "url": null,
+      "note": "Extended the variance analysis to ReLU networks; introduced He/Kaiming initialization"
+    }
+  ]
+}

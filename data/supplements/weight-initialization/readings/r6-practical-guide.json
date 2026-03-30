@@ -1,0 +1,50 @@
+{
+  "id": "r6",
+  "moduleId": "weight-initialization",
+  "title": "Practical Guide & Default Behaviors",
+  "estimatedMinutes": 13,
+  "learningObjectives": [
+    {
+      "id": "r6-lo1",
+      "verb": "State",
+      "description": "State the default initialization used by PyTorch for nn.Linear, nn.Conv2d, nn.Embedding, nn.LSTM, and nn.BatchNorm1d",
+      "skillTags": ["weight-initialization"]
+    },
+    {
+      "id": "r6-lo2",
+      "verb": "State",
+      "description": "State the default initialization used by TensorFlow/Keras for Dense, Conv2D, LSTM, and BatchNormalization",
+      "skillTags": ["weight-initialization"]
+    },
+    {
+      "id": "r6-lo3",
+      "verb": "Apply",
+      "description": "Apply model.apply() in PyTorch and kernel_initializer in TensorFlow to override default initialization across all layers of a model",
+      "skillTags": ["weight-initialization"]
+    },
+    {
+      "id": "r6-lo4",
+      "verb": "Select",
+      "description": "Select the appropriate initializer for a given activation function and layer type using the decision guide",
+      "skillTags": ["weight-initialization"]
+    }
+  ],
+  "prevItem": { "type": "reading", "id": "r5" },
+  "nextItem": { "type": "quiz", "id": "q2" },
+  "content": "## PyTorch Default Initializations\n\nPyTorch initializes every layer type via its `reset_parameters()` method, called at construction. The defaults are documented but not always obvious:\n\n| Layer | Weight default | Bias default |\n|-------|---------------|-------------|\n| `nn.Linear` | `kaiming_uniform_(a=√5)` | `uniform_(-1/√fan_in, 1/√fan_in)` |\n| `nn.Conv1d/2d/3d` | `kaiming_uniform_(a=√5)` | `uniform_(-1/√fan_in, 1/√fan_in)` |\n| `nn.Embedding` | `normal_(mean=0, std=1)` | N/A |\n| `nn.LSTM` / `nn.GRU` | `uniform_(-1/√H, 1/√H)` where $H$ is hidden size | same |\n| `nn.RNN` | `uniform_(-1/√H, 1/√H)` | same |\n| `nn.BatchNorm*` | `ones_()` (weight $\\gamma$) | `zeros_()` (bias $\\beta$) |\n| `nn.LayerNorm` | `ones_()` (weight) | `zeros_()` (bias) |\n| `nn.MultiheadAttention` | Same as Linear for in/out projections | zeros |\n\n**A note on PyTorch's kaiming_uniform_ default for Linear and Conv**: the `a=√5` parameter corresponds to a LeakyReLU negative slope of $\\sqrt{5} \\approx 2.24$, which is not a standard activation. This is a historical artifact that has been kept for backward compatibility. In practice, if your network uses ReLU, explicitly override with `a=0`.\n\n```python\nimport torch.nn as nn\n\n# Inspect default initialization behavior\nlinear = nn.Linear(128, 256)\nprint(linear.weight[:2, :4])   # kaiming_uniform_(a=sqrt(5)) by default\nprint(linear.bias[:4])         # uniform_(-1/sqrt(128), 1/sqrt(128))\n\n# Override at construction time\nlinear.apply(lambda m: nn.init.kaiming_normal_(m.weight, nonlinearity='relu')\n    if isinstance(m, nn.Linear) else None)\n```\n\n## TensorFlow / Keras Default Initializations\n\n| Layer | Kernel default | Bias default | Recurrent default |\n|-------|---------------|-------------|------------------|\n| `Dense` | `GlorotUniform` | `Zeros` | N/A |\n| `Conv1D/2D/3D` | `GlorotUniform` | `Zeros` | N/A |\n| `Embedding` | `RandomUniform(-0.05, 0.05)` | N/A | N/A |\n| `LSTM` | `GlorotUniform` | `Zeros` | `Orthogonal` |\n| `GRU` | `GlorotUniform` | `Zeros` | `Orthogonal` |\n| `SimpleRNN` | `GlorotUniform` | `Zeros` | `Orthogonal` |\n| `BatchNormalization` | `Ones` ($\\gamma$) | `Zeros` ($\\beta$) | N/A |\n| `LayerNormalization` | `Ones` ($\\gamma$) | `Zeros` ($\\beta$) | N/A |\n\nNote: Keras uses **GlorotUniform** (Xavier uniform) as the default for all feedforward layers, while PyTorch uses **kaiming_uniform_**. This is one of the main practical differences between the two frameworks.\n\n## Overriding Initialization in PyTorch\n\nThe idiomatic PyTorch approach is `model.apply(fn)`, which recursively applies `fn` to every submodule:\n\n```python\nimport torch.nn as nn\nimport math\n\n# Strategy 1: model.apply with isinstance checks\ndef init_weights(m):\n    if isinstance(m, nn.Linear):\n        nn.init.kaiming_normal_(m.weight, nonlinearity='relu')\n        nn.init.zeros_(m.bias)\n    elif isinstance(m, nn.Conv2d):\n        nn.init.kaiming_normal_(m.weight, nonlinearity='relu')\n        if m.bias is not None:\n            nn.init.zeros_(m.bias)\n    elif isinstance(m, nn.Embedding):\n        nn.init.normal_(m.weight, mean=0, std=0.02)\n    elif isinstance(m, (nn.BatchNorm1d, nn.BatchNorm2d)):\n        nn.init.ones_(m.weight)\n        nn.init.zeros_(m.bias)\n\nmodel = nn.Sequential(\n    nn.Linear(128, 256), nn.ReLU(),\n    nn.Linear(256, 10)\n)\nmodel.apply(init_weights)\n\n# Strategy 2: override reset_parameters in a custom module\nclass MyLinear(nn.Linear):\n    def reset_parameters(self):\n        nn.init.xavier_uniform_(self.weight)\n        nn.init.zeros_(self.bias)\n```\n\n## Overriding Initialization in TensorFlow\n\nIn Keras, pass the initializer at layer construction:\n\n```python\nimport tensorflow as tf\n\n# Per-layer override\nmodel = tf.keras.Sequential([\n    tf.keras.layers.Dense(256, activation='relu',\n        kernel_initializer=tf.keras.initializers.HeNormal(),\n        bias_initializer='zeros'),\n    tf.keras.layers.Dense(128, activation='relu',\n        kernel_initializer=tf.keras.initializers.HeNormal(),\n        bias_initializer='zeros'),\n    tf.keras.layers.Dense(10, activation='softmax',\n        kernel_initializer=tf.keras.initializers.GlorotUniform())\n])\n\n# Functional API\ndef make_dense(units, activation):\n    return tf.keras.layers.Dense(\n        units, activation=activation,\n        kernel_initializer='he_normal',   # string shorthand\n        bias_initializer='zeros'\n    )\n\n# LSTM with orthogonal recurrent init (already the default, shown explicitly)\nlstm = tf.keras.layers.LSTM(64,\n    kernel_initializer='glorot_uniform',\n    recurrent_initializer='orthogonal',\n    bias_initializer='zeros')\n```\n\n## Initializer String Shorthands\n\nBoth frameworks accept string names for common initializers:\n\n| Initializer | PyTorch (no strings — use functions) | TF/Keras string |\n|------------|--------------------------------------|----------------|\n| Xavier uniform | `nn.init.xavier_uniform_` | `'glorot_uniform'` |\n| Xavier normal | `nn.init.xavier_normal_` | `'glorot_normal'` |\n| He normal | `nn.init.kaiming_normal_` | `'he_normal'` |\n| He uniform | `nn.init.kaiming_uniform_` | `'he_uniform'` |\n| Zeros | `nn.init.zeros_` | `'zeros'` |\n| Ones | `nn.init.ones_` | `'ones'` |\n| Orthogonal | `nn.init.orthogonal_` | `'orthogonal'` |\n| Truncated normal | `nn.init.trunc_normal_` | `'truncated_normal'` |\n\n## Decision Guide\n\nUse this table as a starting point — it reflects empirical best practices across modern architectures:\n\n| Activation | Layer type | Recommended init |\n|-----------|------------|------------------|\n| ReLU, LeakyReLU, PReLU | Linear, Conv | **He / Kaiming** (normal, fan_in) |\n| GELU, SiLU, Mish | Linear, Conv | He or Xavier — both work; He is slightly more principled |\n| Sigmoid, Tanh | Linear | **Xavier / Glorot** |\n| Linear (no activation) | Linear | **Xavier** |\n| SELU | Linear | **LeCun** |\n| Any | RNN hidden-to-hidden | **Orthogonal** |\n| Any | Embedding | `normal_(std=0.02)` or `uniform_(-0.05, 0.05)` |\n| Any | BatchNorm weight $\\gamma$ | `ones_` |\n| Any | BatchNorm bias $\\beta$ | `zeros_` |\n| Any | Output bias (classification) | `zeros_` or log-prior |\n\n## Common Mistakes\n\n**1. Using PyTorch's default kaiming_uniform_(a=√5) for ReLU layers.** The default `a=√5` is not appropriate for ReLU. Always override:\n```python\nnn.init.kaiming_normal_(m.weight, a=0, nonlinearity='relu')\n```\n\n**2. Forgetting to initialize biases.** Framework defaults usually zero-initialize biases, but when you override weight init manually, bias init is often forgotten.\n\n**3. Using Xavier for ReLU networks.** Xavier initializes with half the variance that ReLU needs. Training will likely succeed eventually but may require a lower learning rate.\n\n**4. Using a fixed small std (e.g. 0.01) for all layers.** This ignores fan-in entirely. In a layer with 1024 inputs, $\\sigma = 0.01$ gives an output variance of $1024 \\times 0.0001 = 0.1024$ — signal collapse is avoided but barely. Use variance-scaling instead.\n\n**5. Applying orthogonal init to feedforward layers.** Orthogonal init is designed for square or nearly-square matrices where repeated multiplication is the concern. For standard feedforward layers, Xavier or He is more appropriate.",
+  "equationBreakdowns": [],
+  "references": [
+    {
+      "label": "PyTorch — torch.nn.init documentation",
+      "title": "Full reference for all PyTorch initialization functions including default layer behaviors",
+      "url": "https://docs.pytorch.org/docs/stable/nn.init.html",
+      "note": "Full reference for all PyTorch initialization functions including default layer behaviors"
+    },
+    {
+      "label": "TensorFlow — tf.keras.initializers documentation",
+      "title": "Full reference for all Keras initializer classes and their default assignments by layer",
+      "url": "https://www.tensorflow.org/api_docs/python/tf/keras/initializers",
+      "note": "Full reference for all Keras initializer classes and their default assignments by layer"
+    }
+  ]
+}

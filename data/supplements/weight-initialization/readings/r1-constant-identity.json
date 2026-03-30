@@ -1,0 +1,55 @@
+{
+  "id": "r1",
+  "moduleId": "weight-initialization",
+  "title": "Constant & Identity Initializations",
+  "estimatedMinutes": 11,
+  "learningObjectives": [
+    {
+      "id": "r1-lo1",
+      "verb": "Distinguish",
+      "description": "Distinguish when zero initialization is safe (biases) versus harmful (weights) and explain the symmetry mechanism that makes zero-weight networks untrainable",
+      "skillTags": ["weight-initialization"]
+    },
+    {
+      "id": "r1-lo2",
+      "verb": "Apply",
+      "description": "Apply zeros_, ones_, constant_, eye_, and dirac_ in PyTorch and their Keras equivalents to initialize specific tensors",
+      "skillTags": ["weight-initialization"]
+    },
+    {
+      "id": "r1-lo3",
+      "verb": "Explain",
+      "description": "Explain what dirac_ does to a convolutional weight tensor and why it produces an identity-like mapping at initialization",
+      "skillTags": ["weight-initialization"]
+    }
+  ],
+  "prevItem": { "type": "reading", "id": "r0" },
+  "nextItem": { "type": "reading", "id": "r2" },
+  "content": "## zeros — All Weights Set to Zero\n\n`torch.nn.init.zeros_(tensor)` / `tf.keras.initializers.Zeros()`\n\nSets every element of the tensor to $0$. As established in the previous reading, this breaks the network completely for weights: every neuron in a layer is identical, and symmetry is never broken.\n\n**When it is appropriate**: biases. A zero bias means the initial decision boundary passes through the origin, which is a reasonable starting point. Many frameworks default to zero bias initialization.\n\n**When to avoid**: weight matrices of any fully-connected or convolutional layer.\n\n**PyTorch:**\n```python\nimport torch\nimport torch.nn as nn\n\n# Weight tensor\nw = torch.empty(256, 128)\nnn.init.zeros_(w)   # all zeros — never use for weights\n\n# Correct use: bias only\nlinear = nn.Linear(128, 256)\nnn.init.zeros_(linear.bias)   # safe — bias zero init\n```\n\n**TensorFlow:**\n```python\nimport tensorflow as tf\n\n# In a layer — zeros for bias (the default), not for kernel\ndense = tf.keras.layers.Dense(\n    256,\n    kernel_initializer='glorot_uniform',  # NOT zeros\n    bias_initializer='zeros'              # safe\n)\n\n# Standalone\nzero_init = tf.keras.initializers.Zeros()\nvalues = zero_init(shape=(3, 4))   # tensor of zeros\n```\n\n## ones — All Weights Set to One\n\n`torch.nn.init.ones_(tensor)` / `tf.keras.initializers.Ones()`\n\nSets every element to $1$. Retains the symmetry problem (every neuron in a layer is identical) and additionally causes activations to grow quickly — a layer with 512 inputs and all-ones weights multiplies the input norm by $\\sqrt{512} \\approx 22$ per layer.\n\n**Legitimate uses**: initializing scale parameters in normalization layers to 1 (e.g. $\\gamma = 1$ in BatchNorm) so that the layer acts as an identity at the start of training. Both PyTorch and Keras do this by default.\n\n**PyTorch:**\n```python\nbn = nn.BatchNorm1d(128)\n# PyTorch does this internally:\nnn.init.ones_(bn.weight)   # gamma (scale) = 1\nnn.init.zeros_(bn.bias)    # beta (shift) = 0\n```\n\n**TensorFlow:**\n```python\nbatch_norm = tf.keras.layers.BatchNormalization()\n# Keras defaults: gamma_initializer='ones', beta_initializer='zeros'\n```\n\n## constant — Arbitrary Fixed Value\n\n`torch.nn.init.constant_(tensor, val)` / `tf.keras.initializers.Constant(value=0)`\n\nSets every element to a specified constant. Has the same symmetry problem as zeros and ones for weights. Used when you need a specific non-zero bias (e.g., initializing output logit biases to the log frequency of each class).\n\n**PyTorch:**\n```python\nw = torch.empty(10)\nnn.init.constant_(w, val=0.1)   # every element = 0.1\n\n# Use case: output layer bias initialized to class log-frequencies\nlog_freq = torch.log(class_counts / class_counts.sum())\nnn.init.constant_(output_layer.bias, val=0.0)  # or copy log_freq manually\n```\n\n**TensorFlow:**\n```python\nconst_init = tf.keras.initializers.Constant(value=0.1)\nbias = const_init(shape=(10,))\n\n# In a layer\ndense = tf.keras.layers.Dense(10, bias_initializer=tf.keras.initializers.Constant(0.1))\n```\n\n## eye — Identity Matrix\n\n`torch.nn.init.eye_(tensor)` / `tf.keras.initializers.Identity(gain=1.0)`\n\nInitializes a 2D weight matrix as the identity matrix $I$ (or as close as possible for non-square tensors, filling the rest with zeros). At initialization, the layer acts as a passthrough — input equals output.\n\nThis is useful when you want a layer to start by doing nothing and gradually learn a transformation. It is most relevant for:\n- **Residual connections**: if the shortcut and the main branch both start near the identity, the residual sum is $\\approx 2x$, which is still well-conditioned\n- **Linear probes**: when inserting an adapter layer that should not disrupt a pretrained representation at the start of fine-tuning\n\n**PyTorch:**\n```python\nw = torch.empty(64, 64)\nnn.init.eye_(w)   # identity matrix; requires square or padded tensor\n# w[i][j] = 1 if i == j, else 0\n```\n\n**TensorFlow:**\n```python\n# Only valid for 2D square weight matrices\nidentity_init = tf.keras.initializers.Identity(gain=1.0)\nw = identity_init(shape=(64, 64))\n\ndense = tf.keras.layers.Dense(64, kernel_initializer='identity')  # square only\n```\n\n## dirac — Identity-Like Initialization for Conv Layers\n\n`torch.nn.init.dirac_(tensor, groups=1)` *(PyTorch only)*\n\nInitializes a convolutional weight tensor so that the layer acts as a passthrough at initialization: each output channel is an exact copy of the corresponding input channel, with the filter centered on the current pixel and zero everywhere else.\n\nFor a kernel of shape $(C_{out}, C_{in}, kH, kW)$ with $C_{out} = C_{in}$, this places a $1$ at the center of each $kH \\times kW$ filter and $0$ elsewhere — a Dirac delta function in spatial dimensions.\n\n**Why it matters**: in very deep convolutional networks (e.g., plain networks without explicit residual connections), dirac initialization allows the model to start as an identity function across layers and learn to deviate from it. It is the convolutional analogue of eye_.\n\n**PyTorch:**\n```python\n# groups=1: standard conv; set groups to match nn.Conv2d groups argument\nconv_weight = torch.empty(8, 8, 3, 3)   # out_channels, in_channels, kH, kW\nnn.init.dirac_(conv_weight)              # requires out_channels == in_channels\n\n# Applying to an nn.Conv2d layer\nconv = nn.Conv2d(in_channels=16, out_channels=16, kernel_size=3, padding=1)\nnn.init.dirac_(conv.weight)\nnn.init.zeros_(conv.bias)\n```\n\n**TensorFlow:** No direct equivalent. A similar effect can be achieved manually:\n```python\nimport numpy as np\nimport tensorflow as tf\n\ndef dirac_initializer(shape, dtype=tf.float32):\n    \"\"\"Identity-like init for conv layers with in_channels == out_channels.\"\"\"\n    out_ch, kH, kW, in_ch = shape   # TF uses (kH, kW, in_ch, out_ch)\n    kernel = np.zeros(shape, dtype=np.float32)\n    min_ch = min(out_ch, in_ch)\n    center_h, center_w = kH // 2, kW // 2\n    for c in range(min_ch):\n        kernel[center_h, center_w, c, c] = 1.0\n    return tf.constant(kernel, dtype=dtype)\n\nconv = tf.keras.layers.Conv2D(16, 3, padding='same',\n    kernel_initializer=dirac_initializer)\n```\n\n## Summary\n\n| Initializer | PyTorch | TF/Keras | Use for |\n|-------------|---------|----------|---------|\n| zeros | `zeros_()` | `Zeros()` | Biases, BatchNorm beta |\n| ones | `ones_()` | `Ones()` | BatchNorm gamma, LayerNorm scale |\n| constant | `constant_(val)` | `Constant(value)` | Output biases at specific value |\n| eye | `eye_()` | `Identity(gain)` | Square weight matrices as passthrough |\n| dirac | `dirac_(groups)` | *(manual)* | Conv layers as passthrough |",
+  "equationBreakdowns": [
+    {
+      "label": "Identity matrix initialization",
+      "terms": [
+        {
+          "symbol": "W_{ij} = \\mathbf{1}[i = j]",
+          "name": "Identity weight",
+          "desc": "Weight is 1 on the diagonal, 0 off-diagonal — the layer passes its input through unchanged at initialization"
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "PyTorch — torch.nn.init documentation",
+      "title": "Full reference for all PyTorch initialization functions",
+      "url": "https://docs.pytorch.org/docs/stable/nn.init.html",
+      "note": "Full reference for all PyTorch initialization functions"
+    },
+    {
+      "label": "TensorFlow — tf.keras.initializers documentation",
+      "title": "Full reference for all Keras initializer classes",
+      "url": "https://www.tensorflow.org/api_docs/python/tf/keras/initializers",
+      "note": "Full reference for all Keras initializer classes"
+    }
+  ]
+}

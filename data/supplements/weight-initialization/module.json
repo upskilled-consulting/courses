@@ -1,0 +1,109 @@
+{
+  "id": "weight-initialization",
+  "type": "supplement",
+  "title": "Weight Initialization",
+  "level": "Intermediate",
+  "estimatedHours": 3,
+  "color": "#2d5a8e",
+  "accentLight": "#c8d9f0",
+  "description": "A ground-up treatment of all PyTorch and TensorFlow/Keras weight initializers — from constant and random baselines to variance-scaling methods (Xavier/Glorot, He/Kaiming, LeCun) and orthogonal initialization. Covers the variance-propagation derivations, default layer behaviors, and a practical selection guide by architecture and activation.",
+  "readings": [
+    {
+      "id": "r0",
+      "title": "Why Initialization Matters",
+      "estimatedMinutes": 12,
+      "description": "The symmetry-breaking problem, variance propagation through layers, and why the wrong starting point causes signals and gradients to explode or collapse.",
+      "dataPath": "data/supplements/weight-initialization/readings/r0-why-init-matters.json"
+    },
+    {
+      "id": "r1",
+      "title": "Constant & Identity Initializations",
+      "estimatedMinutes": 11,
+      "description": "zeros, ones, constant, eye, identity, and dirac — what each does, when it is appropriate, and why all-zeros weights break symmetry in practice.",
+      "dataPath": "data/supplements/weight-initialization/readings/r1-constant-identity.json"
+    },
+    {
+      "id": "r2",
+      "title": "Random Distribution Initializations",
+      "estimatedMinutes": 12,
+      "description": "Uniform, normal, truncated normal, and sparse initializations — the role of scale, why naïve N(0,1) fails, and how to pick the right standard deviation.",
+      "dataPath": "data/supplements/weight-initialization/readings/r2-random-distributions.json"
+    },
+    {
+      "id": "r3",
+      "title": "Xavier / Glorot Initialization",
+      "estimatedMinutes": 15,
+      "description": "The variance-propagation derivation, fan-in/fan-out trade-off, uniform vs normal variants, the gain parameter, and when to prefer Xavier over He.",
+      "dataPath": "data/supplements/weight-initialization/readings/r3-xavier-glorot.json"
+    },
+    {
+      "id": "r4",
+      "title": "He / Kaiming & LeCun Initialization",
+      "estimatedMinutes": 15,
+      "description": "Why ReLU invalidates Xavier, the corrected variance formula for ReLU/LeakyReLU, fan modes, the a parameter, and LeCun initialization for SELU.",
+      "dataPath": "data/supplements/weight-initialization/readings/r4-he-kaiming-lecun.json"
+    },
+    {
+      "id": "r5",
+      "title": "Orthogonal & Structured Initializations",
+      "estimatedMinutes": 12,
+      "description": "Orthogonal initialization via SVD, why it prevents exploding/vanishing gradients in RNNs, dirac initialization for convolutional layers, and sparse initialization.",
+      "dataPath": "data/supplements/weight-initialization/readings/r5-orthogonal-structured.json"
+    },
+    {
+      "id": "r6",
+      "title": "Practical Guide & Default Behaviors",
+      "estimatedMinutes": 13,
+      "description": "PyTorch and Keras layer defaults, how to override initialization, the gain table, and a decision guide for every activation-architecture combination.",
+      "dataPath": "data/supplements/weight-initialization/readings/r6-practical-guide.json"
+    }
+  ],
+  "drills": [
+    {
+      "id": "d1",
+      "title": "Constant, Random & Xavier",
+      "cardCount": 12,
+      "estimatedMinutes": 10,
+      "dataPath": "data/supplements/weight-initialization/drills/d1-constant-random-xavier.json"
+    },
+    {
+      "id": "d2",
+      "title": "He, LeCun, Orthogonal & Selection",
+      "cardCount": 12,
+      "estimatedMinutes": 10,
+      "dataPath": "data/supplements/weight-initialization/drills/d2-he-orthogonal-selection.json"
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "q1",
+      "title": "Initialization Fundamentals",
+      "questionCount": 6,
+      "passingScore": 0.7,
+      "dataPath": "data/supplements/weight-initialization/quizzes/q1-fundamentals.json"
+    },
+    {
+      "id": "q2",
+      "title": "Variance-Scaling & Structured Initializations",
+      "questionCount": 6,
+      "passingScore": 0.7,
+      "dataPath": "data/supplements/weight-initialization/quizzes/q2-variance-scaling.json"
+    }
+  ],
+  "labs": [
+    {
+      "id": "lab1",
+      "title": "Weight Initialization in PyTorch",
+      "estimatedMinutes": 50,
+      "description": "Apply every torch.nn.init function, run variance-propagation experiments, compare convergence across initializers on a deep MLP, and verify orthogonality numerically.",
+      "dataPath": "data/supplements/weight-initialization/labs/lab1-pytorch.json"
+    },
+    {
+      "id": "lab2",
+      "title": "Weight Initialization in TensorFlow",
+      "estimatedMinutes": 40,
+      "description": "Use all tf.keras.initializers, verify parity with PyTorch equivalents, and compare training stability of Xavier vs He on CIFAR-10 with different activations.",
+      "dataPath": "data/supplements/weight-initialization/labs/lab2-tensorflow.json"
+    }
+  ]
+}

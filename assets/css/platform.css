@@ -896,8 +896,7 @@ img, svg { display: block; max-width: 100%; }
 .reading-main {
   flex: 1;
   min-width: 0;
-  padding: 40px 56px 80px 48px;
-  max-width: 760px;
+  padding: 40px max(56px, calc(50% - 420px)) 80px max(48px, calc(50% - 420px));
   position: relative;
 }
 
@@ -2100,6 +2099,30 @@ img, svg { display: block; max-width: 100%; }
 /* ----------------------------------------------------------
    12. RESPONSIVE
    ---------------------------------------------------------- */
+
+/* ≥1400px: column grows to ~920px */
+@media (min-width: 1400px) {
+  .reading-main {
+    padding-left:  max(56px, calc(50% - 460px));
+    padding-right: max(56px, calc(50% - 460px));
+  }
+}
+
+/* ≥1700px: column grows to ~1020px */
+@media (min-width: 1700px) {
+  .reading-main {
+    padding-left:  max(64px, calc(50% - 510px));
+    padding-right: max(64px, calc(50% - 510px));
+  }
+}
+
+/* ≥2100px: column grows to ~1100px and stops */
+@media (min-width: 2100px) {
+  .reading-main {
+    padding-left:  max(80px, calc(50% - 550px));
+    padding-right: max(80px, calc(50% - 550px));
+  }
+}
 
 @media (max-width: 900px) {
   .reading-sidebar { display: none; }

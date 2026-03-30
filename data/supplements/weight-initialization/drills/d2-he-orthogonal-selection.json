@@ -1,0 +1,69 @@
+{
+  "id": "d2",
+  "moduleId": "weight-initialization",
+  "title": "He, LeCun, Orthogonal & Selection",
+  "description": "Flashcards covering He/Kaiming initialization, LeCun initialization, orthogonal initialization, framework defaults, and practical selection — formulas, code, and decision rules.",
+  "estimatedMinutes": 10,
+  "cards": [
+    {
+      "id": "c01",
+      "front": "**Why ReLU needs He initialization instead of Xavier**",
+      "back": "Xavier assumes $\\text{Var}(\\sigma(z)) \\approx \\text{Var}(z)$ — the activation preserves variance.\n\n**ReLU violates this:** for zero-mean input, half the values are negative and get zeroed. This halves the variance:\n$$\\text{Var}(\\text{ReLU}(z)) = \\frac{1}{2}\\text{Var}(z)$$\n\n**Fix:** double the weight variance to compensate:\n$$\\text{Var}(w) = \\frac{2}{\\text{fan\\_in}} \\quad \\text{(He/Kaiming)}$$\ncompared to Xavier's $\\text{Var}(w) = 2 / (\\text{fan\\_in} + \\text{fan\\_out})$.\n\n*For a square layer: He uses exactly twice the variance of Xavier.*"
+    },
+    {
+      "id": "c02",
+      "front": "**He normal formula** — with the `a` parameter for LeakyReLU",
+      "back": "$$w \\sim \\mathcal{N}(0, \\sigma^2), \\quad \\sigma = \\sqrt{\\frac{2}{(1 + a^2) \\cdot \\text{fan\\_in}}}$$\n\n| Activation | $a$ value |\n|-----------|----------|\n| ReLU | 0 |\n| LeakyReLU (slope 0.01) | 0.01 |\n| LeakyReLU (slope 0.2) | 0.2 |\n\nFor ReLU ($a = 0$): $\\sigma = \\sqrt{2 / \\text{fan\\_in}}$\n\n**He uniform** bound: $\\text{bound} = \\sqrt{3} \\cdot \\sigma = \\sqrt{6 / \\text{fan\\_in}}$\n\n*PyTorch:* `kaiming_normal_(w, a=0, mode='fan_in', nonlinearity='relu')`\n*TF:* `HeNormal()` (uses `a=0`, `mode='fan_in'` internally)"
+    },
+    {
+      "id": "c03",
+      "front": "**fan_in vs fan_out mode** in kaiming_normal_",
+      "back": "| Mode | Formula | Stabilizes |\n|------|---------|------------|\n| `fan_in` (default) | $\\sigma = \\sqrt{2 / \\text{fan\\_in}}$ | **Forward pass** — activation variance |\n| `fan_out` | $\\sigma = \\sqrt{2 / \\text{fan\\_out}}$ | **Backward pass** — gradient variance |\n\n**When to use fan_out:** In very deep networks where gradient stability is the primary concern, or when fan_out $\\gg$ fan_in and you're worried about gradient explosion in the backward pass.\n\n**Default:** `fan_in` — correct for most feedforward networks.\n\n```python\n# fan_in (standard)\nnn.init.kaiming_normal_(w, mode='fan_in', nonlinearity='relu')\n\n# fan_out\nnn.init.kaiming_normal_(w, mode='fan_out', nonlinearity='relu')\n```"
+    },
+    {
+      "id": "c04",
+      "front": "**LeCun initialization** — formula and required activation",
+      "back": "$$\\sigma_{\\text{LeCun}} = \\sqrt{\\frac{1}{\\text{fan\\_in}}}, \\qquad \\text{bound}_{\\text{LeCun}} = \\sqrt{\\frac{3}{\\text{fan\\_in}}}$$\n\nHalf the variance of He: $1/\\text{fan\\_in}$ vs $2/\\text{fan\\_in}$.\n\n**Required activation: SELU.** LeCun + SELU = self-normalizing networks. Activations maintain approximately $\\mathcal{N}(0,1)$ statistics throughout training without BatchNorm.\n\n*TF:* `LecunNormal()`, `LecunUniform()` — built-in.\n\n*PyTorch:* no built-in — implement manually:\n```python\nimport math\nstd = math.sqrt(1.0 / fan_in)\nnn.init.normal_(w, mean=0, std=std)\n```\n\n*Do not mix LeCun with ReLU or He with SELU.*"
+    },
+    {
+      "id": "c05",
+      "front": "**VarianceScaling** in TensorFlow — the unified formula behind Glorot, He, and LeCun",
+      "back": "All TF variance-scaling initializers are special cases of `VarianceScaling(scale, mode, distribution)`:\n\n| Initializer | scale | mode | distribution |\n|------------|-------|------|--------------|\n| GlorotUniform | 1.0 | `fan_avg` | `uniform` |\n| GlorotNormal | 1.0 | `fan_avg` | `truncated_normal` |\n| HeNormal | 2.0 | `fan_in` | `truncated_normal` |\n| HeUniform | 2.0 | `fan_in` | `uniform` |\n| LecunNormal | 1.0 | `fan_in` | `truncated_normal` |\n| LecunUniform | 1.0 | `fan_in` | `uniform` |\n\n*`fan_avg` = average of fan_in and fan_out (equivalent to Xavier's denominator)*\n\n```python\n# Equivalent to HeNormal:\nvs = tf.keras.initializers.VarianceScaling(\n    scale=2.0, mode='fan_in', distribution='truncated_normal')\n```"
+    },
+    {
+      "id": "c06",
+      "front": "**Orthogonal initialization** — mathematical property and how it is computed",
+      "back": "**Property:** $W^\\top W = I$ (orthonormal columns). All singular values = 1.\n\n**Why it matters:** Repeated multiplication by $W$ (as in RNNs across $T$ timesteps) does not change the norm of a vector — no gradient explosion or collapse from the weight matrix alone.\n\n**Construction via SVD:**\n1. Draw $A \\sim \\mathcal{N}(0,1)^{m \\times n}$\n2. Compute SVD: $A = U \\Sigma V^\\top$\n3. Use $U$ (if $m \\geq n$) or $V^\\top$ (if $m < n$) as the weight matrix\n4. Scale by `gain`\n\n*PyTorch:* `nn.init.orthogonal_(w, gain=1.0)`\n*TF:* `tf.keras.initializers.Orthogonal(gain=1.0)`"
+    },
+    {
+      "id": "c07",
+      "front": "**When to use orthogonal initialization**",
+      "back": "| Use case | Reason |\n|----------|--------|\n| RNN hidden-to-hidden weights | Applied $T$ times across timesteps; singular values = 1 prevents gradient explosion/collapse |\n| Deep linear networks | All layers are rotations at init; effective Jacobian is well-conditioned |\n| Very deep feedforward (experimental) | Improved gradient flow in depth, though BatchNorm and He init usually suffice |\n\n**Keras default for recurrent layers:**\n```python\n# LSTM, GRU, SimpleRNN all default to recurrent_initializer='orthogonal'\nlstm = tf.keras.layers.LSTM(64)  # recurrent weights already orthogonal\n```\n\n**PyTorch for LSTM (must set manually):**\n```python\nfor name, p in lstm.named_parameters():\n    if 'weight_hh' in name:\n        nn.init.orthogonal_(p)\n```"
+    },
+    {
+      "id": "c08",
+      "front": "**PyTorch default initializations** — which initializer does each layer use?",
+      "back": "| Layer | Weight | Bias |\n|-------|--------|------|\n| `nn.Linear` | `kaiming_uniform_(a=√5)` | `uniform_(-1/√fan_in, 1/√fan_in)` |\n| `nn.Conv2d` | `kaiming_uniform_(a=√5)` | `uniform_(-1/√fan_in, 1/√fan_in)` |\n| `nn.Embedding` | `normal_(0, 1)` | N/A |\n| `nn.LSTM/GRU/RNN` | `uniform_(-1/√H, 1/√H)` | same |\n| `nn.BatchNorm*` | `ones_()` ($\\gamma$) | `zeros_()` ($\\beta$) |\n| `nn.LayerNorm` | `ones_()` | `zeros_()` |\n\n**Key caveat:** `nn.Linear` uses `a=√5` in kaiming_uniform_, which is not appropriate for ReLU. Always override when you know the activation function."
+    },
+    {
+      "id": "c09",
+      "front": "**TF/Keras default initializations** — which initializer does each layer use?",
+      "back": "| Layer | Kernel | Bias | Recurrent |\n|-------|--------|------|-----------|\n| `Dense` | GlorotUniform | Zeros | N/A |\n| `Conv2D` | GlorotUniform | Zeros | N/A |\n| `LSTM` | GlorotUniform | Zeros | Orthogonal |\n| `GRU` | GlorotUniform | Zeros | Orthogonal |\n| `SimpleRNN` | GlorotUniform | Zeros | Orthogonal |\n| `Embedding` | RandomUniform(-0.05, 0.05) | N/A | N/A |\n| `BatchNormalization` | Ones ($\\gamma$) | Zeros ($\\beta$) | N/A |\n\n**Key difference from PyTorch:** Keras defaults to GlorotUniform (Xavier) for all feedforward layers; PyTorch defaults to kaiming_uniform_(a=√5). Neither default is ideal for ReLU without override."
+    },
+    {
+      "id": "c10",
+      "front": "**Overriding init in PyTorch** — the `model.apply()` pattern",
+      "back": "```python\nimport torch.nn as nn\n\ndef init_weights(m):\n    if isinstance(m, nn.Linear):\n        nn.init.kaiming_normal_(m.weight, nonlinearity='relu')\n        nn.init.zeros_(m.bias)\n    elif isinstance(m, nn.Conv2d):\n        nn.init.kaiming_normal_(m.weight, nonlinearity='relu')\n        if m.bias is not None:\n            nn.init.zeros_(m.bias)\n    elif isinstance(m, (nn.BatchNorm1d, nn.BatchNorm2d)):\n        nn.init.ones_(m.weight)\n        nn.init.zeros_(m.bias)\n\nmodel.apply(init_weights)   # recursively visits all submodules\n```\n\n*`model.apply(fn)` calls `fn` on every `nn.Module` in the tree, bottom-up.*"
+    },
+    {
+      "id": "c11",
+      "front": "**Common initialization mistakes** — the four most frequent errors",
+      "back": "1. **Using PyTorch's default `a=√5` for ReLU networks.** Override:\n   `nn.init.kaiming_normal_(m.weight, a=0, nonlinearity='relu')`\n\n2. **Using Xavier for ReLU networks.** Xavier initializes with half the needed variance — training may converge but slowly.\n\n3. **Forgetting bias initialization when overriding weights.** Framework defaults zero-initialize biases; manual overrides often skip them.\n\n4. **Using fixed small std (e.g. 0.01) for all layers regardless of size.** A 1024-input layer with std=0.01: output variance = $1024 \\times 0.0001 = 0.1$. Always scale std to fan_in."
+    },
+    {
+      "id": "c12",
+      "front": "**Complete decision table** — initialization by activation and layer type",
+      "back": "| Activation | Layer | Init |\n|-----------|-------|------|\n| Sigmoid, Tanh | Linear, Conv | Xavier / Glorot |\n| None (linear) | Linear | Xavier / Glorot |\n| ReLU, ReLU6 | Linear, Conv | He normal (fan_in, a=0) |\n| LeakyReLU | Linear, Conv | He normal (a=slope) |\n| GELU, SiLU, Mish | Linear, Conv | He normal (a=0) |\n| SELU | Linear | LeCun normal |\n| Any | RNN hidden-to-hidden | Orthogonal |\n| Any | Embedding | normal(std=0.02) |\n| Any | BatchNorm/LayerNorm weight | ones_ |\n| Any | BatchNorm/LayerNorm bias | zeros_ |\n| Any | Any bias | zeros_ |"
+    }
+  ]
+}

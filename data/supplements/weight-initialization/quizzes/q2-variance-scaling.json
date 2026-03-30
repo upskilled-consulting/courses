@@ -1,0 +1,91 @@
+{
+  "id": "q2",
+  "moduleId": "weight-initialization",
+  "title": "Variance-Scaling & Structured Initializations",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "type": "reading", "id": "r6" },
+  "nextItem": { "type": "lab", "id": "lab1" },
+  "questions": [
+    {
+      "id": "q2_1",
+      "type": "multiple-choice",
+      "prompt": "Xavier initialization preserves variance under the assumption that the activation function is approximately linear around zero. Why does this assumption fail for ReLU?",
+      "options": [
+        { "id": "a", "text": "ReLU has a gradient of 0 for positive inputs, compressing the signal", "correct": false },
+        { "id": "b", "text": "ReLU sets approximately half of its inputs to zero, effectively halving the active fan-in", "correct": true },
+        { "id": "c", "text": "ReLU outputs are not zero-centered, causing the mean of activations to shift away from zero", "correct": false },
+        { "id": "d", "text": "ReLU has an unbounded output range, which causes activations to exceed the assumed variance", "correct": false }
+      ],
+      "explanation": "Xavier's derivation assumed $\\text{Var}(\\sigma(z)) \\approx \\text{Var}(z)$ — the activation preserves variance. ReLU violates this: for a zero-mean input, half the values are negative and get zeroed out. This halves the variance: $\\text{Var}(\\text{ReLU}(z)) = \\text{Var}(z) / 2$. He initialization corrects for this by using $2/\\text{fan\\_in}$ instead of Xavier's $2/(\\text{fan\\_in} + \\text{fan\\_out})$, doubling the weight variance to compensate.",
+      "hint": "Focus on what ReLU does to negative pre-activations and how that changes the effective number of inputs contributing to each output."
+    },
+    {
+      "id": "q2_2",
+      "type": "multiple-choice",
+      "prompt": "A `Conv2d(64, 128, kernel_size=3)` layer uses He normal initialization with `mode='fan_in'`. What is the approximate standard deviation of the initialized weights?",
+      "options": [
+        { "id": "a", "text": "$\\sqrt{2 / (64 \\times 3 \\times 3)} = \\sqrt{2/576} \\approx 0.059$", "correct": true },
+        { "id": "b", "text": "$\\sqrt{2 / 128} \\approx 0.125$", "correct": false },
+        { "id": "c", "text": "$\\sqrt{2 / (64 + 128)} \\approx 0.102$", "correct": false },
+        { "id": "d", "text": "$\\sqrt{2 / (128 \\times 3 \\times 3)} \\approx 0.047$", "correct": false }
+      ],
+      "explanation": "For a Conv2d layer, fan_in = in_channels × kH × kW = 64 × 3 × 3 = 576. He normal with fan_in mode: $\\sigma = \\sqrt{2 / 576} \\approx 0.059$. Fan_out would use 128 × 3 × 3 = 1152 instead. For convolutional layers, PyTorch computes fan_in and fan_out by multiplying the channel count by the kernel spatial size.",
+      "hint": "For a Conv2d, fan_in is not just in_channels — it also includes the kernel spatial dimensions."
+    },
+    {
+      "id": "q2_3",
+      "type": "multiple-choice",
+      "prompt": "Which initializer should be paired with SELU activation for self-normalizing neural networks?",
+      "options": [
+        { "id": "a", "text": "He normal — SELU is a smooth ReLU variant, so the ReLU correction applies", "correct": false },
+        { "id": "b", "text": "Xavier uniform — SELU is smooth, so the linear approximation holds", "correct": false },
+        { "id": "c", "text": "LeCun normal — SELU requires Var(W) = 1/fan_in for its self-normalization property to hold", "correct": true },
+        { "id": "d", "text": "Orthogonal — SELU needs unit singular values for self-normalization", "correct": false }
+      ],
+      "explanation": "SELU was designed to be self-normalizing: with the correct initialization, activations maintain approximately unit Gaussian statistics throughout training — no BatchNorm needed. The Klambauer et al. (2017) paper proved that this holds specifically with LeCun normal initialization ($\\sigma = \\sqrt{1/\\text{fan\\_in}}$). He normal uses $\\sqrt{2/\\text{fan\\_in}}$, which is twice as large and breaks the self-normalization property.",
+      "hint": "LeCun initialization uses Var(W) = 1/fan_in, while He uses 2/fan_in. SELU's self-normalization requires a specific scale — which matches LeCun?"
+    },
+    {
+      "id": "q2_4",
+      "type": "multiple-choice",
+      "prompt": "You are initializing the hidden-to-hidden weight matrix of a 512-unit RNN that will process sequences of length 200. Which initialization is most appropriate and why?",
+      "options": [
+        { "id": "a", "text": "He normal — ReLU activations are common in modern RNNs", "correct": false },
+        { "id": "b", "text": "Xavier uniform — the hidden-to-hidden matrix is square, so fan_in equals fan_out", "correct": false },
+        { "id": "c", "text": "Orthogonal — repeated multiplication of the hidden-to-hidden matrix across 200 timesteps requires all singular values to equal 1 to prevent gradient explosion or vanishing", "correct": true },
+        { "id": "d", "text": "Truncated normal with std=0.01 — a small initialization prevents exploding gradients in long sequences", "correct": false }
+      ],
+      "explanation": "In an RNN, the hidden-to-hidden matrix $W_{hh}$ is applied 200 times across timesteps. Gradients propagate back through the product $W_{hh}^{200}$. If any singular value is $> 1$, this grows exponentially; if $< 1$, it shrinks exponentially. Orthogonal initialization sets all singular values to exactly 1, making the gradient product norm-preserving regardless of sequence length. Xavier or He would give unpredictable singular value distributions.",
+      "hint": "With 200 timesteps, the hidden-to-hidden matrix is multiplied by itself 200 times. What property of a matrix makes its repeated products bounded?"
+    },
+    {
+      "id": "q2_5",
+      "type": "multiple-choice",
+      "prompt": "In PyTorch, what is the default weight initialization for `nn.Linear`?",
+      "options": [
+        { "id": "a", "text": "`xavier_uniform_` with gain=1.0", "correct": false },
+        { "id": "b", "text": "`kaiming_normal_` with `a=0`, `mode='fan_in'`", "correct": false },
+        { "id": "c", "text": "`kaiming_uniform_` with `a=√5`", "correct": true },
+        { "id": "d", "text": "`normal_(mean=0, std=0.01)`", "correct": false }
+      ],
+      "explanation": "`nn.Linear` uses `kaiming_uniform_` with `a=√5` by default — a historical choice from PyTorch's early development that corresponds to a LeakyReLU with negative slope √5 ≈ 2.24, which is not a standard activation. This default is kept for backward compatibility. For ReLU networks, you should override with `kaiming_normal_(m.weight, a=0, nonlinearity='relu')` or similar. TensorFlow/Keras uses `GlorotUniform` (Xavier uniform) by default for `Dense`.",
+      "hint": "PyTorch's default for Linear is Kaiming-based, but with an unusual `a` parameter. TensorFlow defaults to a different family entirely."
+    },
+    {
+      "id": "q2_6",
+      "type": "code-completion",
+      "prompt": "Complete the code to initialize a Conv2d layer's weights with He normal initialization for a ReLU network using fan_in mode:",
+      "codeTemplate": "import torch.nn as nn\n\nconv = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1)\nnn.init.kaiming_normal_(conv.weight, a=___BLANK___, mode='fan_in', nonlinearity='relu')\nnn.init.zeros_(conv.bias)",
+      "blankKey": "___BLANK___",
+      "acceptedAnswers": [
+        "0",
+        "0.0",
+        "0, mode='fan_in', nonlinearity='relu'"
+      ],
+      "explanation": "`a=0` specifies that the negative-slope parameter for the activation is 0, which is the definition of ReLU (LeakyReLU with slope 0). The formula becomes $\\sigma = \\sqrt{2 / \\text{fan\\_in}}$. If you were using LeakyReLU with slope 0.1, you would pass `a=0.1`. The `nonlinearity='relu'` argument is used by PyTorch for documentation/matching purposes; the actual calculation uses `a`.",
+      "hint": "For ReLU, there is no negative slope — the gradient is 0 for all negative inputs. What value of `a` represents a zero negative slope?"
+    }
+  ]
+}

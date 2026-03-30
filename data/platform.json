@@ -10,30 +10,17 @@
       "description": "Build the mathematical and computational foundations required by the featured courses.",
       "courses": [
         {
-          "id": "calculus-foundations",
+          "id": "matrix-algebra",
           "type": "prereq",
-          "title": "Calculus Foundations",
-          "description": "Single-variable calculus for ML practitioners who know algebra and trigonometry. Covers the derivative as a limit, differentiation rules, exponentials and logarithms, optimization and gradient descent, and integration with the Fundamental Theorem. Every concept is anchored to its role in training neural networks.",
+          "title": "Matrix Algebra Foundations",
+          "description": "Core linear algebra for practitioners — matrix notation, operations, determinants, inverses, and eigendecomposition. Required background for any course involving optimization or geometric transformations.",
           "level": "Foundational",
-          "estimatedHours": 6,
-          "readingCount": 6,
-          "color": "#1776a4",
+          "estimatedHours": 3,
+          "readingCount": 5,
+          "color": "#1a3c75",
           "accentLight": "#c8d9f0",
-          "tags": ["Calculus", "Mathematics", "Optimization"],
-          "dataPath": "data/prereqs/calculus-foundations/module.json"
-        },
-        {
-          "id": "probability-foundations",
-          "type": "prereq",
-          "title": "Probability Foundations",
-          "description": "The probability and statistics prerequisites for modern ML — random variables, expectation, Bayes' theorem, key distributions (Gaussian, Bernoulli, Categorical, Dirichlet), importance sampling, and KL divergence. Directly addresses the Spinning Up background requirements for deep reinforcement learning.",
-          "level": "Foundational",
-          "estimatedHours": 7,
-          "readingCount": 6,
-          "color": "#5b4d9e",
-          "accentLight": "#b1aad1",
-          "tags": ["Probability", "Statistics", "Mathematics", "Reinforcement Learning"],
-          "dataPath": "data/prereqs/probability-foundations/module.json"
+          "tags": ["Linear Algebra", "Mathematics"],
+          "dataPath": "data/prereqs/matrix-algebra/module.json"
         },
         {
           "id": "linear-algebra",
@@ -49,17 +36,30 @@
           "dataPath": "data/prereqs/linear-algebra/module.json"
         },
         {
-          "id": "matrix-algebra",
+          "id": "probability-foundations",
           "type": "prereq",
-          "title": "Matrix Algebra Foundations",
-          "description": "Core linear algebra for practitioners — matrix notation, operations, determinants, inverses, and eigendecomposition. Required background for any course involving optimization or geometric transformations.",
+          "title": "Probability Foundations",
+          "description": "The probability and statistics prerequisites for modern ML — random variables, expectation, Bayes' theorem, key distributions (Gaussian, Bernoulli, Categorical, Dirichlet), importance sampling, and KL divergence. Directly addresses the Spinning Up background requirements for deep reinforcement learning.",
           "level": "Foundational",
-          "estimatedHours": 3,
-          "readingCount": 5,
-          "color": "#1a3c75",
+          "estimatedHours": 7,
+          "readingCount": 6,
+          "color": "#5b4d9e",
+          "accentLight": "#b1aad1",
+          "tags": ["Probability", "Statistics", "Mathematics", "Reinforcement Learning"],
+          "dataPath": "data/prereqs/probability-foundations/module.json"
+        },
+        {
+          "id": "calculus-foundations",
+          "type": "prereq",
+          "title": "Calculus Foundations",
+          "description": "Single-variable calculus for ML practitioners who know algebra and trigonometry. Covers the derivative as a limit, differentiation rules, exponentials and logarithms, optimization and gradient descent, and integration with the Fundamental Theorem. Every concept is anchored to its role in training neural networks.",
+          "level": "Foundational",
+          "estimatedHours": 6,
+          "readingCount": 6,
+          "color": "#1776a4",
           "accentLight": "#c8d9f0",
-          "tags": ["Linear Algebra", "Mathematics"],
-          "dataPath": "data/prereqs/matrix-algebra/module.json"
+          "tags": ["Calculus", "Mathematics", "Optimization"],
+          "dataPath": "data/prereqs/calculus-foundations/module.json"
         }
       ]
     },
@@ -68,32 +68,6 @@
       "title": "Supplements",
       "description": "Topic-focused mini-courses that fill in specific knowledge gaps for ML practitioners.",
       "courses": [
-        {
-          "id": "regularization",
-          "type": "supplement",
-          "title": "Regularization",
-          "description": "A unified treatment of regularization in deep learning — bias-variance tradeoff, L1/L2 weight penalties, dropout and its variants (MC Dropout, Stochastic Depth), normalization layers (BatchNorm, LayerNorm, RMSNorm), early stopping, data augmentation (Mixup, CutOut, CutMix), label smoothing, and implicit regularization from initialization and SGD noise.",
-          "level": "Intermediate",
-          "estimatedHours": 6,
-          "readingCount": 7,
-          "color": "#9e4060",
-          "accentLight": "#edced3",
-          "tags": ["Deep Learning", "Training", "Generalization", "CNNs", "Transformers"],
-          "dataPath": "data/supplements/regularization/module.json"
-        },
-        {
-          "id": "normalization",
-          "type": "supplement",
-          "title": "Normalization in Deep Learning",
-          "description": "A comprehensive treatment of normalization techniques — from why they work to how to choose between them. Covers BatchNorm internals (running stats, train/eval modes, SyncBN), the LayerNorm family (RMSNorm, DeepNorm, pre/post-norm), weight and spectral normalization, small-batch alternatives (GroupNorm, InstanceNorm), and adaptive/conditional normalization (AdaIN, SPADE, FiLM, adaLN-Zero in DiT).",
-          "level": "Intermediate",
-          "estimatedHours": 1.5,
-          "readingCount": 6,
-          "color": "#2a5757",
-          "accentLight": "#63aac9",
-          "tags": ["Deep Learning", "Training", "Transformers", "GANs", "Diffusion Models"],
-          "dataPath": "data/supplements/normalization/module.json"
-        },
         {
           "id": "architectures",
           "type": "supplement",
@@ -106,19 +80,6 @@
           "accentLight": "#63aac9",
           "tags": ["Deep Learning", "CNNs", "RNNs", "Transformers", "Attention"],
           "dataPath": "data/supplements/architectures/module.json"
-        },
-        {
-          "id": "loss-functions",
-          "type": "supplement",
-          "title": "Loss Functions",
-          "description": "A ground-up tour of all 20 PyTorch loss functions — regression, classification, distribution, ranking, embedding, and metric learning — with equation breakdowns, derivations from probability theory, and side-by-side PyTorch and TensorFlow implementations.",
-          "level": "Intermediate",
-          "estimatedHours": 3,
-          "readingCount": 7,
-          "color": "#7c5c9e",
-          "accentLight": "#d9c2d6",
-          "tags": ["Deep Learning", "Optimization", "PyTorch", "TensorFlow"],
-          "dataPath": "data/supplements/loss-functions/module.json"
         },
         {
           "id": "activation-functions",
@@ -134,6 +95,19 @@
           "dataPath": "data/supplements/activation-functions/module.json"
         },
         {
+          "id": "loss-functions",
+          "type": "supplement",
+          "title": "Loss Functions",
+          "description": "A ground-up tour of all 20 PyTorch loss functions — regression, classification, distribution, ranking, embedding, and metric learning — with equation breakdowns, derivations from probability theory, and side-by-side PyTorch and TensorFlow implementations.",
+          "level": "Intermediate",
+          "estimatedHours": 3,
+          "readingCount": 7,
+          "color": "#7c5c9e",
+          "accentLight": "#d9c2d6",
+          "tags": ["Deep Learning", "Optimization", "PyTorch", "TensorFlow"],
+          "dataPath": "data/supplements/loss-functions/module.json"
+        },
+        {
           "id": "optimizers",
           "type": "supplement",
           "title": "Optimizers",
@@ -145,6 +119,45 @@
           "accentLight": "#5ec9be",
           "tags": ["Deep Learning", "Optimization", "PyTorch", "TensorFlow"],
           "dataPath": "data/supplements/optimizers/module.json"
+        },
+        {
+          "id": "weight-initialization",
+          "type": "supplement",
+          "title": "Weight Initialization",
+          "description": "A ground-up treatment of all PyTorch and TensorFlow/Keras weight initializers — from constant and random baselines to variance-scaling methods (Xavier/Glorot, He/Kaiming, LeCun) and orthogonal initialization. Covers variance-propagation derivations, default layer behaviors, and a practical selection guide by architecture and activation.",
+          "level": "Intermediate",
+          "estimatedHours": 3,
+          "readingCount": 7,
+          "color": "#2d5a8e",
+          "accentLight": "#c8d9f0",
+          "tags": ["Deep Learning", "Training", "PyTorch", "TensorFlow"],
+          "dataPath": "data/supplements/weight-initialization/module.json"
+        },
+        {
+          "id": "normalization",
+          "type": "supplement",
+          "title": "Normalization in Deep Learning",
+          "description": "A comprehensive treatment of normalization techniques — from why they work to how to choose between them. Covers BatchNorm internals (running stats, train/eval modes, SyncBN), the LayerNorm family (RMSNorm, DeepNorm, pre/post-norm), weight and spectral normalization, small-batch alternatives (GroupNorm, InstanceNorm), and adaptive/conditional normalization (AdaIN, SPADE, FiLM, adaLN-Zero in DiT).",
+          "level": "Intermediate",
+          "estimatedHours": 1.5,
+          "readingCount": 6,
+          "color": "#2a5757",
+          "accentLight": "#63aac9",
+          "tags": ["Deep Learning", "Training", "Transformers", "GANs", "Diffusion Models"],
+          "dataPath": "data/supplements/normalization/module.json"
+        },
+        {
+          "id": "regularization",
+          "type": "supplement",
+          "title": "Regularization",
+          "description": "A unified treatment of regularization in deep learning — bias-variance tradeoff, L1/L2 weight penalties, dropout and its variants (MC Dropout, Stochastic Depth), normalization layers (BatchNorm, LayerNorm, RMSNorm), early stopping, data augmentation (Mixup, CutOut, CutMix), label smoothing, and implicit regularization from initialization and SGD noise.",
+          "level": "Intermediate",
+          "estimatedHours": 6,
+          "readingCount": 7,
+          "color": "#9e4060",
+          "accentLight": "#edced3",
+          "tags": ["Deep Learning", "Training", "Generalization", "CNNs", "Transformers"],
+          "dataPath": "data/supplements/regularization/module.json"
         }
       ]
     },

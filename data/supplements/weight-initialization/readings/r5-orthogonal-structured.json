@@ -1,0 +1,65 @@
+{
+  "id": "r5",
+  "moduleId": "weight-initialization",
+  "title": "Orthogonal & Structured Initializations",
+  "estimatedMinutes": 12,
+  "learningObjectives": [
+    {
+      "id": "r5-lo1",
+      "verb": "Explain",
+      "description": "Explain why orthogonal weight matrices preserve gradient norms and how this prevents vanishing and exploding gradients in RNNs",
+      "skillTags": ["weight-initialization", "training-dynamics"]
+    },
+    {
+      "id": "r5-lo2",
+      "verb": "Describe",
+      "description": "Describe how orthogonal initialization is computed via SVD of a random normal matrix",
+      "skillTags": ["weight-initialization"]
+    },
+    {
+      "id": "r5-lo3",
+      "verb": "Apply",
+      "description": "Apply orthogonal_ in PyTorch and Orthogonal in TensorFlow to RNN hidden-to-hidden weight matrices",
+      "skillTags": ["weight-initialization"]
+    }
+  ],
+  "prevItem": { "type": "reading", "id": "r4" },
+  "nextItem": { "type": "reading", "id": "r6" },
+  "content": "## Orthogonal Initialization\n\n`torch.nn.init.orthogonal_(tensor, gain=1.0)` / `tf.keras.initializers.Orthogonal(gain=1.0)`\n\nInitializes the weight matrix so that its rows (or columns, for tall matrices) form an orthonormal set. Concretely, a square $n \\times n$ matrix $W$ is **orthogonal** if:\n\n$$W^\\top W = I \\quad \\text{(equivalently } WW^\\top = I\\text{)}$$\n\nAll singular values of an orthogonal matrix equal 1. This is the key property.\n\n## Why Singular Values = 1 Matters\n\nConsider a sequence of linear operations — for example, the hidden-state updates in an RNN across $T$ timesteps:\n\n$$h_t = \\sigma(W_{hh}\\, h_{t-1} + W_{xh}\\, x_t)$$\n\nIgnoring the activation for a moment, the gradient of the loss at step $t$ flows backward through $T - t$ applications of $W_{hh}^\\top$:\n\n$$\\frac{\\partial h_T}{\\partial h_t} = \\prod_{k=t}^{T-1} W_{hh}^\\top$$\n\nIf $W_{hh}$ has singular values $> 1$, this product grows exponentially — **exploding gradients**. If singular values $< 1$, it shrinks exponentially — **vanishing gradients**. If all singular values $= 1$ (orthogonal), the product has the same norm as any single factor. Gradients neither explode nor vanish purely due to the weight matrix.\n\n## Computing an Orthogonal Matrix\n\nAn orthogonal matrix is computed via the Singular Value Decomposition (SVD) of a random matrix:\n\n1. Draw $A \\sim \\mathcal{N}(0, 1)^{m \\times n}$\n2. Compute SVD: $A = U \\Sigma V^\\top$\n3. If $m \\geq n$: use $Q = U$ (shape $m \\times n$, orthonormal columns)\n4. If $m < n$: use $Q = V^\\top$ (shape $m \\times n$, orthonormal rows)\n5. Scale: $W = \\text{gain} \\cdot Q$\n\n**PyTorch:**\n```python\nimport torch\nimport torch.nn as nn\n\nw = torch.empty(64, 64)\nnn.init.orthogonal_(w, gain=1.0)\n\n# Verify orthogonality: W^T @ W ≈ I\nprint(torch.allclose(w.T @ w, torch.eye(64), atol=1e-6))  # True\n\n# Non-square: orthonormal columns (m > n) or rows (m < n)\nw_tall = torch.empty(128, 64)\nnn.init.orthogonal_(w_tall)   # orthonormal columns: w_tall.T @ w_tall ≈ I_64\n\nw_wide = torch.empty(64, 128)\nnn.init.orthogonal_(w_wide)   # orthonormal rows: w_wide @ w_wide.T ≈ I_64\n```\n\n**TensorFlow:**\n```python\nimport tensorflow as tf\n\northo_init = tf.keras.initializers.Orthogonal(gain=1.0)\nw = ortho_init(shape=(64, 64))\n\n# Verify\nimport tensorflow as tf\nprint(tf.reduce_max(tf.abs(tf.transpose(w) @ w - tf.eye(64))))  # ≈ 0\n```\n\n## Applying to RNNs\n\nOrthogonal initialization is most commonly used for the **hidden-to-hidden** weight matrix of RNNs, GRUs, and LSTMs, where the repeated matrix multiplication across timesteps makes gradient stability especially important.\n\n**PyTorch — vanilla RNN:**\n```python\nrnn = nn.RNN(input_size=32, hidden_size=64, num_layers=2)\n\n# Initialize all hidden-to-hidden weights orthogonally\nfor name, param in rnn.named_parameters():\n    if 'weight_hh' in name:\n        nn.init.orthogonal_(param)\n    elif 'weight_ih' in name:\n        nn.init.xavier_uniform_(param)\n    elif 'bias' in name:\n        nn.init.zeros_(param)\n```\n\n**PyTorch — LSTM (weight_hh has concatenated gates):**\n```python\nlstm = nn.LSTM(input_size=32, hidden_size=64)\n\nfor name, param in lstm.named_parameters():\n    if 'weight_hh' in name:\n        # weight_hh is (4*hidden, hidden) — apply orthogonal to each gate block\n        hidden_size = 64\n        for gate_idx in range(4):\n            block = param.data[gate_idx*hidden_size:(gate_idx+1)*hidden_size]\n            nn.init.orthogonal_(block)\n    elif 'weight_ih' in name:\n        nn.init.xavier_uniform_(param)\n    elif 'bias' in name:\n        nn.init.zeros_(param)\n```\n\n**TensorFlow — built-in recurrent_initializer:**\n```python\n# SimpleRNN, GRU, and LSTM all accept a recurrent_initializer\nrnn = tf.keras.layers.SimpleRNN(64, recurrent_initializer='orthogonal')\ngru = tf.keras.layers.GRU(64, recurrent_initializer='orthogonal')\nlstm = tf.keras.layers.LSTM(64, recurrent_initializer='orthogonal')\n\n# Keras default for LSTM recurrent_initializer is already Orthogonal\n```\n\n## The gain Parameter\n\nScaling an orthogonal matrix by `gain` changes all singular values from 1 to `gain`. Values $> 1$ bias the initialization toward expansion; $< 1$ toward contraction. For most RNN use cases, `gain=1.0` is the right choice. When using orthogonal init as a warmstart for a network that will later develop non-unit singular values (e.g., GAN discriminators), a slight gain $< 1$ can help stability.\n\n## Orthogonal Initialization for Deep Linear Networks\n\nIn deep **linear** networks (no activation functions), the product of weight matrices determines the effective linear map. Orthogonal initialization makes all layers start as rotations, which keeps the effective Jacobian well-conditioned from the start — a useful property for theoretical analysis and for networks that approximate linear mappings (e.g., some attention-free architectures).\n\n## Practical Notes\n\n- **Only for 2D weight tensors**: orthogonal initialization is defined for matrices. For conv layers (4D tensors), PyTorch reshapes the tensor to 2D, applies orthogonal init, then reshapes back.\n- **Not variance-scaling**: orthogonal init sets singular values to 1 regardless of fan-in or fan-out. Combine with a `gain` value scaled to your layer size if needed.\n- **Computational cost**: SVD is $O(\\min(m,n) \\cdot m \\cdot n)$, which is non-trivial for large weight matrices. For very large layers, He or Xavier is more practical at initialization time.\n\n## Summary of Structured Initializations\n\n| Initializer | What it produces | Primary use case |\n|-------------|-----------------|------------------|\n| `orthogonal_` / `Orthogonal` | $W^\\top W = I$; all singular values = 1 | RNN hidden-to-hidden weights; deep linear networks |\n| `eye_` / `Identity` | Identity matrix (square only) | Linear adapter layers; residual passthrough |\n| `dirac_` | Dirac delta conv filter (PyTorch only) | Conv layer identity passthrough |",
+  "equationBreakdowns": [
+    {
+      "label": "Orthogonality condition",
+      "terms": [
+        {
+          "symbol": "W^\\top W = I",
+          "name": "Orthogonality",
+          "desc": "Columns of W form an orthonormal set; multiplying by W preserves vector norms, preventing gradient explosion or collapse"
+        }
+      ]
+    },
+    {
+      "label": "Gradient product across RNN timesteps",
+      "terms": [
+        {
+          "symbol": "\\prod_{k=t}^{T-1} W_{hh}^\\top",
+          "name": "Gradient product",
+          "desc": "Gradient of the loss at time T w.r.t. hidden state at time t; with orthogonal W_hh, this product has bounded norm for any T"
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "label": "Saxe et al. (2014) — Exact Solutions to the Nonlinear Dynamics of Learning in Deep Linear Networks",
+      "title": "Showed that orthogonal initialization enables exact analytical solutions for linear network training dynamics",
+      "url": null,
+      "note": "Showed that orthogonal initialization enables exact analytical solutions for linear network training dynamics"
+    },
+    {
+      "label": "Le et al. (2015) — A Simple Way to Initialize Recurrent Networks of Rectified Linear Units",
+      "title": "Proposed identity/orthogonal initialization for ReLU RNNs as a practical alternative to LSTMs",
+      "url": null,
+      "note": "Proposed identity/orthogonal initialization for ReLU RNNs as a practical alternative to LSTMs"
+    }
+  ]
+}
