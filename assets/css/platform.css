@@ -1077,6 +1077,28 @@ img, svg { display: block; max-width: 100%; }
   .audio-play-btn { width: 32px; height: 32px; }
 }
 
+.audio-attribution {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  margin-top: 6px;
+  padding-bottom: 10px;
+  opacity: 0.55;
+  transition: opacity 0.2s;
+}
+.audio-attribution:hover { opacity: 0.85; }
+.audio-attribution-logo {
+  height: 13px;
+  width: auto;
+  display: block;
+}
+.audio-attribution span {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+
 /* Learning objectives block */
 .reading-los {
   border-left: 3px solid var(--accent-light);
