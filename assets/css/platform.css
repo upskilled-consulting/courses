@@ -388,6 +388,24 @@ img, svg { display: block; max-width: 100%; }
 .footer-form-row input::placeholder { color: var(--text-faint); }
 .footer-form-row input:focus { border-color: var(--border-strong); }
 
+.footer-feedback {
+  width: 100%;
+  margin-top: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  color: var(--text);
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+.footer-feedback::placeholder { color: var(--text-faint); }
+.footer-feedback:focus { border-color: var(--border-strong); }
+
 .footer-submit-btn {
   background: var(--accent);
   border: none;

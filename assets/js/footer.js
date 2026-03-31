@@ -34,11 +34,20 @@ document.addEventListener('DOMContentLoaded', () => {
         submitBtn.disabled    = true;
         submitBtn.textContent = 'Sending\u2026';
 
+        // Capture the current page context at submission time
+        const pageTitle = document.querySelector('h1.reading-title')?.textContent?.trim()
+            || document.querySelector('h1')?.textContent?.trim()
+            || document.title
+            || '';
+        const pagePath = window.location.hash || window.location.pathname;
+
         try {
             await db.collection('contacts').add({
                 name:      document.getElementById('footer-name').value.trim(),
                 email,
-                message:   '',
+                message:   document.getElementById('footer-feedback').value.trim(),
+                pageTitle,
+                pagePath,
                 source:    'upskilled-platform',
                 origin:    'footer',
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
