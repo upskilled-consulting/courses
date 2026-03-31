@@ -1976,6 +1976,8 @@ async function renderLab(params, root) {
 const Notation = {
   // [ { symbol, name, desc, sources: [{title, url}] } ]  — deduped by symbol
   index: [],
+  // Set of symbol strings belonging to the current page; empty = show all
+  pageSymbols: new Set(),
 };
 
 function addNotationTerms(terms, sourceTitle, sourceUrl) {
@@ -2027,13 +2029,16 @@ function renderNotationList(query) {
   const list = document.getElementById('notationList');
   if (!list) return;
   const q = query.toLowerCase().trim();
+  const pool = Notation.pageSymbols.size
+    ? Notation.index.filter(e => Notation.pageSymbols.has(e.symbol))
+    : Notation.index;
   const entries = q
-    ? Notation.index.filter(e =>
+    ? pool.filter(e =>
         e.symbol.toLowerCase().includes(q) ||
         e.name.toLowerCase().includes(q) ||
         e.desc.toLowerCase().includes(q)
       )
-    : Notation.index;
+    : pool;
 
   if (!entries.length) {
     list.innerHTML = `<div class="notation-empty">No symbols match "${_escHtml(query)}"</div>`;
@@ -2123,7 +2128,8 @@ function stripMd(text) {
     .replace(/^\s*[-*+]\s+/gm, '')     // bullets
     .replace(/^\s*\d+\.\s+/gm, '')     // ordered list
     .replace(/^\s*>\s+/gm, '')         // blockquote
-    .replace(/\|[^\n]+\|\n/g, '')      // table rows
+    .replace(/\|/g, ' ')                // table pipes → spaces (preserves cell text)
+    .replace(/\s*-{2,}\s*/g, ' ')      // table separator rows
     .replace(/\$\$[\s\S]*?\$\$/g, '') // display math
     .replace(/\$[^$\n]+\$/g, '')      // inline math
     .replace(/\\\([\s\S]*?\\\)/g, '') // \(...\) math
@@ -2136,7 +2142,7 @@ function getParagraphs(mdText) {
   return mdText
     .split(/\n\n+/)
     .map(p => stripMd(p).trim())
-    .filter(p => p.length > 30);
+    .filter(p => p.length > 10);
 }
 
 // Extract the sentence containing `query` from `para`.
@@ -2165,17 +2171,21 @@ function extractSnippet(para, query) {
     sentence = (from > 0 ? '…' : '') + sentence.slice(from, to) + (to < sentence.length ? '…' : '');
   }
 
-  return _escHtml(sentence).replace(
-    new RegExp(_escRegex(_escHtml(query)), 'gi'),
-    '<mark>$&</mark>'
-  );
+  const tokens = query.split(/\s+/).filter(Boolean);
+  let escaped = _escHtml(sentence);
+  for (const t of tokens) {
+    escaped = escaped.replace(new RegExp(_escRegex(_escHtml(t)), 'gi'), '<mark>$&</mark>');
+  }
+  return escaped;
 }
 
 function highlightInPara(para, query) {
-  return _escHtml(para).replace(
-    new RegExp(_escRegex(_escHtml(query)), 'gi'),
-    '<mark>$&</mark>'
-  );
+  const tokens = query.split(/\s+/).filter(Boolean);
+  let escaped = _escHtml(para);
+  for (const t of tokens) {
+    escaped = escaped.replace(new RegExp(_escRegex(_escHtml(t)), 'gi'), '<mark>$&</mark>');
+  }
+  return escaped;
 }
 
 // ── Index builders ───────────────────────────────────────────
@@ -2353,16 +2363,23 @@ function buildCourseIndex(module, courseRef, seg) {
 
 function buildReadingIndex(reading, module, seg, courseRef) {
   const base = courseBase(seg, courseRef || { id: module.id }, module);
+  const url = `${base}/reading/${reading.id}`;
   const paragraphs = getParagraphs(reading.content || '');
+
+  // Populate page-scoped notation
+  Notation.pageSymbols = new Set();
   for (const bd of reading.equationBreakdowns || []) {
     for (const term of (bd && bd.terms) || []) {
       paragraphs.push(`${term.name}: ${term.desc}`);
+      Notation.pageSymbols.add(term.symbol);
     }
+    addNotationTerms(bd?.terms || [], reading.title, url);
   }
+
   Search.index = [{
     title: reading.title,
     subtitle: module.title,
-    url: `${base}/reading/${reading.id}`,
+    url,
     type: 'reading',
     paragraphs,
   }];
@@ -2389,6 +2406,8 @@ async function setSearchContext(type, data) {
   const navSearch  = document.getElementById('navSearch');
   const scopeLabel = document.getElementById('searchScopeLabel');
   const scopeDot   = document.getElementById('searchScopeDot');
+
+  if (type !== 'reading') Notation.pageSymbols = new Set();
 
   if (type === 'none') {
     if (navSearch) navSearch.style.display = 'none';
@@ -2450,17 +2469,30 @@ function runSearch(query) {
     return;
   }
 
+  const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const allTokensIn = str => tokens.every(t => str.toLowerCase().includes(t));
+
   const results = [];
   for (const item of Search.index) {
-    for (const para of item.paragraphs) {
-      if (para.toLowerCase().includes(query.toLowerCase())) {
-        const snippet = extractSnippet(para, query);
-        if (snippet) {
-          results.push({ ...item, snippet, rawPara: para });
-          break; // one result per index item
-        }
-      }
-    }
+    const titleText = ((item.title || '') + ' ' + (item.subtitle || '')).toLowerCase();
+
+    // Check if all tokens appear anywhere across title + all paragraphs combined
+    const fullText = titleText + ' ' + item.paragraphs.join(' ').toLowerCase();
+    if (!tokens.every(t => fullText.includes(t))) continue;
+
+    // Find the best matching paragraph — prefer longest (most substantive) over first
+    const matchingParas = item.paragraphs.filter(p => allTokensIn(p));
+
+    // If only the title matches (no paragraph contains all tokens), use the longest para as context
+    const candidateParas = matchingParas.length
+      ? matchingParas
+      : (allTokensIn(titleText) ? item.paragraphs : []);
+
+    if (!candidateParas.length) continue;
+
+    const bestPara = candidateParas.reduce((a, b) => b.length > a.length ? b : a);
+    const snippet = extractSnippet(bestPara, tokens[0]) || _escHtml(bestPara.slice(0, 150));
+    results.push({ ...item, snippet, rawPara: bestPara });
   }
 
   renderSearchResults(results.slice(0, 30), query, list);
