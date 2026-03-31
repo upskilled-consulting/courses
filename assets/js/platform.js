@@ -640,15 +640,7 @@ function buildCourseCard(course) {
         <div class="course-card-type">${typeLabel}</div>
         <div class="course-card-title">${course.title}</div>
         <div class="course-card-desc">${course.description}</div>
-        <div class="course-card-meta">
-          <span class="meta-pill ${levelClass}">${course.level}</span>
-          <span class="meta-pill">${hoursLabel}</span>
-          <span class="meta-pill">${countLabel}</span>
-        </div>
         <div class="course-card-tags">${tagsHTML}</div>
-      </div>
-      <div class="course-card-footer">
-        <span class="card-cta">${ctaText} <span class="card-cta-arrow">→</span></span>
       </div>
     </div>`;
 }
