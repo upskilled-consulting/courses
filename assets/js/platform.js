@@ -2106,6 +2106,8 @@ const Search = {
   contextLabel: 'All content',
   contextColor: null,
   moduleCache: {},     // dataPath → module JSON (for catalog enrichment)
+  platformData: null,  // cached platform.json for global index
+  catalogReady: false, // true after first buildCatalogIndex completes
   debounceTimer: null,
   activeIdx: -1,       // keyboard-selected result index
 };
@@ -2417,44 +2419,38 @@ async function setSearchContext(type, data) {
   }
   if (navSearch) navSearch.style.display = '';
 
-  let label = 'All content';
-  let color  = null;
-
-  if (type === 'catalog') {
-    label = 'All content';
-    color = null;
-    await buildCatalogIndex(data.platform);
-  } else if (type === 'course') {
-    label = data.module.title;
-    buildCourseIndex(data.module, data.courseRef, data.seg);
-  } else if (type === 'reading') {
-    label = data.reading.title;
-    buildReadingIndex(data.reading, data.module, data.seg, data.courseRef);
-  } else if (type === 'lab') {
-    label = data.lab.title;
-    buildLabIndex(data.lab, data.module, data.seg, data.courseRef);
-  }
-
-  Search.contextLabel = label;
-  if (scopeLabel) scopeLabel.textContent = label;
-  if (scopeDot) {
-    if (type !== 'catalog') {
-      scopeDot.classList.add('visible');
-    } else {
-      scopeDot.classList.remove('visible');
+  // Reading: set up page-scoped notation (independent of search index)
+  if (type === 'reading') {
+    const { reading, module, seg, courseRef } = data;
+    const base = courseBase(seg, courseRef || { id: module.id }, module);
+    const url  = `${base}/reading/${reading.id}`;
+    Notation.pageSymbols = new Set();
+    for (const bd of reading.equationBreakdowns || []) {
+      for (const term of (bd && bd.terms) || []) {
+        Notation.pageSymbols.add(term.symbol);
+      }
+      addNotationTerms(bd?.terms || [], reading.title, url);
     }
   }
 
-  // Sync search field placeholder
-  const field = document.getElementById('searchField');
-  if (field) {
-    const hint = type === 'catalog'   ? 'Search all courses and readings…'
-               : type === 'course'    ? `Search in ${label}…`
-               : type === 'reading'   ? `Search in this reading…`
-               : type === 'lab'       ? `Search in this lab…`
-               : 'Search…';
-    field.placeholder = hint;
+  // Always use the global catalog index — build once per session
+  if (data?.platform) Search.platformData = data.platform;
+  if (!Search.catalogReady) {
+    if (!Search.platformData) {
+      try { Search.platformData = await fetchJSON('data/platform.json'); } catch { /* ignore */ }
+    }
+    if (Search.platformData) {
+      await buildCatalogIndex(Search.platformData);
+      Search.catalogReady = true;
+    }
   }
+
+  Search.contextLabel = 'All content';
+  if (scopeLabel) scopeLabel.textContent = 'All content';
+  if (scopeDot) scopeDot.classList.remove('visible');
+
+  const field = document.getElementById('searchField');
+  if (field) field.placeholder = 'Search all courses and readings…';
 }
 
 // ── Search execution ─────────────────────────────────────────
