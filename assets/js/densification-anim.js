@@ -58,10 +58,13 @@ function drawGradientArrow(ctx, x, y, pulseFactor, r, g, b) {
   ctx.restore();
 }
 
+// Module-level label colour, set per-canvas from --text-muted CSS var
+let _lr = 100, _lg = 100, _lb = 100;
+
 function drawLabel(ctx, text, x, y, r, g, b, alpha = 0.55) {
   ctx.save();
   ctx.font         = `500 10px Inter, system-ui, sans-serif`;
-  ctx.fillStyle    = `rgba(${r},${g},${b},${alpha})`;
+  ctx.fillStyle    = `rgba(${_lr},${_lg},${_lb},${Math.min(alpha * 1.6, 1)})`;
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'top';
   ctx.fillText(text, x, y);
@@ -271,6 +274,10 @@ export function initDensificationAnimation(canvas, type) {
                  : type === 'gradient' ? '--accent'
                  :                       '--accent';
   const [r, g, b] = parseColor(style.getPropertyValue(colorVar).trim());
+
+  // Use --text-muted for labels so they remain legible in both light and dark mode
+  const labelParsed = parseColor(style.getPropertyValue('--text-muted').trim());
+  [_lr, _lg, _lb] = labelParsed;
 
   let animId = null, t0 = null;
 
