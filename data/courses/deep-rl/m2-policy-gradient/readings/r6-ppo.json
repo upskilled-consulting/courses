@@ -1,0 +1,46 @@
+{
+  "id": "r6",
+  "moduleId": "m2",
+  "title": "Proximal Policy Optimization (PPO)",
+  "estimatedMinutes": 12,
+  "prevItem": { "id": "r5", "type": "reading", "title": "Trust Region Policy Optimization (TRPO)" },
+  "nextItem": { "id": "q2", "type": "quiz", "title": "On-Policy Algorithms Quiz" },
+  "learningObjectives": [
+    {
+      "id": "m2r6-lo1",
+      "verb": "Explain",
+      "description": "Explain the PPO-Clip objective: what the ratio r_t(θ) measures and how clipping at (1-ε, 1+ε) prevents large policy updates",
+      "skillTags": ["ppo", "clipping", "surrogate-objective"]
+    },
+    {
+      "id": "m2r6-lo2",
+      "verb": "Trace",
+      "description": "Trace the PPO-Clip objective for positive and negative advantage cases to show that the new policy cannot over-exploit the old data in either direction",
+      "skillTags": ["ppo", "advantage", "clipping"]
+    },
+    {
+      "id": "m2r6-lo3",
+      "verb": "Implement",
+      "description": "Launch PPO in both PyTorch and TensorFlow and configure clip_ratio, target_kl, train_pi_iters, and lam",
+      "skillTags": ["ppo", "pytorch", "tensorflow", "hyperparameters"]
+    }
+  ],
+  "content": "## The PPO Idea\n\nTRPO solves the policy update stability problem rigorously but expensively (conjugate gradient, line search, second-order methods). PPO asks: *Can we get the same safety guarantees with a much simpler first-order method?*\n\nThe answer is yes — almost. PPO modifies the objective directly so that large deviations from the old policy are penalized or ignored, without needing an explicit constraint. It runs multiple minibatch SGD steps per batch of experience, which makes better use of collected data.\n\n## PPO-Clip\n\nSpinning Up implements **PPO-Clip** (the dominant variant used at OpenAI). Define the probability ratio:\n$$r_t(\\theta) = \\frac{\\pi_\\theta(a_t|s_t)}{\\pi_{\\theta_k}(a_t|s_t)}$$\n\nThe PPO-Clip objective is:\n$$L^{CLIP}(\\theta) = \\mathbb{E}_t\\left[\\min\\left(r_t(\\theta)\\hat{A}_t, \\; g(\\epsilon, \\hat{A}_t)\\right)\\right]$$\n\nwhere:\n$$g(\\epsilon, A) = \\begin{cases} (1+\\epsilon) A & A \\geq 0 \\\\ (1-\\epsilon) A & A < 0 \\end{cases}$$\n\n### Why Does This Work?\n\n**Case 1: Positive advantage.** Action \\(a_t\\) was better than expected. We want to increase its probability. The ratio \\(r_t(\\theta)\\) grows as the new policy increases \\(a_t\\). But once \\(r_t > 1+\\epsilon\\), the min kicks in and the objective **stops improving** — no incentive to move further from the old policy.\n\n**Case 2: Negative advantage.** Action \\(a_t\\) was worse than expected. We want to decrease its probability. The ratio \\(r_t(\\theta)\\) falls as the new policy decreases \\(a_t\\). But once \\(r_t < 1-\\epsilon\\), the max kicks in and the objective **stops improving** — again, no incentive to move too far.\n\nIn both cases, the objective is flat once the policy has moved \\(\\epsilon\\) away from the old policy. This acts as a soft trust region.\n\n### Early Stopping\n\nSpinning Up adds one more safeguard: if the mean KL divergence of the new policy from the old exceeds `target_kl`, training stops early (before `train_pi_iters` gradient steps are taken). This prevents pathological updates.\n\n```python\n# During PPO inner loop:\nfor i in range(train_pi_iters):\n    optimizer.zero_grad()\n    loss_pi = compute_ppo_clip_loss(data, policy)\n    kl = compute_approx_kl(data, policy)   # cheap approximation\n    if kl > 1.5 * target_kl:              # early stop\n        break\n    loss_pi.backward()\n    optimizer.step()\n```\n\n## PyTorch Implementation\n\n```python\nfrom spinup import ppo_pytorch as ppo\nimport gym\n\nppo(\n    env_fn=lambda: gym.make('HalfCheetah-v2'),\n    ac_kwargs=dict(hidden_sizes=[64, 64]),\n    steps_per_epoch=4000,\n    epochs=200,\n    gamma=0.99,\n    clip_ratio=0.2,       # epsilon in the clipping formula\n    pi_lr=3e-4,\n    vf_lr=1e-3,\n    train_pi_iters=80,    # max gradient steps on policy per epoch\n    train_v_iters=80,\n    lam=0.97,\n    target_kl=0.01,       # early stopping threshold\n    logger_kwargs=dict(output_dir='/tmp/ppo', exp_name='ppo-halfcheetah')\n)\n```\n\nFrom the command line:\n```bash\npython -m spinup.run ppo_pytorch --env HalfCheetah-v2 \\\n  --epochs 200 --clip_ratio 0.2 --seed 0 10 20\n```\n\n## TensorFlow: Identical Interface\n\n```python\nfrom spinup import ppo_tf1 as ppo\n# All arguments identical to ppo_pytorch\n```\n\n## Key Hyperparameters\n\n| Hyperparameter | Default | Role |\n|---|---|---|\n| `clip_ratio` | 0.2 | \\(\\epsilon\\) — how far the new policy can move from old. Typical: 0.1–0.3. |\n| `target_kl` | 0.01 | KL threshold for early stopping. Typical: 0.01–0.05. |\n| `train_pi_iters` | 80 | Max gradient steps per epoch (subject to early stopping). |\n| `train_v_iters` | 80 | Value function gradient steps per epoch. |\n| `lam` | 0.97 | GAE-Lambda for advantage estimation. |\n\n## PPO vs. TRPO vs. VPG\n\n| | VPG | TRPO | PPO |\n|--|--|--|--|\n| Constraint | None | Hard KL (constrained opt) | Soft (clipped objective) |\n| Implementation | Trivial | Complex (CG, line search) | Simple |\n| Data reuse | 1 step | 1 step | Multiple minibatch steps |\n| Typical performance | Low | High | High (≈ TRPO) |\n| TF support | Both | TF only | Both |\n\n## PPO in Practice\n\nPPO is the **workhorse on-policy algorithm**. It was used in:\n- OpenAI Five (Dota 2 at superhuman level)\n- OpenAI's robotics dexterous manipulation work\n- Many large-scale RLHF (Reinforcement Learning from Human Feedback) systems\n\nIf you need an on-policy algorithm and aren't sure where to start, **use PPO**.",
+  "references": [
+    {
+      "label": "Schulman et al. 2017",
+      "title": "Proximal Policy Optimization Algorithms",
+      "url": "https://arxiv.org/abs/1707.06347"
+    },
+    {
+      "label": "Heess et al. 2017",
+      "title": "Emergence of Locomotion Behaviours in Rich Environments",
+      "url": "https://arxiv.org/abs/1707.02286"
+    },
+    {
+      "label": "OpenAI Spinning Up",
+      "title": "PPO Documentation",
+      "url": "https://spinningup.openai.com/en/latest/algorithms/ppo.html"
+    }
+  ]
+}

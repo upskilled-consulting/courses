@@ -1,0 +1,90 @@
+{
+  "id": "q3",
+  "moduleId": "m3",
+  "title": "Off-Policy Methods & Tooling Quiz",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "id": "r10", "type": "reading", "title": "Key Papers in Deep RL" },
+  "nextItem": null,
+  "questions": [
+    {
+      "id": "q3_1",
+      "type": "multiple-choice",
+      "prompt": "DDPG stores transitions collected with earlier (outdated) policies in its replay buffer and trains on them. Why is this valid — i.e., why doesn't training on off-policy data break Q-learning?",
+      "options": [
+        { "id": "a", "text": "DDPG uses importance sampling to correct for the distribution shift between old and current policy", "correct": false },
+        { "id": "b", "text": "The Bellman equation is a constraint on Q that must hold for any transition regardless of the collecting policy, so any valid transition is usable", "correct": true },
+        { "id": "c", "text": "The replay buffer only stores transitions from the last 1000 steps, so the data is approximately on-policy", "correct": false },
+        { "id": "d", "text": "Off-policy data is valid only because the deterministic policy makes the action distribution irrelevant", "correct": false }
+      ],
+      "explanation": "The Bellman equation \\(Q^*(s,a) = \\mathbb{E}[r + \\gamma \\max_{a'} Q^*(s',a')]\\) must hold for *all* valid transitions \\((s,a,r,s')\\) — it doesn't care which policy collected them. This is why Q-learning can use a replay buffer of old experiences: any stored transition is a valid training sample for MSBE minimization.",
+      "hint": "Think about what the Bellman equation is saying: it's a constraint on Q that must hold for all state-action pairs."
+    },
+    {
+      "id": "q3_2",
+      "type": "multiple-choice",
+      "prompt": "TD3 uses `policy_delay=2` (default). What happens during the update iterations where the policy is NOT updated?",
+      "options": [
+        { "id": "a", "text": "The target networks are updated but the main networks are frozen", "correct": false },
+        { "id": "b", "text": "Both Q-functions are updated but the policy and target networks are left unchanged", "correct": true },
+        { "id": "c", "text": "New environment interactions are collected to replenish the replay buffer", "correct": false },
+        { "id": "d", "text": "The exploration noise is doubled to compensate for the paused policy learning", "correct": false }
+      ],
+      "explanation": "With `policy_delay=2`, for every 2 gradient update iterations, the Q-functions are updated twice but the policy (\\(\\mu_\\theta\\)) and target networks (\\(\\phi_{\\text{targ}}, \\theta_{\\text{targ}}\\)) are updated only once. During the 'skipped' iterations, only \\(Q_{\\phi_1}\\) and \\(Q_{\\phi_2}\\) are trained. This lets Q-functions stabilize before influencing the policy.",
+      "hint": "What specifically is being 'delayed' — the policy update or the Q-function update?"
+    },
+    {
+      "id": "q3_3",
+      "type": "multiple-choice",
+      "prompt": "SAC's entropy-regularized objective includes \\(\\alpha H(\\pi(\\cdot|s_t))\\) as a bonus at each timestep. What practical effect does this have on the learned policy?",
+      "options": [
+        { "id": "a", "text": "The policy converges faster because entropy regularization simplifies the optimization landscape", "correct": false },
+        { "id": "b", "text": "The policy maintains broader action distributions, improving exploration and preventing premature convergence to suboptimal behavior", "correct": true },
+        { "id": "c", "text": "The policy becomes more deterministic over time to maximize the entropy bonus", "correct": false },
+        { "id": "d", "text": "The policy can only be used in environments with continuous action spaces", "correct": false }
+      ],
+      "explanation": "The entropy bonus \\(\\alpha H(\\pi(\\cdot|s))\\) rewards the policy for maintaining randomness. This creates a 'soft' policy that doesn't fully commit to a single action unless the advantage of doing so clearly outweighs the entropy loss. The result: better exploration, robustness to reward noise, and resistance to premature convergence. This is also why SAC doesn't need an explicit exploration mechanism like DDPG's Gaussian noise.",
+      "hint": "Maximizing entropy means maximizing randomness — what does that imply about action selection?"
+    },
+    {
+      "id": "q3_4",
+      "type": "multiple-choice",
+      "prompt": "The SAC policy uses the reparameterization trick: \\(\\tilde{a} = \\tanh(\\mu_\\theta(s) + \\sigma_\\theta(s) \\odot \\xi)\\) where \\(\\xi \\sim \\mathcal{N}(0,I)\\). What does applying \\(\\tanh\\) achieve?",
+      "options": [
+        { "id": "a", "text": "It normalizes the action distribution to have zero mean and unit variance", "correct": false },
+        { "id": "b", "text": "It squashes unbounded Gaussian samples to the range \\((-1, 1)\\), keeping actions within valid bounds", "correct": true },
+        { "id": "c", "text": "It makes the policy deterministic by applying a monotone transformation", "correct": false },
+        { "id": "d", "text": "It converts the Gaussian distribution into a categorical distribution over discretized actions", "correct": false }
+      ],
+      "explanation": "A Gaussian distribution has unbounded support — actions can be arbitrarily large. Most continuous control environments require bounded actions (e.g., joint torques in \\([-1,1]\\)). The \\(\\tanh\\) squashing maps \\(\\mathbb{R}\\) to \\((-1,1)\\). After rescaling to the environment's action range, all actions are valid. The resulting distribution is a squashed Gaussian — no longer Gaussian, but log-probabilities can still be computed analytically (see SAC paper appendix).",
+      "hint": "What is the output range of \\(\\tanh(x)\\) for any \\(x \\in \\mathbb{R}\\)?"
+    },
+    {
+      "id": "q3_5",
+      "type": "multiple-choice",
+      "prompt": "You run PPO with 5 random seeds and want to plot the results with Spinning Up's plotter. How should you structure the output directories for the plotter to automatically average across seeds?",
+      "options": [
+        { "id": "a", "text": "Save each seed to a completely separate top-level directory with a different exp_name", "correct": false },
+        { "id": "b", "text": "Use the same exp_name for all seeds — Spinning Up will place them in subdirectories under the same parent folder, which the plotter averages automatically", "correct": true },
+        { "id": "c", "text": "Manually concatenate the progress.txt files before plotting", "correct": false },
+        { "id": "d", "text": "Use --datestamp to group runs by timestamp into the same folder", "correct": false }
+      ],
+      "explanation": "When you run `python -m spinup.run ppo --exp_name myexp --seed 0 10 20`, Spinning Up places each seed's output in `data/myexp/myexp_s0/`, `data/myexp/myexp_s10/`, etc. — all under the same parent `data/myexp/`. The plotter, when given `data/myexp/`, detects multiple seed subdirectories and automatically plots mean ± std.",
+      "hint": "Think about what happens when you pass multiple `--seed` values to spinup.run."
+    },
+    {
+      "id": "q3_6",
+      "type": "multiple-choice",
+      "prompt": "Which metric from `progress.txt` is the most reliable indicator that a DDPG agent is actually improving?",
+      "options": [
+        { "id": "a", "text": "`LossPi` — the policy gradient loss decreasing means the policy is getting better", "correct": false },
+        { "id": "b", "text": "`LossQ` — a decreasing Q-function loss means the Q-function is converging", "correct": false },
+        { "id": "c", "text": "`AverageEpRet` — the actual return in test episodes is the ground truth measure of policy quality", "correct": true },
+        { "id": "d", "text": "`QVals` — higher Q-values indicate the agent expects better performance", "correct": false }
+      ],
+      "explanation": "`AverageEpRet` is the only ground-truth metric. `LossPi` in DDPG is a surrogate objective that doesn't correspond directly to policy quality. `LossQ` (MSBE) decreasing means the Q-function is fitting the Bellman equation better, which is good for training stability but doesn't directly measure policy quality. Q-values can be overestimated without the policy actually improving. Only real environment returns tell you how well the agent is doing.",
+      "hint": "Which metric directly measures what you actually care about — how much reward the agent collects in the real environment?"
+    }
+  ]
+}

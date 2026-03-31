@@ -1,0 +1,90 @@
+{
+  "id": "q2",
+  "moduleId": "m2",
+  "title": "On-Policy Algorithms Quiz",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "id": "r6", "type": "reading", "title": "Proximal Policy Optimization (PPO)" },
+  "nextItem": { "id": "lab1", "type": "lab", "title": "VPG & PPO in PyTorch" },
+  "questions": [
+    {
+      "id": "q2_1",
+      "type": "multiple-choice",
+      "prompt": "After one gradient update step in VPG, the collected trajectory data becomes stale and is discarded. Why can't we reuse it for additional gradient steps?",
+      "options": [
+        { "id": "a", "text": "The replay buffer becomes full and must be cleared", "correct": false },
+        { "id": "b", "text": "The gradient estimator requires data from the current policy, but after one update the policy has changed", "correct": true },
+        { "id": "c", "text": "The value function targets become incorrect after one gradient step", "correct": false },
+        { "id": "d", "text": "On-policy algorithms do not use neural networks that can be updated multiple times", "correct": false }
+      ],
+      "explanation": "The VPG policy gradient estimator is \\(\\mathbb{E}_{\\tau \\sim \\pi_{\\theta_k}}[\\ldots]\\) — it requires samples from the *current* policy \\(\\pi_{\\theta_k}\\). After one gradient step, we have \\(\\pi_{\\theta_{k+1}} \\neq \\pi_{\\theta_k}\\), so old trajectories are no longer valid samples from the current policy. This is what makes on-policy methods sample-inefficient.",
+      "hint": "Look at the subscript on the expectation in the policy gradient formula."
+    },
+    {
+      "id": "q2_2",
+      "type": "multiple-choice",
+      "prompt": "In the GAE-Lambda advantage estimator, what does \\(\\lambda \\to 0\\) correspond to, and what is its tradeoff?",
+      "options": [
+        { "id": "a", "text": "Full Monte Carlo return — high variance, no bias", "correct": false },
+        { "id": "b", "text": "1-step TD error — low variance but high bias (because \\(V_\\phi\\) is imperfect)", "correct": true },
+        { "id": "c", "text": "The discounted sum of all future rewards — maximum information", "correct": false },
+        { "id": "d", "text": "The advantage function without any value function baseline", "correct": false }
+      ],
+      "explanation": "With \\(\\lambda = 0\\), GAE reduces to the 1-step TD error: \\(\\delta_t = r_t + \\gamma V_\\phi(s_{t+1}) - V_\\phi(s_t)\\). This has low variance because it only uses one future step, but high bias because it relies heavily on the learned \\(V_\\phi\\), which is imperfect. With \\(\\lambda = 1\\), GAE recovers the full Monte Carlo return (unbiased but high variance). A value around 0.97 balances both.",
+      "hint": "Consider: with \\(\\lambda=0\\), only \\(\\delta_t^0\\) contributes; with \\(\\lambda=1\\), the geometric series sums to the full return."
+    },
+    {
+      "id": "q2_3",
+      "type": "multiple-choice",
+      "prompt": "TRPO constrains the policy update using KL-divergence. Which of the following accurately describes the KL constraint used?",
+      "options": [
+        { "id": "a", "text": "\\(D_{KL}(\\pi_{\\theta_k} \\| \\pi_\\theta) \\leq \\delta\\) computed at a single reference state", "correct": false },
+        { "id": "b", "text": "\\(\\mathbb{E}_{s \\sim \\pi_{\\theta_k}}[D_{KL}(\\pi_\\theta(\\cdot|s) \\| \\pi_{\\theta_k}(\\cdot|s))] \\leq \\delta\\) averaged over states visited by the old policy", "correct": true },
+        { "id": "c", "text": "The L2 distance between old and new policy parameters \\(\\| \\theta - \\theta_k \\|^2 \\leq \\delta\\)", "correct": false },
+        { "id": "d", "text": "\\(D_{KL}(\\pi_\\theta \\| \\pi_{\\theta_k}) \\leq \\delta\\) computed at the initial state distribution", "correct": false }
+      ],
+      "explanation": "TRPO uses the *average* KL-divergence across states sampled from the old policy: \\(\\bar{D}_{KL}(\\theta \\| \\theta_k) = \\mathbb{E}_{s \\sim \\pi_{\\theta_k}}[D_{KL}(\\pi_\\theta(\\cdot|s) \\| \\pi_{\\theta_k}(\\cdot|s))]\\). This measures how much the policies differ in behavior (action distributions), not just in parameter space — making it a more meaningful constraint than parameter-space distance.",
+      "hint": "The constraint is averaged over a distribution of states, not computed at a single point."
+    },
+    {
+      "id": "q2_4",
+      "type": "multiple-choice",
+      "prompt": "PPO-Clip uses \\(\\epsilon = 0.2\\). A state-action pair has a positive advantage \\(\\hat{A} = 2.0\\) and the ratio \\(r_t(\\theta) = 1.5\\). What is the contribution of this pair to the PPO-Clip objective?",
+      "options": [
+        { "id": "a", "text": "\\(1.5 \\times 2.0 = 3.0\\)", "correct": false },
+        { "id": "b", "text": "\\(1.2 \\times 2.0 = 2.4\\)", "correct": true },
+        { "id": "c", "text": "\\(0.8 \\times 2.0 = 1.6\\)", "correct": false },
+        { "id": "d", "text": "\\(0.0\\) — no contribution because the ratio exceeds the clip limit", "correct": false }
+      ],
+      "explanation": "For positive advantage, the objective is \\(\\min(r_t \\hat{A}, (1+\\epsilon)\\hat{A}) = \\min(1.5 \\times 2.0, 1.2 \\times 2.0) = \\min(3.0, 2.4) = 2.4\\). The clip kicks in because \\(r_t = 1.5 > 1+\\epsilon = 1.2\\), capping the contribution at \\((1+\\epsilon)\\hat{A}\\). The policy gains nothing more by increasing the ratio further.",
+      "hint": "Compute both terms in the \\(\\min\\) and take the smaller one."
+    },
+    {
+      "id": "q2_5",
+      "type": "multiple-choice",
+      "prompt": "PPO's `target_kl` hyperparameter triggers early stopping. Setting `target_kl = 0.001` (very small) would likely cause which problem?",
+      "options": [
+        { "id": "a", "text": "The policy would make catastrophically large updates, destabilizing training", "correct": false },
+        { "id": "b", "text": "Training would be very slow because nearly every epoch stops after the first gradient step", "correct": true },
+        { "id": "c", "text": "The value function would diverge because it updates independently of the policy", "correct": false },
+        { "id": "d", "text": "PPO would become equivalent to TRPO since the KL constraint is enforced tightly", "correct": false }
+      ],
+      "explanation": "A very small `target_kl` means training stops after just one or a few gradient steps, because even tiny policy changes exceed the threshold. This wastes the collected data — PPO's advantage over VPG is that it can take multiple gradient steps per batch, so `target_kl` should be permissive enough to allow that (typical: 0.01–0.05).",
+      "hint": "More restrictive early stopping = fewer gradient steps per batch of data."
+    },
+    {
+      "id": "q2_6",
+      "type": "multiple-choice",
+      "prompt": "Which of the following accurately characterizes the exploration strategy used by VPG, TRPO, and PPO?",
+      "options": [
+        { "id": "a", "text": "Epsilon-greedy: the policy takes a random action with probability ε", "correct": false },
+        { "id": "b", "text": "Boltzmann (softmax) exploration with a temperature parameter that decays over training", "correct": false },
+        { "id": "c", "text": "Inherent stochasticity: actions are sampled from the stochastic policy, which becomes less random over training as the policy converges", "correct": true },
+        { "id": "d", "text": "Gaussian noise added to a deterministic policy's output at training time", "correct": false }
+      ],
+      "explanation": "On-policy algorithms (VPG, TRPO, PPO) maintain stochastic policies and explore by sampling from them. Early in training, the policy is nearly uniform (high entropy), providing broad exploration. As the update rule increases probabilities of high-advantage actions, the policy gradually concentrates — reducing randomness. There is no explicit exploration mechanism; exploration is an emergent property of the stochastic policy.",
+      "hint": "None of these algorithms add noise separately or have an explicit epsilon — exploration comes from the policy distribution itself."
+    }
+  ]
+}

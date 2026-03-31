@@ -1,0 +1,46 @@
+{
+  "id": "r7",
+  "moduleId": "m3",
+  "title": "Deep Deterministic Policy Gradient (DDPG)",
+  "estimatedMinutes": 13,
+  "prevItem": null,
+  "nextItem": { "id": "r8", "type": "reading", "title": "TD3 & Soft Actor-Critic (SAC)" },
+  "learningObjectives": [
+    {
+      "id": "m3r7-lo1",
+      "verb": "Explain",
+      "description": "Explain how DDPG extends DQN to continuous action spaces using a deterministic policy network that differentiably maximizes Q",
+      "skillTags": ["ddpg", "continuous-control", "q-learning"]
+    },
+    {
+      "id": "m3r7-lo2",
+      "verb": "Describe",
+      "description": "Describe the roles of replay buffer, target networks, and polyak averaging in DDPG and explain why each is necessary for stability",
+      "skillTags": ["ddpg", "replay-buffer", "target-networks"]
+    },
+    {
+      "id": "m3r7-lo3",
+      "verb": "Configure",
+      "description": "Configure DDPG's key hyperparameters: polyak, act_noise, start_steps, replay_size, batch_size, update_after, and update_every",
+      "skillTags": ["ddpg", "hyperparameters"]
+    }
+  ],
+  "content": "## The Core Idea\n\nDDPG is essentially deep Q-learning for continuous action spaces. In discrete spaces, computing \\(\\arg\\max_a Q(s,a)\\) is trivial — just evaluate Q for all actions. In continuous spaces, this becomes an optimization problem that would be run at every environment step, making it prohibitively slow.\n\nDDPG's insight: if \\(Q^*(s,a)\\) is differentiable with respect to \\(a\\), we can maintain a separate **policy network** \\(\\mu_\\theta(s)\\) trained to maximize Q. Instead of running optimization every step, we just forward-pass the policy:\n$$\\max_a Q(s,a) \\approx Q(s, \\mu_\\theta(s))$$\n\n## Quick Facts\n\n- **Off-policy** algorithm (uses a replay buffer)\n- **Continuous action spaces only**\n- Deterministic policy \\(\\mu_\\theta(s)\\)\n- No MPI parallelization support\n\n## The Two Learning Problems\n\n### 1. Learning the Q-Function (Bellman Minimization)\n\nDDPG minimizes the **mean-squared Bellman error (MSBE)**:\n$$L(\\phi) = \\mathbb{E}_{(s,a,r,s',d) \\sim \\mathcal{D}}\\left[\\left(Q_\\phi(s,a) - y(r,s',d)\\right)^2\\right]$$\n\nwhere the target \\(y\\) uses a **target policy network** \\(\\mu_{\\theta_{\\text{targ}}}\\) and a **target Q-network** \\(Q_{\\phi_{\\text{targ}}}\\):\n$$y(r,s',d) = r + \\gamma(1-d)\\, Q_{\\phi_{\\text{targ}}}(s', \\mu_{\\theta_{\\text{targ}}}(s'))$$\n\n### 2. Learning the Policy (Gradient Ascent on Q)\n\n$$\\max_\\theta \\; \\mathbb{E}_{s \\sim \\mathcal{D}}\\left[Q_\\phi(s, \\mu_\\theta(s))\\right]$$\n\nSince \\(Q_\\phi\\) is differentiable through \\(\\mu_\\theta\\), this is just gradient ascent — no sampling needed.\n\n## Three Stability Tricks\n\n### Trick 1: Replay Buffer\n\nDDPG stores all past transitions \\((s,a,r,s',d)\\) in a fixed-size buffer and samples random minibatches for training. This breaks the temporal correlation between consecutive samples (crucial for stable neural network training) and allows **data reuse** — the key advantage over on-policy methods.\n\nThe Bellman equation holds for *any* transition regardless of how it was collected, which is exactly why off-policy replay works.\n\n### Trick 2: Target Networks\n\nIf we compute the Bellman target using the same parameters we're updating, the target is a moving goalpost — the network can enter feedback loops and diverge. The solution: maintain **target networks** \\(Q_{\\phi_{\\text{targ}}}\\) and \\(\\mu_{\\theta_{\\text{targ}}}\\) that are updated slowly.\n\n### Trick 3: Polyak Averaging\n\nUnlike DQN (which copies the main network periodically), DDPG uses **polyak averaging** — a soft update every single step:\n$$\\phi_{\\text{targ}} \\leftarrow \\rho \\phi_{\\text{targ}} + (1-\\rho) \\phi$$\n\nWith \\(\\rho = 0.995\\) (default), the target network tracks the main network very slowly and smoothly.\n\n## Exploration\n\nThe policy is **deterministic**, so the agent won't explore on its own. At training time, noise is added to actions:\n$$a = \\text{clip}(\\mu_\\theta(s) + \\epsilon, a_{Low}, a_{High}), \\quad \\epsilon \\sim \\mathcal{N}(0, \\sigma^2 I)$$\n\nThe original paper used Ornstein-Uhlenbeck (time-correlated) noise, but uncorrelated Gaussian noise works just as well in practice.\n\n**Start steps trick:** For the first `start_steps` environment interactions, actions are sampled uniformly at random (ignoring the policy entirely). This pre-fills the replay buffer with diverse experiences before policy learning begins.\n\n## PyTorch Implementation\n\n```python\nfrom spinup import ddpg_pytorch as ddpg\nimport gym\n\nddpg(\n    env_fn=lambda: gym.make('HalfCheetah-v2'),\n    ac_kwargs=dict(hidden_sizes=[256, 256]),\n    steps_per_epoch=4000,\n    epochs=100,\n    replay_size=int(1e6),   # replay buffer size\n    gamma=0.99,\n    polyak=0.995,           # ρ for target network updates\n    pi_lr=1e-3,\n    q_lr=1e-3,\n    batch_size=100,\n    start_steps=10000,      # random exploration before policy kicks in\n    update_after=1000,      # wait until buffer has enough data\n    update_every=50,        # env steps between gradient updates\n    act_noise=0.1,          # Gaussian noise std for exploration\n    num_test_episodes=10,\n    max_ep_len=1000,\n    logger_kwargs=dict(output_dir='/tmp/ddpg', exp_name='ddpg')\n)\n```\n\n## Key Hyperparameters\n\n| Hyperparameter | Default | Role |\n|---|---|---|\n| `polyak` | 0.995 | Target network smoothing. Close to 1 = very slow update. |\n| `act_noise` | 0.1 | Gaussian noise std during training. Tune for exploration. |\n| `start_steps` | 10000 | Steps of random action before policy is used. |\n| `update_after` | 1000 | Don't start updates until buffer has this many samples. |\n| `update_every` | 50 | Steps between update batches (ratio of env steps to gradient steps = 1). |\n| `batch_size` | 100 | Minibatch size. 100–256 typical. |\n| `replay_size` | 1e6 | Max replay buffer size. Usually sufficient. |\n\n## DDPG's Weakness\n\nDDPG can be brittle. The most common failure mode is **Q-value overestimation**: the Q-network develops spurious peaks in the action space, and the policy learns to exploit these errors, producing deterministic actions that perform well in the model but poorly in the environment. This feedback loop degrades performance rapidly.\n\nTD3 (next reading) was designed specifically to address this failure mode.",
+  "references": [
+    {
+      "label": "Lillicrap et al. 2016",
+      "title": "Continuous Control With Deep Reinforcement Learning",
+      "url": "https://arxiv.org/abs/1509.02971"
+    },
+    {
+      "label": "Silver et al. 2014",
+      "title": "Deterministic Policy Gradient Algorithms",
+      "url": "http://proceedings.mlr.press/v32/silver14.pdf"
+    },
+    {
+      "label": "OpenAI Spinning Up",
+      "title": "DDPG Documentation",
+      "url": "https://spinningup.openai.com/en/latest/algorithms/ddpg.html"
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "id": "q1",
+  "moduleId": "m1",
+  "title": "RL Foundations Quiz",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "id": "r3", "type": "reading", "title": "Policy Gradient Theory" },
+  "nextItem": null,
+  "questions": [
+    {
+      "id": "q1_1",
+      "type": "multiple-choice",
+      "prompt": "An agent observes a Pong game frame and decides to move the paddle up. The frame is a partial view — ball velocity is not visible. What is the correct terminology for what the agent receives?",
+      "options": [
+        { "id": "a", "text": "A state, because the game environment has a complete Markov description", "correct": false },
+        { "id": "b", "text": "An observation, because the frame omits velocity information that is part of the true state", "correct": true },
+        { "id": "c", "text": "A reward, because the environment is telling the agent something about the game", "correct": false },
+        { "id": "d", "text": "A trajectory, because a single frame represents one step in the interaction", "correct": false }
+      ],
+      "explanation": "A single game frame is an observation — it's a partial description of the true state (which would include the full game variables including ball velocity). Since velocity is hidden, the environment is partially observed. Observations are denoted \\(o\\) while complete states are \\(s\\).",
+      "hint": "Ask whether the agent can determine the full state (all relevant world variables) from what it sees."
+    },
+    {
+      "id": "q1_2",
+      "type": "multiple-choice",
+      "prompt": "A robotic arm controls 7 joint torques, each a real number in \\([-1, 1]\\). A policy for this arm must sample actions and compute log-probabilities for the policy gradient. Which policy architecture is appropriate?",
+      "options": [
+        { "id": "a", "text": "Categorical policy — output 7 logits and apply softmax", "correct": false },
+        { "id": "b", "text": "Diagonal Gaussian policy — output mean and log-std vectors of dimension 7", "correct": true },
+        { "id": "c", "text": "Deterministic policy — output a single real-valued vector of dimension 7", "correct": false },
+        { "id": "d", "text": "Categorical policy over a discretized grid of torque values", "correct": false }
+      ],
+      "explanation": "Continuous action spaces require a continuous policy distribution. A diagonal Gaussian \\(\\mathcal{N}(\\mu_\\theta(s), \\sigma^2 I)\\) is standard. A categorical policy requires discrete actions. A deterministic policy can't compute log-probabilities needed for the policy gradient (without a distribution, there's no probability to differentiate).",
+      "hint": "Which type of policy is designed for real-valued, continuous action outputs?"
+    },
+    {
+      "id": "q1_3",
+      "type": "multiple-choice",
+      "prompt": "With \\(\\gamma = 0.99\\), what is the discounted return of the trajectory with rewards \\([1, 0, 0, 10]\\) at timesteps \\(t=0,1,2,3\\)?",
+      "options": [
+        { "id": "a", "text": "11", "correct": false },
+        { "id": "b", "text": "\\(1 + 0.99^3 \\times 10 = 1 + 9.703 = 10.703\\)", "correct": true },
+        { "id": "c", "text": "\\(0.99 \\times 11 = 10.89\\)", "correct": false },
+        { "id": "d", "text": "\\(10 \\times 0.99 = 9.9\\)", "correct": false }
+      ],
+      "explanation": "Discounted return: \\(R = \\sum_{t=0}^T \\gamma^t r_t = \\gamma^0 \\cdot 1 + \\gamma^1 \\cdot 0 + \\gamma^2 \\cdot 0 + \\gamma^3 \\cdot 10 = 1 + 0 + 0 + 0.99^3 \\times 10 \\approx 1 + 9.703 = 10.703\\).",
+      "hint": "The discount factor \\(\\gamma^t\\) grows with timestep \\(t\\), not with reward magnitude."
+    },
+    {
+      "id": "q1_4",
+      "type": "multiple-choice",
+      "prompt": "The advantage function is defined as \\(A^\\pi(s,a) = Q^\\pi(s,a) - V^\\pi(s)\\). If \\(A^\\pi(s,a) < 0\\), what does this mean?",
+      "options": [
+        { "id": "a", "text": "Action \\(a\\) leads to negative reward in state \\(s\\)", "correct": false },
+        { "id": "b", "text": "Action \\(a\\) is worse than the average action taken by \\(\\pi\\) in state \\(s\\)", "correct": true },
+        { "id": "c", "text": "The value function \\(V^\\pi(s)\\) is incorrect and needs updating", "correct": false },
+        { "id": "d", "text": "The policy gradient update will increase the probability of \\(a\\)", "correct": false }
+      ],
+      "explanation": "\\(A^\\pi(s,a) < 0\\) means \\(Q^\\pi(s,a) < V^\\pi(s)\\): taking action \\(a\\) yields less expected return than average. The policy gradient will *decrease* the probability of \\(a\\). Note: this doesn't mean \\(a\\) leads to negative reward — the return could still be positive but below average.",
+      "hint": "\\(V^\\pi(s) = \\mathbb{E}_{a \\sim \\pi}[Q^\\pi(s,a)]\\) — it's the expected Q-value over all actions."
+    },
+    {
+      "id": "q1_5",
+      "type": "multiple-choice",
+      "prompt": "In the derivation of the policy gradient, the log-derivative trick transforms \\(\\nabla_\\theta P(\\tau|\\theta)\\) into \\(P(\\tau|\\theta) \\nabla_\\theta \\log P(\\tau|\\theta)\\). Why does this matter?",
+      "options": [
+        { "id": "a", "text": "It makes the gradient computation numerically stable by taking a log", "correct": false },
+        { "id": "b", "text": "It converts the gradient into an expectation over trajectories, enabling Monte Carlo estimation", "correct": true },
+        { "id": "c", "text": "It eliminates the environment dynamics from the gradient computation", "correct": false },
+        { "id": "d", "text": "It replaces the policy gradient with the natural policy gradient", "correct": false }
+      ],
+      "explanation": "After applying the log-derivative trick, \\(\\nabla_\\theta J = \\mathbb{E}_{\\tau \\sim \\pi_\\theta}[R(\\tau) \\nabla_\\theta \\log P(\\tau|\\theta)]\\) — an expectation that can be estimated with sampled trajectories. This is what makes policy gradient algorithms tractable: we don't need to differentiate through the environment dynamics.",
+      "hint": "The key word is 'expectation' — what does converting \\(\\int_\\tau P(\\tau|\\theta) [\\ldots]\\) to \\(\\mathbb{E}_{\\tau}[\\ldots]\\) enable?"
+    },
+    {
+      "id": "q1_6",
+      "type": "multiple-choice",
+      "prompt": "A policy gradient update uses full-trajectory returns \\(R(\\tau)\\) as weights. Replacing these with reward-to-go \\(\\hat{R}_t = \\sum_{t'=t}^T r_{t'}\\) has what effect?",
+      "options": [
+        { "id": "a", "text": "It introduces bias by removing past rewards from the gradient estimate", "correct": false },
+        { "id": "b", "text": "It reduces variance without introducing bias, because past rewards don't affect future actions", "correct": true },
+        { "id": "c", "text": "It changes the expected value of the gradient, making updates more aggressive", "correct": false },
+        { "id": "d", "text": "It is only valid when the episode has a fixed length \\(T\\)", "correct": false }
+      ],
+      "explanation": "Reward-to-go removes terms \\(r_{t' < t}\\) that are independent of action \\(a_t\\) (past rewards can't be caused by future actions). By the EGLP lemma, their contribution to the gradient is zero in expectation — so removing them doesn't change the expected gradient but reduces the variance of the estimator.",
+      "hint": "Can an action at time \\(t\\) have caused a reward at time \\(t' < t\\)?"
+    }
+  ]
+}

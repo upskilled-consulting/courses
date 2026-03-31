@@ -1,0 +1,77 @@
+{
+  "id": "r8",
+  "moduleId": "m3",
+  "title": "TD3 & Soft Actor-Critic (SAC)",
+  "estimatedMinutes": 14,
+  "prevItem": { "id": "r7", "type": "reading", "title": "Deep Deterministic Policy Gradient (DDPG)" },
+  "nextItem": { "id": "r9", "type": "reading", "title": "Running, Logging & Benchmarking" },
+  "learningObjectives": [
+    {
+      "id": "m3r8-lo1",
+      "verb": "Describe",
+      "description": "Describe TD3's three tricks (clipped double-Q, delayed policy updates, target policy smoothing) and explain the failure mode each addresses",
+      "skillTags": ["td3", "overestimation", "policy-smoothing"]
+    },
+    {
+      "id": "m3r8-lo2",
+      "verb": "Derive",
+      "description": "State SAC's entropy-regularized objective and explain how it balances expected return against policy entropy",
+      "skillTags": ["sac", "entropy-regularization"]
+    },
+    {
+      "id": "m3r8-lo3",
+      "verb": "Explain",
+      "description": "Explain the reparameterization trick in SAC and why squashed Gaussian policies are used for bounded action spaces",
+      "skillTags": ["sac", "reparameterization", "stochastic-policy"]
+    },
+    {
+      "id": "m3r8-lo4",
+      "verb": "Compare",
+      "description": "Compare TD3 and SAC on stability, sample efficiency, and the role of stochasticity in exploration",
+      "skillTags": ["td3", "sac", "comparison"]
+    }
+  ],
+  "content": "## Twin Delayed DDPG (TD3)\n\nTD3 addresses DDPG's brittleness through three targeted improvements, each attacking a specific failure mode.\n\n### Trick 1: Clipped Double-Q Learning\n\n**Problem:** DDPG overestimates Q-values. The policy exploits these inflated estimates, producing suboptimal behavior.\n\n**Fix:** Learn *two* Q-functions \\(Q_{\\phi_1}\\) and \\(Q_{\\phi_2}\\), and use the **minimum** for computing Bellman targets:\n$$y(r,s',d) = r + \\gamma(1-d)\\min_{i=1,2} Q_{\\phi_{i,\\text{targ}}}(s', a'(s'))$$\n\nBoth Q-functions are trained to regress to this shared target. Taking the minimum prevents either Q-function from overestimating — if one goes high, the other acts as a corrector.\n\n### Trick 2: Delayed Policy Updates\n\n**Problem:** When the Q-function has high error, policy updates derived from it push the policy in the wrong direction. These bad policy updates then corrupt future Q-estimates — a destabilizing feedback loop.\n\n**Fix:** Update the policy (and target networks) **less frequently** than the Q-functions. Default: 1 policy update per 2 Q-function updates (`policy_delay=2`).\n\nThis gives the Q-function time to settle before the policy sees a gradient from it.\n\n### Trick 3: Target Policy Smoothing\n\n**Problem:** The policy can exploit sharp peaks in the Q-function — narrow regions where Q is erroneously high. Because the deterministic policy always picks the action with highest Q, it gets \"stuck\" exploiting these artifacts.\n\n**Fix:** Add clipped noise to the target actions used in the Bellman update:\n$$a'(s') = \\text{clip}\\left(\\mu_{\\theta_{\\text{targ}}}(s') + \\text{clip}(\\epsilon, -c, c), a_{Low}, a_{High}\\right), \\quad \\epsilon \\sim \\mathcal{N}(0, \\sigma^2)$$\n\nThis smooths the Q-function over nearby actions, making it harder to exploit spurious peaks.\n\n### TD3 PyTorch\n\n```python\nfrom spinup import td3_pytorch as td3\nimport gym\n\ntd3(\n    env_fn=lambda: gym.make('HalfCheetah-v2'),\n    ac_kwargs=dict(hidden_sizes=[256, 256]),\n    epochs=100,\n    polyak=0.995,\n    pi_lr=1e-3,\n    q_lr=1e-3,\n    act_noise=0.1,\n    target_noise=0.2,   # σ for target policy smoothing\n    noise_clip=0.5,     # c: clip limit on smoothing noise\n    policy_delay=2,     # update policy every 2nd Q step\n    start_steps=10000,\n    logger_kwargs=dict(output_dir='/tmp/td3', exp_name='td3')\n)\n```\n\n---\n\n## Soft Actor-Critic (SAC)\n\nSAC is an off-policy algorithm that trains a *stochastic* policy — a significant departure from DDPG and TD3. Rather than just maximizing expected return, SAC optimizes a trade-off between return and **policy entropy**.\n\n### Entropy-Regularized Objective\n\nThe agent seeks to maximize:\n$$\\pi^* = \\arg\\max_\\pi \\; \\mathbb{E}_{\\tau \\sim \\pi}\\left[\\sum_{t=0}^\\infty \\gamma^t \\left(r_t + \\alpha H(\\pi(\\cdot|s_t))\\right)\\right]$$\n\nwhere \\(H(\\pi(\\cdot|s)) = \\mathbb{E}_{a \\sim \\pi}[-\\log \\pi(a|s)]\\) is the <a class=\"lookback-link\" data-lookback=\"entropy-reg\">policy entropy</a> and \\(\\alpha > 0\\) is the temperature.\n\n**Why entropy regularization?**\n- **More exploration**: a high-entropy policy tries many actions, avoiding premature convergence.\n- **Robustness**: spreading probability mass over multiple good actions avoids overfitting to a single mode.\n- **Better stability**: the entropy bonus prevents the policy from becoming deterministic too quickly.\n\n### Value Functions under Entropy Regularization\n\nWith entropy bonuses added at every timestep, the value functions change slightly:\n$$V^\\pi(s) = \\mathbb{E}_{\\tau \\sim \\pi}\\left[\\sum_{t=0}^\\infty \\gamma^t (r_t + \\alpha H(\\pi(\\cdot|s_t))) \\mid s_0=s\\right]$$\n\nThe Bellman equation becomes:\n$$Q^\\pi(s,a) \\approx r + \\gamma \\mathbb{E}_{a' \\sim \\pi}\\left[Q^\\pi(s',a') - \\alpha \\log \\pi(a'|s')\\right]$$\n\n### Learning Q in SAC\n\nSAC uses the clipped double-Q trick from TD3. The Bellman target is:\n$$y(r,s',d) = r + \\gamma(1-d)\\left(\\min_{j=1,2} Q_{\\phi_{j,\\text{targ}}}(s',\\tilde{a}') - \\alpha \\log \\pi_\\theta(\\tilde{a}'|s')\\right)$$\n\nwhere \\(\\tilde{a}' \\sim \\pi_\\theta(\\cdot|s')\\) is sampled fresh from the current policy (not from the replay buffer).\n\n### The Reparameterization Trick\n\nSAC trains a **squashed Gaussian policy** — the network outputs mean and log-std, and actions are sampled using:\n$$\\tilde{a}_\\theta(s, \\xi) = \\tanh(\\mu_\\theta(s) + \\sigma_\\theta(s) \\odot \\xi), \\quad \\xi \\sim \\mathcal{N}(0, I)$$\n\nThe <a class=\"lookback-link\" data-lookback=\"tanh-squash\">\\(\\tanh\\) squashing</a> ensures actions stay in \\([-1, 1]\\) (or the valid range after rescaling). More importantly, the <a class=\"lookback-link\" data-lookback=\"reparam\">reparameterization trick</a> separates the randomness (\\(\\xi\\)) from the parameters (\\(\\mu_\\theta, \\sigma_\\theta\\)), making the expectation over actions differentiable:\n$$\\nabla_\\theta \\mathbb{E}_{a \\sim \\pi_\\theta}[Q(s,a)] = \\mathbb{E}_{\\xi}\\left[\\nabla_\\theta Q(s, \\tilde{a}_\\theta(s,\\xi))\\right]$$\n\n### SAC PyTorch\n\n```python\nfrom spinup import sac_pytorch as sac\nimport gym\n\nsac(\n    env_fn=lambda: gym.make('HalfCheetah-v2'),\n    ac_kwargs=dict(hidden_sizes=[256, 256]),\n    epochs=100,\n    alpha=0.2,          # entropy temperature (fixed in Spinning Up)\n    gamma=0.99,\n    polyak=0.995,\n    lr=1e-3,\n    batch_size=100,\n    start_steps=10000,\n    update_after=1000,\n    update_every=50,\n    logger_kwargs=dict(output_dir='/tmp/sac', exp_name='sac')\n)\n```\n\n## TD3 vs SAC\n\n| | TD3 | SAC |\n|--|--|--|\n| Policy type | Deterministic | Stochastic (squashed Gaussian) |\n| Exploration | Gaussian noise added externally | Inherent from stochastic policy |\n| Q-overestimation fix | Clipped double-Q | Clipped double-Q |\n| Target smoothing | Explicit (target policy noise) | Implicit (stochastic policy) |\n| Entropy | Not considered | Explicitly maximized |\n| Typical performance | Strong | State-of-the-art for continuous control |\n\n**Rule of thumb:** SAC generally outperforms TD3 on standard MuJoCo benchmarks and is more robust to hyperparameter choices, making it the preferred starting point for continuous control tasks.",
+  "lookbacks": {
+    "entropy-reg": {
+      "title": "Entropy as Regularization",
+      "source": "Regularization",
+      "sourcePath": "/supplement/regularization",
+      "body": "$$H(\\pi(\\cdot|s)) = -\\mathbb{E}_{a \\sim \\pi}[\\log \\pi(a|s)]$$\n\nEntropy penalises overconfidence the same way L2 weight decay penalises large weights. A policy that puts near-1 probability on a single action has near-zero entropy — it has collapsed to deterministic behaviour before the Q-function is well-estimated, locking in whatever biases exist in early Q-value estimates.\n\nThe temperature \\(\\alpha\\) is the regularisation strength: **high \\(\\alpha\\)** keeps the policy diverse and exploratory; **\\(\\alpha \\to 0\\)** recovers standard max-return RL. In practice, \\(\\alpha\\) is either tuned or set to auto-tune toward a target entropy level — the same way you'd search for an L2 coefficient via cross-validation."
+    },
+    "reparam": {
+      "title": "Reparameterization Trick",
+      "source": null,
+      "sourcePath": null,
+      "body": "You can't backpropagate through a random sample, but you can through a **deterministic function of noise**.\n\nInstead of sampling \\(a \\sim \\pi_\\theta(\\cdot|s)\\) directly, factor the sample as:\n$$\\tilde{a} = \\mu_\\theta(s) + \\sigma_\\theta(s) \\odot \\xi, \\quad \\xi \\sim \\mathcal{N}(0, I)$$\n\nNow \\(\\tilde{a}\\) is a deterministic function of \\(\\theta\\) and noise \\(\\xi\\), so \\(\\partial \\tilde{a} / \\partial \\theta\\) exists and backprop works end-to-end. The expectation \\(\\mathbb{E}_{a \\sim \\pi_\\theta}[Q(s,a)]\\) becomes \\(\\mathbb{E}_{\\xi}[Q(s, \\tilde{a}_\\theta(s,\\xi))]\\) — differentiable with respect to \\(\\theta\\), enabling SAC to directly optimise the entropy-regularised objective through the policy."
+    },
+    "tanh-squash": {
+      "title": "tanh Squashing & Log-Prob Correction",
+      "source": "Activation Functions",
+      "sourcePath": "/supplement/activation-functions",
+      "body": "\\(\\tanh\\) maps \\(\\mathbb{R} \\to (-1, 1)\\), enforcing bounded action spaces. But the change of variables introduces a **log-probability correction** that must not be omitted:\n\n$$\\log \\pi(a|s) = \\log \\mathcal{N}(u;\\, \\mu, \\sigma^2) - \\sum_i \\log(1 - \\tanh^2(u_i))$$\n\nwhere \\(u = \\mu + \\sigma \\odot \\xi\\) is the pre-squash sample. The subtracted term is the Jacobian of \\(\\tanh\\): because \\(\\tanh\\) compresses the tails of the Gaussian, the probability density at extreme values would be artificially inflated without it.\n\nOmitting this correction is a common silent bug — the agent trains against a wrong entropy estimate, degrading performance without any visible error."
+    }
+  },
+  "references": [
+    {
+      "label": "Fujimoto et al. 2018",
+      "title": "Addressing Function Approximation Error in Actor-Critic Methods (TD3)",
+      "url": "https://arxiv.org/abs/1802.09477"
+    },
+    {
+      "label": "Haarnoja et al. 2018",
+      "title": "Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning",
+      "url": "https://arxiv.org/abs/1801.01290"
+    },
+    {
+      "label": "OpenAI Spinning Up",
+      "title": "TD3 Documentation",
+      "url": "https://spinningup.openai.com/en/latest/algorithms/td3.html"
+    },
+    {
+      "label": "OpenAI Spinning Up",
+      "title": "SAC Documentation",
+      "url": "https://spinningup.openai.com/en/latest/algorithms/sac.html"
+    }
+  ]
+}

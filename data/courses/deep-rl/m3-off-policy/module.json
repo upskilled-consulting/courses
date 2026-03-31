@@ -1,0 +1,67 @@
+{
+  "id": "m3",
+  "title": "Off-Policy Methods & Tooling",
+  "order": 3,
+  "color": "#2a5757",
+  "accentLight": "#63aac9",
+  "prereq": "m2",
+  "learningObjectives": [
+    "Explain how DDPG uses a replay buffer and target networks to stably learn Q-functions off-policy for continuous action spaces.",
+    "Describe TD3's three tricks (clipped double-Q, delayed updates, target policy smoothing) and how each addresses DDPG's failure modes.",
+    "Derive SAC's entropy-regularized objective and explain how the reparameterization trick enables differentiable policy optimization.",
+    "Compare TD3 and SAC: when stochastic (SAC) vs deterministic (TD3) policies are preferable.",
+    "Use spinup.run and ExperimentGrid to launch, log, and compare experiments across hyperparameter grids.",
+    "Load a saved policy with test_policy and interpret progress.txt columns to diagnose training problems."
+  ],
+  "readings": [
+    {
+      "id": "r7",
+      "title": "Deep Deterministic Policy Gradient (DDPG)",
+      "estimatedMinutes": 13,
+      "dataPath": "data/courses/deep-rl/m3-off-policy/readings/r7-ddpg.json"
+    },
+    {
+      "id": "r8",
+      "title": "TD3 & Soft Actor-Critic (SAC)",
+      "estimatedMinutes": 14,
+      "dataPath": "data/courses/deep-rl/m3-off-policy/readings/r8-td3-sac.json"
+    },
+    {
+      "id": "r9",
+      "title": "Running, Logging & Benchmarking",
+      "estimatedMinutes": 10,
+      "dataPath": "data/courses/deep-rl/m3-off-policy/readings/r9-tooling.json"
+    },
+    {
+      "id": "r10",
+      "title": "Key Papers in Deep RL",
+      "estimatedMinutes": 15,
+      "dataPath": "data/courses/deep-rl/m3-off-policy/readings/r10-key-papers.json"
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "q3",
+      "title": "Off-Policy Methods & Tooling Quiz",
+      "questionCount": 6,
+      "passingScore": 0.7,
+      "dataPath": "data/courses/deep-rl/m3-off-policy/quizzes/q3-off-policy.json"
+    }
+  ],
+  "drills": [
+    {
+      "id": "d2",
+      "title": "Algorithm Mechanics",
+      "cardCount": 12,
+      "dataPath": "data/courses/deep-rl/m3-off-policy/drills/d2-algorithms.json"
+    }
+  ],
+  "labs": [
+    {
+      "id": "lab2",
+      "title": "DDPG & SAC in TensorFlow",
+      "estimatedMinutes": 60,
+      "dataPath": "data/courses/deep-rl/m3-off-policy/labs/lab2-tensorflow.json"
+    }
+  ]
+}

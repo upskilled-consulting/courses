@@ -1,0 +1,46 @@
+{
+  "id": "r9",
+  "moduleId": "m3",
+  "title": "Running, Logging & Benchmarking",
+  "estimatedMinutes": 10,
+  "prevItem": { "id": "r8", "type": "reading", "title": "TD3 & Soft Actor-Critic (SAC)" },
+  "nextItem": { "id": "r10", "type": "reading", "title": "Key Papers in Deep RL" },
+  "learningObjectives": [
+    {
+      "id": "m3r9-lo1",
+      "verb": "Run",
+      "description": "Run any Spinning Up algorithm from the command line using spinup.run, selecting PyTorch vs TensorFlow and setting hyperparameters as flags",
+      "skillTags": ["tooling", "command-line"]
+    },
+    {
+      "id": "m3r9-lo2",
+      "verb": "Use",
+      "description": "Use ExperimentGrid to define a hyperparameter sweep and launch all combinations programmatically",
+      "skillTags": ["tooling", "experiment-grid"]
+    },
+    {
+      "id": "m3r9-lo3",
+      "verb": "Interpret",
+      "description": "Interpret the experiment output directory (config.json, progress.txt, pyt_save/), load a saved policy with test_policy, and plot results with the Spinning Up plotter",
+      "skillTags": ["tooling", "logging", "evaluation"]
+    }
+  ],
+  "content": "## Running from the Command Line\n\nSpinning Up ships with `spinup/run.py`, a unified launcher for all algorithms:\n\n```bash\npython -m spinup.run [algo] [flags]\n```\n\n### Choosing PyTorch or TensorFlow\n\n```bash\n# PyTorch version:\npython -m spinup.run ppo_pytorch --env HalfCheetah-v2 --exp_name ppo-hc\n\n# TensorFlow version:\npython -m spinup.run ppo_tf1 --env HalfCheetah-v2 --exp_name ppo-hc-tf\n\n# Default (reads spinup/user_config.py):\npython -m spinup.run ppo --env HalfCheetah-v2\n```\n\n### Setting Hyperparameters\n\nEvery keyword argument for the algorithm function can be set as a flag:\n\n```bash\npython -m spinup.run ppo_pytorch --env Walker2d-v2 \\\n  --exp_name walker-ppo \\\n  --epochs 200 \\\n  --gamma 0.99 \\\n  --clip_ratio 0.2 \\\n  --hid[h] [64,64]   # shortcut for ac_kwargs:hidden_sizes\n```\n\nValues pass through `eval()`, so you can pass Python expressions:\n```bash\n--act torch.nn.ELU     # sets activation function directly\n```\n\n### Running Multiple Experiments\n\nProvide multiple values for any argument to run all combinations in series:\n\n```bash\n# Three seeds, two architectures = 6 experiments total:\npython -m spinup.run ppo_pytorch --env Walker2d-v2 \\\n  --seed 0 10 20 \\\n  --hid[h] [64,64] [256,256]\n```\n\nExperiments run **in series** (not parallel) because each one uses enough compute to saturate a machine.\n\n## ExperimentGrid: Sweeps from Python\n\nFor larger hyperparameter searches, use `ExperimentGrid` in a Python script:\n\n```python\nfrom spinup.utils.run_utils import ExperimentGrid\nfrom spinup import ppo_pytorch\nimport torch\n\neg = ExperimentGrid(name='ppo-sweep')\neg.add('env_name', 'HalfCheetah-v2', '', in_name=True)\neg.add('seed', [10 * i for i in range(5)])               # 5 seeds\neg.add('epochs', 200)\neg.add('ac_kwargs:hidden_sizes', [(64, 64), (256, 256)], 'hid')  # 2 architectures\neg.add('ac_kwargs:activation', [torch.nn.Tanh, torch.nn.ReLU], '')  # 2 activations\n\neg.run(ppo_pytorch, num_cpu=1)  # runs 5 × 2 × 2 = 20 experiments\n```\n\nKey `eg.add()` parameters:\n- `param_name`: the algorithm kwarg name\n- `values`: list of values to try\n- `shorthand`: used in naming save directories\n- `in_name=True`: always include this param in directory name (even if it has one value)\n\n## Experiment Outputs\n\nEach experiment run saves to:\n```\ndata_dir/[timestamp_]exp_name[suffix]/[timestamp_]exp_name[suffix]_s[seed]/\n  config.json      ← hyperparameters used (for record-keeping)\n  progress.txt     ← tab-separated training metrics by epoch\n  vars.pkl         ← pickled environment (if serializable)\n  pyt_save/        ← PyTorch: model.pt (ActorCritic nn.Module)\n  tf1_save/        ← TF: SavedModel directory\n```\n\n### progress.txt columns\n\nTypical columns logged by Spinning Up algorithms:\n\n| Column | Meaning |\n|--------|---------|\n| `Epoch` | Current epoch number |\n| `AverageEpRet` | Mean return over test episodes |\n| `StdEpRet` | Std of test episode returns |\n| `MaxEpRet` | Best episode return |\n| `MinEpRet` | Worst episode return |\n| `EpLen` | Mean episode length |\n| `TotalEnvInteracts` | Total environment steps so far |\n| `LossPi` | Policy loss (not a reliable progress metric) |\n| `LossV` | Value function loss |\n| `KL` | Approx KL divergence (on-policy algs) |\n| `Time` | Wall-clock time elapsed |\n\n> **Key rule:** Watch `AverageEpRet`, not `LossPi`. The policy loss is not a meaningful diagnostic.\n\n## Loading and Testing Trained Policies\n\n### PyTorch\n\n```python\nimport torch\n\nac = torch.load('path/to/pyt_save/model.pt')\n\nobs = env.reset()\nwhile True:\n    action = ac.act(torch.as_tensor(obs, dtype=torch.float32))\n    obs, rew, done, _ = env.step(action)\n    if done:\n        break\n```\n\n### Command-Line Test Runner\n\n```bash\n# Run 100 test episodes and render:\npython -m spinup.run test_policy path/to/output_dir\n\n# Options:\n#  -n 50          run 50 episodes instead of 100\n#  -l 500         max 500 steps per episode\n#  -nr            no rendering (faster, just print returns)\n```\n\n## Plotting Results\n\n```bash\n# Plot a single run:\npython -m spinup.run plot path/to/output_dir\n\n# Compare multiple runs on the same axes:\npython -m spinup.run plot path/to/run1 path/to/run2\n\n# Multiple seeds in the same directory are automatically averaged:\npython -m spinup.run plot path/to/exp_folder/\n```\n\nThe plotter reads `progress.txt` and plots mean ± std across seeds.\n\n## Practical Benchmarking Tips\n\n1. **Always run multiple seeds** (3–5 minimum). RL is stochastic and a single seed can look great or terrible by chance.\n2. **Report mean and std**, not just the best seed.\n3. **Wall-clock vs. environment steps**: report `TotalEnvInteracts` on the x-axis for fair comparisons across machines.\n4. **Baseline against VPG**: VPG is a sanity check. If PPO doesn't beat VPG, something is wrong.\n5. **Tune on simple environments first**: CartPole, Pendulum, or HalfCheetah. Don't waste compute on complex envs before confirming basic sanity.",
+  "references": [
+    {
+      "label": "OpenAI Spinning Up",
+      "title": "Running Experiments",
+      "url": "https://spinningup.openai.com/en/latest/user/running.html"
+    },
+    {
+      "label": "OpenAI Spinning Up",
+      "title": "Experiment Outputs",
+      "url": "https://spinningup.openai.com/en/latest/user/saving_and_loading.html"
+    },
+    {
+      "label": "OpenAI Spinning Up",
+      "title": "Plotting Results",
+      "url": "https://spinningup.openai.com/en/latest/user/plotting.html"
+    }
+  ]
+}

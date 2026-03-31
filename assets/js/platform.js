@@ -1376,6 +1376,9 @@ async function renderReading(params, root) {
   highlightCode(root);
   attachCodeRunners(root);
 
+  // Wire lookback links
+  wireLookbacks(root.querySelector('#readingContent'), reading.lookbacks || {});
+
   // Boot canvas animations (densification, SH visualizer)
   const contentEl = root.querySelector('#readingContent');
   if (contentEl) {
@@ -1906,11 +1909,12 @@ async function renderLab(params, root) {
         <div class="reading-kicker">${kickerLabel} · ${modTitle}</div>
         <h1 class="reading-title">${lab.title}</h1>
         <div class="reading-meta-row">
-          <span>Colab Notebook</span>
+          <span>${lab.colabUrl ? 'Colab Notebook' : 'Lab Exercises'}</span>
           <span class="reading-meta-sep">·</span>
           <span>~${lab.estimatedMinutes} min</span>
         </div>
 
+        ${lab.colabUrl ? `
         <div class="lab-colab-card">
           <div class="lab-colab-info">
             <div class="lab-colab-kicker">Google Colab Notebook</div>
@@ -1924,7 +1928,7 @@ async function renderLab(params, root) {
             </svg>
             Open in Colab
           </a>
-        </div>
+        </div>` : ''}
 
         ${objectivesHTML ? `
         <div class="lab-objectives">
@@ -2562,6 +2566,36 @@ function closeParagraphPopup() {
   document.getElementById('paraOverlay')?.classList.remove('is-open');
 }
 
+// ── Lookback links ────────────────────────────────────────────
+function wireLookbacks(contentEl, lookbacks) {
+  if (!contentEl || !lookbacks) return;
+  contentEl.querySelectorAll('[data-lookback]').forEach(el => {
+    const item = lookbacks[el.dataset.lookback];
+    if (!item) return;
+    el.addEventListener('click', e => {
+      e.preventDefault();
+      const overlay = document.getElementById('paraOverlay');
+      const src     = document.getElementById('paraPopupSrc');
+      const text    = document.getElementById('paraPopupText');
+      if (!overlay || !src || !text) return;
+      const label = item.source ? `${item.title}  ·  ${item.source}` : item.title;
+      if (item.sourcePath) {
+        src.innerHTML = `<a class="para-popup-src-link" href="${BASE_PATH + item.sourcePath}" title="Go to supplement">${_escHtml(label)}</a>`;
+        src.querySelector('a').addEventListener('click', e2 => {
+          e2.preventDefault();
+          closeParagraphPopup();
+          navigate(item.sourcePath);
+        });
+      } else {
+        src.textContent = label;
+      }
+      text.innerHTML = renderMarkdown(item.body);
+      overlay.classList.add('is-open');
+      document.getElementById('paraPopupClose')?.focus();
+    });
+  });
+}
+
 // ── Open / close search ──────────────────────────────────────
 function openSearch() {
   const overlay = document.getElementById('searchOverlay');
@@ -2704,7 +2738,7 @@ const SYLLABUS_ICONS = {
 
 function _syllabusItemRow(iconKey, label, href, meta) {
   const content = href
-    ? `<a class="outline-item-link" href="${href}">${_escHtml(label)}</a>`
+    ? `<a class="outline-item-link" href="${BASE_PATH + href}" data-nav="${href}">${_escHtml(label)}</a>`
     : `<span class="outline-item-link outline-item-disabled">${_escHtml(label)}</span>`;
   return `
     <li class="outline-item${href ? '' : ' outline-item-locked'}">
@@ -2831,7 +2865,7 @@ async function renderSyllabus(params, root) {
     </div>`;
 
   root.querySelectorAll('[data-nav]').forEach(el =>
-    el.addEventListener('click', () => navigate(el.dataset.nav))
+    el.addEventListener('click', e => { e.preventDefault(); navigate(el.dataset.nav); })
   );
   root.querySelector('#outline-expand-all')?.addEventListener('click', () => {
     root.querySelectorAll('.outline-module').forEach(el => el.open = true);

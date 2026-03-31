@@ -1243,6 +1243,33 @@ img, svg { display: block; max-width: 100%; }
   padding: 4px 0 8px;
 }
 
+/* Lookback links — inline concept recall triggers */
+.lookback-link {
+  color: var(--accent-light);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--accent-light);
+  cursor: pointer;
+  padding-bottom: 1px;
+  transition: opacity 0.15s;
+}
+.lookback-link:hover {
+  opacity: 0.8;
+  text-decoration: none;
+}
+.lookback-link::after {
+  content: '↩';
+  font-size: 0.72em;
+  margin-left: 2px;
+  opacity: 0.35;
+  display: inline-block;
+  transition: opacity 0.15s;
+  user-select: none;
+  vertical-align: 0.05em;
+}
+.lookback-link:hover::after {
+  opacity: 0.75;
+}
+
 /* Equation breakdown cards */
 .eq-breakdown {
   background: var(--bg-card);

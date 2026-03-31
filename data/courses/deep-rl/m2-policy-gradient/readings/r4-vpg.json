@@ -1,0 +1,46 @@
+{
+  "id": "r4",
+  "moduleId": "m2",
+  "title": "Vanilla Policy Gradient (VPG)",
+  "estimatedMinutes": 12,
+  "prevItem": null,
+  "nextItem": { "id": "r5", "type": "reading", "title": "Trust Region Policy Optimization (TRPO)" },
+  "learningObjectives": [
+    {
+      "id": "m2r4-lo1",
+      "verb": "Implement",
+      "description": "Implement VPG's training loop in PyTorch: collect trajectories, compute GAE advantages, take one policy gradient step, and fit the value function",
+      "skillTags": ["vpg", "pytorch", "implementation"]
+    },
+    {
+      "id": "m2r4-lo2",
+      "verb": "Configure",
+      "description": "Configure the key VPG hyperparameters (steps_per_epoch, gamma, lam, pi_lr, vf_lr, train_v_iters) and explain each one's role",
+      "skillTags": ["vpg", "hyperparameters"]
+    },
+    {
+      "id": "m2r4-lo3",
+      "verb": "Explain",
+      "description": "Explain why VPG's exploration degrades over training and what practical consequences this has for hyperparameter tuning",
+      "skillTags": ["vpg", "exploration"]
+    }
+  ],
+  "content": "## The Key Idea\n\nVanilla Policy Gradient (VPG) is the simplest practical implementation of the policy gradient idea developed in Part 3. The core intuition: push up the probabilities of actions that led to high advantage, push down the probabilities of actions that led to low advantage, and repeat.\n\nVPG is **on-policy**: every update uses freshly collected trajectories. After one gradient step, the data is discarded.\n\n## Quick Facts\n\n- **On-policy** algorithm\n- Works for **discrete and continuous** action spaces\n- Supports **MPI parallelization** (collect trajectories on multiple workers simultaneously)\n- Uses **GAE-Lambda** for advantage estimation\n\n## The Algorithm\n\n```\nInput: initial policy θ₀, initial value function φ₀\nFor k = 0, 1, 2, ...:\n  1. Collect trajectories D_k by running π_θk in the environment\n  2. Compute rewards-to-go R̂_t\n  3. Compute advantage estimates Â_t using V_φk (via GAE-λ)\n  4. Update policy by gradient ascent:\n       θ_{k+1} = θ_k + α * (1/|D_k|) Σ Σ ∇_θ log π_θ(a_t|s_t)|_θk * Â_t\n  5. Fit value function by gradient descent on MSE:\n       φ_{k+1} = argmin_φ (1/|D_k|T) Σ Σ (V_φ(s_t) - R̂_t)²\n```\n\n## PyTorch Implementation\n\n```python\nfrom spinup import vpg_pytorch as vpg\nimport gym\n\n# Launch VPG on CartPole:\nvpg(\n    env_fn=lambda: gym.make('CartPole-v1'),\n    ac_kwargs=dict(hidden_sizes=[64, 64]),\n    steps_per_epoch=4000,\n    epochs=50,\n    gamma=0.99,\n    pi_lr=3e-4,\n    vf_lr=1e-3,\n    train_v_iters=80,\n    lam=0.97,\n    max_ep_len=1000,\n    logger_kwargs=dict(output_dir='/tmp/vpg-test', exp_name='vpg')\n)\n```\n\nFrom the command line:\n```bash\npython -m spinup.run vpg_pytorch --env CartPole-v1 --epochs 50\n```\n\n## Key Hyperparameters\n\n| Hyperparameter | Default | Role |\n|---|---|---|\n| `steps_per_epoch` | 4000 | Number of environment steps per policy update. Larger = lower variance gradient estimate but slower. |\n| `gamma` | 0.99 | Discount factor. |\n| `lam` | 0.97 | GAE-Lambda. Higher = lower bias, higher variance. |\n| `pi_lr` | 3e-4 | Policy learning rate. |\n| `vf_lr` | 1e-3 | Value function learning rate (higher than policy is typical). |\n| `train_v_iters` | 80 | Gradient steps on value function per epoch. |\n| `max_ep_len` | 1000 | Max episode length before forced termination. |\n\n## Loading a Trained Policy\n\nAfter training, the PyTorch model is saved as `pyt_save/model.pt`:\n\n```python\nimport torch\n\nac = torch.load('path/to/pyt_save/model.pt')\n\n# Get actions:\nobs = env.reset()\naction = ac.act(torch.as_tensor(obs, dtype=torch.float32))\n```\n\n## Exploration vs. Exploitation\n\nVPG trains a stochastic policy. Early in training, the policy is nearly random (high entropy), which provides exploration. As training proceeds, the policy becomes more deterministic as it exploits discovered high-reward actions.\n\nThe danger: the policy may converge prematurely to a local optimum before finding the globally best behavior. VPG has no explicit mechanism to prevent this — unlike SAC, which explicitly encourages entropy throughout training.\n\n## When to Use VPG\n\nVPG is primarily useful as a **baseline** and a **learning tool** rather than a production algorithm. Its simplicity makes it easy to debug. For competitive performance:\n- Use **PPO** when an on-policy algorithm is required (simpler and more robust than TRPO).\n- Use **SAC** when sample efficiency matters and the action space is continuous.",
+  "references": [
+    {
+      "label": "Sutton et al. 2000",
+      "title": "Policy Gradient Methods for Reinforcement Learning with Function Approximation",
+      "url": "https://papers.nips.cc/paper/1713-policy-gradient-methods-for-reinforcement-learning-with-function-approximation.pdf"
+    },
+    {
+      "label": "Schulman et al. 2016",
+      "title": "High Dimensional Continuous Control Using Generalized Advantage Estimation",
+      "url": "https://arxiv.org/abs/1506.02438"
+    },
+    {
+      "label": "OpenAI Spinning Up",
+      "title": "VPG Documentation",
+      "url": "https://spinningup.openai.com/en/latest/algorithms/vpg.html"
+    }
+  ]
+}

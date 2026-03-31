@@ -1,0 +1,39 @@
+{
+  "id": "deep-rl",
+  "title": "Deep Reinforcement Learning",
+  "subtitle": "From RL Foundations to PPO, SAC, and the Spinning Up Toolkit",
+  "version": "1.0.0",
+  "unlockThreshold": 0.6,
+  "modules": [
+    {
+      "id": "m1",
+      "slug": "m1-foundations",
+      "title": "RL Foundations",
+      "description": "Agents, environments, policies, value functions, and the mathematical landscape of modern RL algorithms.",
+      "order": 1,
+      "prereq": null,
+      "dataPath": "data/courses/deep-rl/m1-foundations/module.json",
+      "color": "#63aac9"
+    },
+    {
+      "id": "m2",
+      "slug": "m2-policy-gradient",
+      "title": "Policy Gradient Algorithms",
+      "description": "VPG, TRPO, and PPO — the on-policy family of algorithms that directly optimize the policy objective.",
+      "order": 2,
+      "prereq": "m1",
+      "dataPath": "data/courses/deep-rl/m2-policy-gradient/module.json",
+      "color": "#1776a4"
+    },
+    {
+      "id": "m3",
+      "slug": "m3-off-policy",
+      "title": "Off-Policy Methods & Tooling",
+      "description": "DDPG, TD3, and SAC for continuous control, plus the Spinning Up toolkit for running, logging, and benchmarking experiments.",
+      "order": 3,
+      "prereq": "m2",
+      "dataPath": "data/courses/deep-rl/m3-off-policy/module.json",
+      "color": "#2a5757"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "id": "r5",
+  "moduleId": "m2",
+  "title": "Trust Region Policy Optimization (TRPO)",
+  "estimatedMinutes": 12,
+  "prevItem": { "id": "r4", "type": "reading", "title": "Vanilla Policy Gradient (VPG)" },
+  "nextItem": { "id": "r6", "type": "reading", "title": "Proximal Policy Optimization (PPO)" },
+  "learningObjectives": [
+    {
+      "id": "m2r5-lo1",
+      "verb": "Explain",
+      "description": "Explain the core problem that TRPO solves: why large policy gradient steps can cause performance collapse, and how KL-divergence constrains the update",
+      "skillTags": ["trpo", "kl-divergence", "trust-region"]
+    },
+    {
+      "id": "m2r5-lo2",
+      "verb": "Describe",
+      "description": "Describe the TRPO update rule: surrogate advantage objective, KL constraint, conjugate gradient, and backtracking line search",
+      "skillTags": ["trpo", "optimization"]
+    },
+    {
+      "id": "m2r5-lo3",
+      "verb": "Configure",
+      "description": "Configure TRPO's key hyperparameters: delta (KL limit), damping_coeff, cg_iters, and lam",
+      "skillTags": ["trpo", "hyperparameters"]
+    }
+  ],
+  "content": "## The Problem with Large Policy Gradient Steps\n\nVanilla policy gradient keeps new and old policies close *in parameter space* — it simply takes a step of size \\(\\alpha\\) along the gradient. But small moves in parameter space can produce large changes in policy behavior, because the mapping from parameters to action distributions is nonlinear.\n\nA single bad gradient step can collapse performance. Recovering from collapse often requires reducing the learning rate and waiting many epochs — effectively wasting all the data you collected.\n\n## The TRPO Idea: Constrain the KL Divergence\n\nTRPO asks: *What is the largest performance-improving step we can take such that the new policy stays close to the old one in terms of behavior — not just parameter values?*\n\nIt formalizes \"closeness\" using <a class=\"lookback-link\" data-lookback=\"kl-div\"><strong>KL divergence</strong></a>:\n$$\\bar{D}_{KL}(\\theta || \\theta_k) = \\mathbb{E}_{s \\sim \\pi_{\\theta_k}}\\left[D_{KL}\\left(\\pi_\\theta(\\cdot|s) \\,\\|\\, \\pi_{\\theta_k}(\\cdot|s)\\right)\\right]$$\n\nThe TRPO update solves a constrained optimization:\n$$\\theta_{k+1} = \\arg\\max_\\theta \\; \\mathcal{L}(\\theta_k, \\theta) \\quad \\text{s.t.} \\quad \\bar{D}_{KL}(\\theta || \\theta_k) \\leq \\delta$$\n\nwhere \\(\\mathcal{L}(\\theta_k, \\theta)\\) is the **surrogate advantage** — a measure of how much \\(\\pi_\\theta\\) improves on \\(\\pi_{\\theta_k}\\) using old data:\n$$\\mathcal{L}(\\theta_k, \\theta) = \\mathbb{E}_{s,a \\sim \\pi_{\\theta_k}}\\left[\\frac{\\pi_\\theta(a|s)}{\\pi_{\\theta_k}(a|s)} A^{\\pi_{\\theta_k}}(s,a)\\right]$$\n\nThe ratio \\(\\pi_\\theta(a|s) / \\pi_{\\theta_k}(a|s)\\) is the **importance weight** — it corrects for the fact that we're evaluating the new policy using data from the old one.\n\n## Solving the Constrained Problem Efficiently\n\nThe exact constrained optimization is expensive. TRPO uses two approximations:\n\n### 1. Taylor Expansion\n\nExpand objective and constraint to leading order around \\(\\theta_k\\):\n$$\\mathcal{L} \\approx g^T(\\theta - \\theta_k), \\quad \\bar{D}_{KL} \\approx \\frac{1}{2}(\\theta - \\theta_k)^T H (\\theta - \\theta_k)$$\n\nHere \\(g\\) is the policy gradient and \\(H\\) is the Hessian of the KL constraint. The solution is:\n$$\\theta_{k+1} = \\theta_k + \\sqrt{\\frac{2\\delta}{g^T H^{-1} g}} H^{-1} g$$\n\nThis is exactly the **natural policy gradient**.\n\n### 2. Conjugate Gradient\n\nComputing \\(H^{-1} g\\) directly is \\(O(n^2)\\) in parameters — infeasible for large neural networks. TRPO instead solves \\(Hx = g\\) using the **conjugate gradient** algorithm, which only requires computing matrix-vector products \\(Hv\\) (not storing \\(H\\)). Computing \\(Hv = \\nabla_\\theta[(\\nabla_\\theta \\bar{D}_{KL})^T v]\\) is a second-order AD operation available in PyTorch and TensorFlow.\n\n### 3. Backtracking Line Search\n\nBecause of Taylor approximation errors, the analytical step might violate the constraint. TRPO adds a backtracking line search:\n$$\\theta_{k+1} = \\theta_k + \\alpha^j \\sqrt{\\frac{2\\delta}{g^T H^{-1} g}} H^{-1} g$$\n\nwhere \\(\\alpha \\in (0,1)\\) is the backtrack coefficient and \\(j\\) is the smallest integer such that the new policy satisfies the KL constraint and shows a positive surrogate advantage.\n\n## TensorFlow API\n\n> **Note:** The Spinning Up TRPO implementation is TensorFlow only — there is no PyTorch version.\n\n```python\nfrom spinup import trpo_tf1 as trpo\nimport gym\n\ntrpo(\n    env_fn=lambda: gym.make('HalfCheetah-v2'),\n    ac_kwargs=dict(hidden_sizes=[64, 64]),\n    steps_per_epoch=4000,\n    epochs=50,\n    gamma=0.99,\n    delta=0.01,          # KL divergence limit\n    vf_lr=1e-3,\n    train_v_iters=80,\n    damping_coeff=0.1,   # Hessian damping for numerical stability\n    cg_iters=10,         # Conjugate gradient iterations\n    backtrack_iters=10,\n    backtrack_coeff=0.8,\n    lam=0.97,\n    logger_kwargs=dict(output_dir='/tmp/trpo', exp_name='trpo')\n)\n```\n\n## Key Hyperparameters\n\n| Hyperparameter | Default | Notes |\n|---|---|---|\n| `delta` | 0.01 | KL limit. Typical values: 0.01–0.05. Smaller = more conservative. |\n| `damping_coeff` | 0.1 | Adds \\(\\alpha I\\) to Hessian for stability. Usually don't touch. |\n| `cg_iters` | 10 | More iterations → better \\(H^{-1}g\\) approximation, but slower. |\n| `backtrack_iters` | 10 | Max backtracking steps (rarely reached). |\n| `backtrack_coeff` | 0.8 | Shrink factor per backtrack step. |\n| `lam` | 0.97 | GAE-Lambda. |\n\n## TRPO vs. VPG\n\n| | VPG | TRPO |\n|--|--|--|\n| Update rule | Unconstrained gradient | KL-constrained optimization |\n| Step size tuning | Sensitive to learning rate | Robust to step size (constraint handles it) |\n| Computational cost | Cheap | Expensive (conjugate gradient, line search) |\n| Performance | Lower ceiling | Higher, more monotonic improvement |\n\nIn practice, **PPO** (next reading) achieves similar performance to TRPO at a fraction of the implementation complexity, which is why TRPO sees less use despite its theoretical elegance.",
+  "lookbacks": {
+    "kl-div": {
+      "title": "KL Divergence",
+      "source": "Probability Foundations",
+      "sourcePath": "/prereq/probability-foundations",
+      "body": "$$D_{KL}(P \\| Q) = \\mathbb{E}_{a \\sim P}\\left[\\log \\frac{P(a)}{Q(a)}\\right]$$\n\nAlways \\(\\geq 0\\), equals 0 iff \\(P = Q\\) everywhere. It measures how many nats of information you'd lose by replacing distribution \\(P\\) with \\(Q\\).\n\nIn the TRPO trust region, \\(P = \\pi_{\\text{old}}\\) and \\(Q = \\pi_{\\text{new}}\\): the constraint \\(\\bar{D}_{KL}(\\theta \\| \\theta_k) \\leq \\delta\\) keeps the new policy's **action distributions** close enough that the surrogate advantage \\(\\mathcal{L}\\) remains a valid proxy for the true performance gain \\(J(\\theta)\\). Constraining KL rather than parameter distance captures actual behavioral change — two policies with identical parameters but different architectures have zero KL, while two policies with small parameter differences can have large KL if the mapping is nonlinear."
+    }
+  },
+  "references": [
+    {
+      "label": "Schulman et al. 2015",
+      "title": "Trust Region Policy Optimization",
+      "url": "https://arxiv.org/abs/1502.05477"
+    },
+    {
+      "label": "Kakade & Langford 2002",
+      "title": "Approximately Optimal Approximate Reinforcement Learning",
+      "url": "https://people.eecs.berkeley.edu/~pabbeel/cs287-fa09/readings/KakadeLangford-icml2002.pdf"
+    },
+    {
+      "label": "OpenAI Spinning Up",
+      "title": "TRPO Documentation",
+      "url": "https://spinningup.openai.com/en/latest/algorithms/trpo.html"
+    }
+  ]
+}

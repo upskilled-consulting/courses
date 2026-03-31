@@ -1,0 +1,68 @@
+{
+  "id": "d1",
+  "moduleId": "m1",
+  "title": "RL Terminology & Concepts",
+  "description": "Flashcard drill on core RL vocabulary, value functions, and policy gradient theory.",
+  "cards": [
+    {
+      "id": "d1_1",
+      "front": "What is the difference between a **state** \\(s\\) and an **observation** \\(o\\) in RL?",
+      "back": "A **state** is the complete, unambiguous description of the world (no hidden information). An **observation** is what the agent actually perceives — a potentially partial view of the state. If an agent sees only a single video frame, it receives an observation, not the full state (e.g., velocity is hidden)."
+    },
+    {
+      "id": "d1_2",
+      "front": "What is a **stochastic policy** \\(\\pi_\\theta(a|s)\\), and what two computations must it support for policy gradient training?",
+      "back": "A stochastic policy defines a probability distribution over actions given a state. For policy gradient training it must support: (1) **sampling** — \\(a \\sim \\pi_\\theta(\\cdot|s)\\), to generate rollout data, and (2) **log-probability** — \\(\\log \\pi_\\theta(a|s)\\), to compute the gradient estimator."
+    },
+    {
+      "id": "d1_3",
+      "front": "For a **categorical policy** over \\(n\\) discrete actions, how is the log-probability of action \\(a\\) computed?",
+      "back": "Output logits \\(z \\in \\mathbb{R}^n\\) from the network. Compute softmax probabilities \\(P = \\text{softmax}(z)\\). The log-probability is \\(\\log \\pi(a|s) = \\log P_a\\). In PyTorch: `Categorical(logits=z).log_prob(a)`."
+    },
+    {
+      "id": "d1_4",
+      "front": "For a **diagonal Gaussian policy**, why must you use `.sum(axis=-1)` when computing log-probabilities?",
+      "back": "`Normal(mean, std).log_prob(a)` returns per-dimension log-probs, yielding shape `(batch, act_dim)`. For the RL gradient you need the **joint** log-prob of the full action vector, which is the sum of per-dimension log-probs (since dimensions are independent in a diagonal Gaussian): `log_prob(a).sum(axis=-1)` → shape `(batch,)`."
+    },
+    {
+      "id": "d1_5",
+      "front": "What is the **infinite-horizon discounted return**, and why is a discount factor \\(\\gamma < 1\\) required?",
+      "back": "\\(R(\\tau) = \\sum_{t=0}^\\infty \\gamma^t r_t\\). The discount factor \\(\\gamma \\in (0,1)\\) ensures the infinite sum converges (bounded) when rewards are bounded. Without discounting, the sum might be infinite for non-terminating tasks. It also expresses a preference for immediate rewards over distant ones."
+    },
+    {
+      "id": "d1_6",
+      "front": "State the relationship between \\(V^\\pi(s)\\), \\(Q^\\pi(s,a)\\), and \\(A^\\pi(s,a)\\).",
+      "back": "\\(V^\\pi(s) = \\mathbb{E}_{a \\sim \\pi}[Q^\\pi(s,a)]\\) — the state-value is the expected action-value under the policy. \\(A^\\pi(s,a) = Q^\\pi(s,a) - V^\\pi(s)\\) — the advantage is how much better action \\(a\\) is compared to the policy's average. These three functions are always mutually consistent."
+    },
+    {
+      "id": "d1_7",
+      "front": "State the **Bellman equation** for \\(Q^\\pi(s,a)\\) under a policy \\(\\pi\\).",
+      "back": "\\(Q^\\pi(s,a) = \\mathbb{E}_{s' \\sim P, a' \\sim \\pi}\\left[r(s,a,s') + \\gamma Q^\\pi(s',a')\\right]\\). This expresses recursive consistency: the Q-value now equals the expected immediate reward plus the discounted Q-value of the next state-action pair."
+    },
+    {
+      "id": "d1_8",
+      "front": "How is the **optimal action** recovered from \\(Q^*\\), and why does this work differently for discrete vs. continuous action spaces?",
+      "back": "\\(a^*(s) = \\arg\\max_a Q^*(s,a)\\). For **discrete** spaces: trivially computed by evaluating \\(Q^*\\) at all actions. For **continuous** spaces: requires solving an optimization problem at every step — expensive. This motivated DDPG and TD3, which maintain a policy network \\(\\mu_\\theta(s) \\approx \\arg\\max_a Q^*(s,a)\\)."
+    },
+    {
+      "id": "d1_9",
+      "front": "What is the **log-derivative trick** and what does it enable in the policy gradient derivation?",
+      "back": "The identity \\(\\nabla_\\theta P(\\tau|\\theta) = P(\\tau|\\theta) \\nabla_\\theta \\log P(\\tau|\\theta)\\). It transforms the gradient of a probability into the form \\(P \\times \\text{something}\\), which allows writing \\(\\nabla_\\theta J\\) as an **expectation** \\(\\mathbb{E}_{\\tau \\sim \\pi_\\theta}[\\ldots]\\). This expectation can then be estimated by sampling trajectories — making the gradient computable without differentiating through the environment."
+    },
+    {
+      "id": "d1_10",
+      "front": "Why is the policy gradient training objective often called a **pseudo-loss** rather than a true loss?",
+      "back": "Two reasons: (1) The data distribution depends on parameters — we need fresh on-policy data after each update, unlike a fixed dataset. (2) It doesn't measure performance — minimizing the pseudo-loss to \\(-\\infty\\) on a fixed batch does **not** guarantee higher returns. The gradient of the pseudo-loss at the current parameters equals the policy gradient, but this relationship breaks after one step."
+    },
+    {
+      "id": "d1_11",
+      "front": "What is the **EGLP lemma**, and how does it justify subtracting a baseline in the policy gradient?",
+      "back": "The EGLP lemma states: \\(\\mathbb{E}_{a \\sim \\pi_\\theta}[\\nabla_\\theta \\log \\pi_\\theta(a|s)] = 0\\). Therefore, for any baseline \\(b(s)\\) that doesn't depend on action \\(a\\): \\(\\mathbb{E}_a[\\nabla_\\theta \\log \\pi_\\theta(a|s) \\cdot b(s)] = b(s) \\cdot \\mathbb{E}_a[\\nabla_\\theta \\log \\pi_\\theta(a|s)] = 0\\). The baseline contributes zero in expectation — so subtracting it doesn't bias the gradient, but can reduce variance."
+    },
+    {
+      "id": "d1_12",
+      "front": "Compare **policy optimization** and **Q-learning** in terms of on/off-policy data and optimization stability.",
+      "back": "**Policy optimization** (VPG, TRPO, PPO): on-policy (needs fresh data), directly optimizes the objective (stable), but sample-inefficient. **Q-learning** (DQN, DDPG): off-policy (uses replay buffer, reuses data), much more sample-efficient, but optimizes a self-consistency equation (Bellman) rather than the direct objective — more failure modes, less stable."
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "id": "r2",
+  "moduleId": "m1",
+  "title": "The RL Algorithm Landscape",
+  "estimatedMinutes": 10,
+  "prevItem": { "id": "r1", "type": "reading", "title": "Return, Value Functions & Bellman Equations" },
+  "nextItem": { "id": "r3", "type": "reading", "title": "Policy Gradient Theory" },
+  "learningObjectives": [
+    {
+      "id": "m1r2-lo1",
+      "verb": "Distinguish",
+      "description": "Distinguish model-free from model-based RL and explain the key upside (planning) and downside (model bias) of model-based approaches",
+      "skillTags": ["algorithm-landscape", "model-based", "model-free"]
+    },
+    {
+      "id": "m1r2-lo2",
+      "verb": "Compare",
+      "description": "Compare policy optimization and Q-learning along the dimensions of stability, sample efficiency, and directness of optimization",
+      "skillTags": ["algorithm-landscape", "policy-optimization", "q-learning"]
+    },
+    {
+      "id": "m1r2-lo3",
+      "verb": "Classify",
+      "description": "Classify VPG, TRPO, PPO, DDPG, TD3, SAC, DQN, and A3C into the correct branches of the RL algorithm taxonomy",
+      "skillTags": ["algorithm-landscape", "taxonomy"]
+    }
+  ],
+  "content": "## The Big Picture\n\nModern RL encompasses dozens of algorithms that differ in what they learn, how they learn it, and what assumptions they make about the environment. Before diving into individual algorithms, it pays to understand the major branching points in algorithm design.\n\n## Model-Free vs. Model-Based\n\nThe first major branching point: does the agent learn (or use) a **model** of the environment? A model is a function that predicts state transitions and rewards: given \\((s, a)\\), predict \\(s'\\) and \\(r\\).\n\n### Model-Based RL\n\n**Upside: planning.** With a model, the agent can think ahead — simulate possible futures and choose actions that lead to better outcomes. AlphaZero does this with Monte Carlo Tree Search over a learned model and achieves superhuman performance in Go and Chess.\n\n**Downside: model bias.** A learned model is never perfect. The agent may overfit to the model's errors, learning to exploit inaccuracies in ways that don't transfer to the real environment. Model learning is hard, and even after significant compute investment, the bias can cause catastrophic failures at deployment.\n\n### Model-Free RL\n\nModel-free methods forego the model entirely and learn directly from environment interactions. This sacrifices some potential for planning but:\n- Is far simpler to implement and tune.\n- Avoids model bias.\n- Has been more extensively validated on benchmarks.\n\nAll algorithms in this course (VPG, TRPO, PPO, DDPG, TD3, SAC) are model-free.\n\n## Policy Optimization vs. Q-Learning\n\nWithin model-free RL, the second major split is *what to learn*.\n\n### Policy Optimization\n\nRepresent and directly optimize a policy \\(\\pi_\\theta(a|s)\\). The agent explicitly stores and updates the policy network. Updates are performed **on-policy**: each gradient step uses data collected with the *current* policy.\n\n**Examples:** A2C/A3C, VPG, TRPO, PPO.\n\n**Strengths:** Principled — you optimize directly for what you care about. Stable and reliable when implemented correctly.\n\n**Weakness:** Sample inefficient — on-policy data goes stale after one gradient update, so every new batch of experience requires fresh rollouts.\n\n### Q-Learning\n\nLearn an approximation \\(Q_\\theta(s,a)\\) of the optimal action-value function \\(Q^*\\). The policy is recovered implicitly: \\(a^*(s) = \\arg\\max_a Q_\\theta(s,a)\\). Updates are performed **off-policy**: any previously collected transition \\((s,a,r,s')\\) is usable, because the Bellman equation doesn't care which policy collected the data.\n\n**Examples:** DQN, C51, HER.\n\n**Strengths:** Much more sample efficient — data can be stored in a replay buffer and reused many times.\n\n**Weakness:** Less stable. Q-learning solves a self-consistency equation (the Bellman equation), not a direct objective. There are many failure modes, especially with function approximation.\n\n## Interpolating Between the Two\n\nPolicy optimization and Q-learning are not binary opposites — some algorithms live between them:\n\n**DDPG**: Learns both a deterministic policy and a Q-function, each used to improve the other. Off-policy (uses a replay buffer), but also directly updates a policy network.\n\n**SAC**: Like DDPG but with a stochastic policy and entropy regularization, giving better exploration and stability.\n\nThese hybrid approaches try to get the sample efficiency of Q-learning while maintaining some of the stability of policy optimization.\n\n## The Taxonomy at a Glance\n\n| Family | Algorithm | On/Off-Policy | Action Space |\n|--------|-----------|---------------|--------------|\n| Policy Optimization | VPG | On | Discrete or Continuous |\n| Policy Optimization | TRPO | On | Discrete or Continuous |\n| Policy Optimization | PPO | On | Discrete or Continuous |\n| Q-Learning | DQN | Off | Discrete |\n| Actor-Critic (hybrid) | DDPG | Off | Continuous only |\n| Actor-Critic (hybrid) | TD3 | Off | Continuous only |\n| Actor-Critic (hybrid) | SAC | Off | Continuous only |\n\n## Model-Based Variants (Brief Overview)\n\nModel-based methods are an active research area. Notable approaches:\n\n- **Pure planning (MPC)**: Replan every step using a learned model, execute only the first action. Used in MBMF.\n- **Expert iteration**: Use planning (MCTS) to generate better actions, then distill into the policy. Used in ExIt and AlphaZero.\n- **Data augmentation**: Use a model to generate synthetic rollouts that supplement real experience. Used in MBVE and World Models.\n\nThese approaches can dramatically improve sample efficiency when the model is accurate, but require careful handling of model uncertainty.",
+  "references": [
+    {
+      "label": "OpenAI Spinning Up",
+      "title": "Part 2: Kinds of RL Algorithms",
+      "url": "https://spinningup.openai.com/en/latest/spinningup/rl_intro2.html"
+    },
+    {
+      "label": "Mnih et al. 2013",
+      "title": "DQN: Playing Atari with Deep Reinforcement Learning",
+      "url": "https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf"
+    },
+    {
+      "label": "Silver et al. 2017",
+      "title": "AlphaZero",
+      "url": "https://arxiv.org/abs/1712.01815"
+    }
+  ]
+}

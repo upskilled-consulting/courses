@@ -1,0 +1,47 @@
+{
+  "id": "r0",
+  "moduleId": "m1",
+  "title": "RL Fundamentals: Agents, Environments, and Policies",
+  "estimatedMinutes": 12,
+  "prevItem": { "id": "r-intro", "type": "reading", "title": "Before You Start: Prerequisites & Learning Path" },
+  "nextItem": { "id": "r1", "type": "reading", "title": "Return, Value Functions & Bellman Equations" },
+  "learningObjectives": [
+    {
+      "id": "m1r0-lo1",
+      "verb": "Define",
+      "description": "Define the agent-environment interaction loop, distinguishing states from observations and identifying where reward is produced",
+      "skillTags": ["rl-fundamentals", "terminology"]
+    },
+    {
+      "id": "m1r0-lo2",
+      "verb": "Distinguish",
+      "description": "Distinguish discrete and continuous action spaces and explain why this distinction drives major differences in algorithm design",
+      "skillTags": ["rl-fundamentals", "action-spaces"]
+    },
+    {
+      "id": "m1r0-lo3",
+      "verb": "Implement",
+      "description": "Implement a categorical policy (discrete) and a diagonal Gaussian policy (continuous) in PyTorch using torch.distributions",
+      "skillTags": ["rl-fundamentals", "policies", "pytorch"]
+    },
+    {
+      "id": "m1r0-lo4",
+      "verb": "Explain",
+      "description": "Explain the role of log-probability in training stochastic policies and compute it for both categorical and diagonal Gaussian distributions",
+      "skillTags": ["rl-fundamentals", "policies", "log-probability"]
+    }
+  ],
+  "content": "## The Core Loop\n\nReinforcement learning studies how agents learn to behave by trial and error. Unlike supervised learning — where a teacher provides correct labels — an RL agent receives only a scalar **reward** signal and must figure out, through exploration, which actions lead to higher cumulative reward.\n\nThe fundamental loop is simple:\n\n1. The agent observes the environment's current state.\n2. The agent selects an action.\n3. The environment transitions to a new state and emits a reward.\n4. Repeat.\n\nOver many repetitions, the agent adjusts its behavior to maximize the total reward collected.\n\n## States vs. Observations\n\nA **state** \\(s\\) is the complete description of the world — no information is hidden. An **observation** \\(o\\) is what the agent actually sees, which may be a partial view of the state.\n\n- A chess board position is a **full state** (perfect information).\n- A single frame from an Atari game is an **observation** — the ball's velocity is not visible in one frame alone.\n\nWhen the agent sees the full state we say the environment is **fully observed**; otherwise it is **partially observed**. In practice, most deep RL papers write \\(s\\) even when they technically mean \\(o\\), because the policy conditions only on what is observed anyway.\n\nStates and observations are represented as real-valued tensors: a robot's state might be joint angles and velocities; a visual observation might be a \\((84 \\times 84 \\times 3)\\) RGB tensor.\n\n## Action Spaces\n\nThe **action space** is the set of all valid actions. Two major types exist:\n\n**Discrete action spaces** contain a finite number of distinct actions — e.g., {left, right, fire} in Atari, or one of 361 board positions in Go. Algorithms like DQN are designed for discrete spaces.\n\n**Continuous action spaces** contain real-valued vectors — e.g., joint torques for a robotic arm or steering/throttle for a simulated car. Algorithms like DDPG, TD3, and SAC are designed for continuous spaces.\n\nThis distinction is not cosmetic. Computing \\(\\arg\\max_a Q(s,a)\\) is trivial when \\(a\\) is discrete (evaluate all options) but becomes a separate optimization problem when \\(a \\in \\mathbb{R}^n\\), which is why continuous-space algorithms need different architecture.\n\n## Policies\n\nA **policy** is the agent's decision rule — a mapping from state to action. There are two types:\n\n**Deterministic policy** \\(\\mu_\\theta\\): returns a single action for each state.\n$$a_t = \\mu_\\theta(s_t)$$\n\n**Stochastic policy** \\(\\pi_\\theta\\): returns a distribution over actions; the agent samples from it.\n$$a_t \\sim \\pi_\\theta(\\cdot \\mid s_t)$$\n\nIn deep RL, policies are parameterized by neural network weights \\(\\theta\\). Training adjusts these weights to improve performance.\n\n### Categorical Policies (Discrete Actions)\n\nFor discrete actions, the network outputs one logit per action and a softmax converts them to probabilities:\n\n```python\nimport torch\nimport torch.nn as nn\nfrom torch.distributions import Categorical\n\nclass CategoricalPolicy(nn.Module):\n    def __init__(self, obs_dim, act_dim, hidden=[64, 64]):\n        super().__init__()\n        layers = []\n        in_dim = obs_dim\n        for h in hidden:\n            layers += [nn.Linear(in_dim, h), nn.Tanh()]\n            in_dim = h\n        layers.append(nn.Linear(in_dim, act_dim))\n        self.net = nn.Sequential(*layers)\n\n    def forward(self, obs):\n        logits = self.net(obs)\n        return Categorical(logits=logits)\n\n    def act(self, obs):\n        return self.forward(obs).sample().item()\n```\n\nTwo key operations:\n- **Sampling**: `dist.sample()` — draw an action from the policy.\n- **Log-likelihood**: `dist.log_prob(a)` — needed for computing policy gradient updates.\n\nThe log-probability of action \\(a\\) under a categorical distribution with probability vector \\(P_\\theta(s)\\) is:\n$$\\log \\pi_\\theta(a|s) = \\log [P_\\theta(s)]_a$$\n\n### Diagonal Gaussian Policies (Continuous Actions)\n\nFor continuous actions, the network outputs a mean vector \\(\\mu_\\theta(s)\\) and either a fixed or state-dependent log-standard-deviation \\(\\log \\sigma\\). Actions are sampled from \\(\\mathcal{N}(\\mu_\\theta(s), \\sigma^2 I)\\):\n\n```python\nfrom torch.distributions import Normal\n\nclass GaussianPolicy(nn.Module):\n    def __init__(self, obs_dim, act_dim, hidden=[64, 64]):\n        super().__init__()\n        layers = []\n        in_dim = obs_dim\n        for h in hidden:\n            layers += [nn.Linear(in_dim, h), nn.Tanh()]\n            in_dim = h\n        self.mean_net = nn.Sequential(*layers, nn.Linear(in_dim, act_dim))\n        # Log std as a learnable parameter (not state-dependent)\n        self.log_std = nn.Parameter(-0.5 * torch.ones(act_dim))\n\n    def forward(self, obs):\n        mean = self.mean_net(obs)\n        std = self.log_std.exp()\n        return Normal(mean, std)\n\n    def act(self, obs):\n        return self.forward(obs).sample()\n```\n\nFor a diagonal Gaussian with mean \\(\\mu\\) and std \\(\\sigma\\), the log-probability of action \\(a\\) is the sum of per-dimension log-probs:\n$$\\log \\pi_\\theta(a|s) = \\sum_{i=1}^{n} \\log \\mathcal{N}(a_i; \\mu_i, \\sigma_i^2)$$\n\nIn code: `dist.log_prob(a).sum(axis=-1)` — the `.sum(axis=-1)` is critical; without it you get a tensor of shape `(batch, act_dim)` instead of `(batch,)`.\n\n## Trajectories\n\nA **trajectory** (also called a rollout or episode) is a sequence of states and actions:\n$$\\tau = (s_0, a_0, s_1, a_1, \\ldots, s_T, a_T)$$\n\nThe first state \\(s_0\\) is sampled from the start-state distribution \\(\\rho_0\\). Each subsequent state transition follows the environment's dynamics \\(P(s_{t+1} | s_t, a_t)\\), which the agent does not know (and usually doesn't need to know in model-free RL).\n\nTrajectories are the raw data of RL. Every algorithm collects them, extracts reward signals, and uses them to update the policy.\n\n## What RL Can Do\n\nRL has produced remarkable results in recent years:\n- **Games**: AlphaGo/AlphaZero (Go), OpenAI Five (Dota 2), DQN (Atari)\n- **Robotics**: Sim-to-real locomotion, robotic dexterous manipulation\n- **Recommendation systems, chip design, protein folding guidance**\n\nSuccess stories share common features: well-defined reward signals, large amounts of simulator experience, and careful engineering. RL still struggles with sparse rewards, safety constraints, and sample efficiency compared to supervised learning.",
+  "references": [
+    {
+      "label": "Sutton & Barto 2018",
+      "title": "Reinforcement Learning: An Introduction (2nd ed.)",
+      "url": "http://incompleteideas.net/book/the-book-2nd.html"
+    },
+    {
+      "label": "OpenAI Spinning Up",
+      "title": "Part 1: Key Concepts in RL",
+      "url": "https://spinningup.openai.com/en/latest/spinningup/rl_intro.html"
+    }
+  ]
+}

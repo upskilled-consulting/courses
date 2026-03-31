@@ -1,0 +1,52 @@
+{
+  "id": "m2",
+  "title": "Policy Gradient Algorithms",
+  "order": 2,
+  "color": "#1776a4",
+  "accentLight": "#c8d9f0",
+  "prereq": "m1",
+  "learningObjectives": [
+    "Implement Vanilla Policy Gradient (VPG) with GAE-Lambda advantage estimation in PyTorch and TensorFlow.",
+    "Explain TRPO's KL-divergence constraint, the conjugate gradient trick, and why it avoids catastrophic policy updates.",
+    "Describe PPO-Clip's clipped surrogate objective and explain the asymmetric behavior for positive and negative advantages.",
+    "Tune the key hyperparameters of VPG, TRPO, and PPO: steps_per_epoch, lam, clip_ratio, and target_kl.",
+    "Distinguish the on-policy nature of VPG/TRPO/PPO from off-policy methods and explain why on-policy data freshness matters."
+  ],
+  "readings": [
+    {
+      "id": "r4",
+      "title": "Vanilla Policy Gradient (VPG)",
+      "estimatedMinutes": 12,
+      "dataPath": "data/courses/deep-rl/m2-policy-gradient/readings/r4-vpg.json"
+    },
+    {
+      "id": "r5",
+      "title": "Trust Region Policy Optimization (TRPO)",
+      "estimatedMinutes": 12,
+      "dataPath": "data/courses/deep-rl/m2-policy-gradient/readings/r5-trpo.json"
+    },
+    {
+      "id": "r6",
+      "title": "Proximal Policy Optimization (PPO)",
+      "estimatedMinutes": 12,
+      "dataPath": "data/courses/deep-rl/m2-policy-gradient/readings/r6-ppo.json"
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "q2",
+      "title": "On-Policy Algorithms Quiz",
+      "questionCount": 6,
+      "passingScore": 0.7,
+      "dataPath": "data/courses/deep-rl/m2-policy-gradient/quizzes/q2-on-policy.json"
+    }
+  ],
+  "labs": [
+    {
+      "id": "lab1",
+      "title": "VPG & PPO in PyTorch",
+      "estimatedMinutes": 60,
+      "dataPath": "data/courses/deep-rl/m2-policy-gradient/labs/lab1-pytorch.json"
+    }
+  ]
+}

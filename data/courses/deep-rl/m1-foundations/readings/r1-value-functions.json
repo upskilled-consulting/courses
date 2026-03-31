@@ -1,0 +1,47 @@
+{
+  "id": "r1",
+  "moduleId": "m1",
+  "title": "Return, Value Functions & Bellman Equations",
+  "estimatedMinutes": 14,
+  "prevItem": { "id": "r0", "type": "reading", "title": "RL Fundamentals: Agents, Environments, and Policies" },
+  "nextItem": { "id": "r2", "type": "reading", "title": "The RL Algorithm Landscape" },
+  "learningObjectives": [
+    {
+      "id": "m1r1-lo1",
+      "verb": "Compute",
+      "description": "Compute finite-horizon undiscounted and infinite-horizon discounted returns for a given trajectory and explain when each formulation is appropriate",
+      "skillTags": ["return", "value-functions"]
+    },
+    {
+      "id": "m1r1-lo2",
+      "verb": "Define",
+      "description": "Define V^π(s), Q^π(s,a), and A^π(s,a) in terms of expected return, and explain the relationship A^π = Q^π - V^π",
+      "skillTags": ["value-functions", "advantage"]
+    },
+    {
+      "id": "m1r1-lo3",
+      "verb": "State",
+      "description": "State and interpret the Bellman equations for V^π and Q^π, and the Bellman optimality equations for V* and Q*",
+      "skillTags": ["value-functions", "bellman"]
+    },
+    {
+      "id": "m1r1-lo4",
+      "verb": "Derive",
+      "description": "Derive the optimal action from Q* without needing a separate policy, and explain why this works for discrete but not continuous action spaces",
+      "skillTags": ["value-functions", "optimal-policy"]
+    }
+  ],
+  "content": "## Reward and Return\n\nAt each timestep \\(t\\), the environment emits a scalar reward \\(r_t = R(s_t, a_t, s_{t+1})\\). The agent's goal is to maximize **return** — some aggregate of rewards over time.\n\n### Finite-Horizon Undiscounted Return\n\nFor episodes with a fixed length \\(T\\):\n$$R(\\tau) = \\sum_{t=0}^{T} r_t$$\n\nAll rewards are counted equally. Used in episodic tasks with a natural endpoint (e.g., a game that ends in win/loss).\n\n### Infinite-Horizon Discounted Return\n\nFor tasks that continue indefinitely, we apply a **discount factor** \\(\\gamma \\in (0, 1)\\) to ensure convergence:\n$$R(\\tau) = \\sum_{t=0}^{\\infty} \\gamma^t r_t$$\n\nThe discount factor has two interpretations:\n- **Mathematical**: ensures the sum is finite.\n- **Economic**: future rewards are worth less than immediate ones. With \\(\\gamma = 0.99\\), a reward 100 steps away is worth \\(0.99^{100} \\approx 0.37\\) of a reward today.\n\nIn practice, implementations often use the discounted return formula even for episodic tasks, treating terminal states as absorbing (no more reward).\n\n## The RL Optimization Problem\n\nThe agent's goal is to find a policy \\(\\pi\\) that maximizes expected return:\n$$\\pi^* = \\arg\\max_\\pi \\; J(\\pi) = \\mathbb{E}_{\\tau \\sim \\pi}[R(\\tau)]$$\n\nDifferent RL algorithms attack this optimization in different ways — policy gradients directly, Q-learning indirectly.\n\n## Value Functions\n\n**Value functions** answer: \"how much expected return will I get from here?\"\n\n### State-Value Function \\(V^\\pi(s)\\)\n\n$$V^\\pi(s) = \\mathbb{E}_{\\tau \\sim \\pi}\\left[R(\\tau) \\mid s_0 = s\\right]$$\n\nThis is the expected return starting from state \\(s\\) and following policy \\(\\pi\\) thereafter. A high \\(V^\\pi(s)\\) means state \\(s\\) is favorable under \\(\\pi\\).\n\n### Action-Value Function \\(Q^\\pi(s, a)\\)\n\n$$Q^\\pi(s, a) = \\mathbb{E}_{\\tau \\sim \\pi}\\left[R(\\tau) \\mid s_0 = s, a_0 = a\\right]$$\n\nThis is the expected return starting from state \\(s\\), taking action \\(a\\) *first*, then following \\(\\pi\\). Unlike \\(V^\\pi\\), it conditions on the specific first action.\n\n### Advantage Function \\(A^\\pi(s, a)\\)\n\n$$A^\\pi(s, a) = Q^\\pi(s, a) - V^\\pi(s)$$\n\nThe advantage measures how much better (or worse) action \\(a\\) is compared to the average action taken by \\(\\pi\\) in state \\(s\\). A positive advantage means \"this action is better than the policy's average\"; negative means worse.\n\nThe advantage function is central to policy gradient methods: instead of pushing up actions proportional to total return, we push them up proportional to their advantage — a much lower-variance signal.\n\n## Bellman Equations\n\nThe Bellman equations express a **recursive consistency** that any valid value function must satisfy. They connect the value at the current state to the value at successor states.\n\n### Bellman Equation for \\(V^\\pi\\)\n\n$$V^\\pi(s) = \\mathbb{E}_{a \\sim \\pi, s' \\sim P}\\left[r(s,a) + \\gamma V^\\pi(s')\\right]$$\n\nIn words: the value of state \\(s\\) equals the expected immediate reward plus the discounted value of the next state.\n\n### Bellman Equation for \\(Q^\\pi\\)\n\n$$Q^\\pi(s,a) = \\mathbb{E}_{s' \\sim P}\\left[r(s,a) + \\gamma \\mathbb{E}_{a' \\sim \\pi}\\left[Q^\\pi(s', a')\\right]\\right]$$\n\nThe connection between \\(V^\\pi\\) and \\(Q^\\pi\\):\n$$V^\\pi(s) = \\mathbb{E}_{a \\sim \\pi}\\left[Q^\\pi(s,a)\\right]$$\n\n## Optimal Value Functions\n\nThe **optimal** value functions correspond to the best possible policy:\n\n$$V^*(s) = \\max_\\pi V^\\pi(s)$$\n$$Q^*(s,a) = \\max_\\pi Q^\\pi(s,a)$$\n\n### Bellman Optimality Equations\n\n$$V^*(s) = \\max_a \\; \\mathbb{E}_{s' \\sim P}\\left[r(s,a) + \\gamma V^*(s')\\right]$$\n\n$$Q^*(s,a) = \\mathbb{E}_{s' \\sim P}\\left[r(s,a) + \\gamma \\max_{a'} Q^*(s', a')\\right]$$\n\nThese are the foundation of Q-learning: if we can learn \\(Q^*\\), we can recover the optimal policy without ever explicitly representing it:\n\n$$a^*(s) = \\arg\\max_a Q^*(s,a)$$\n\nThis works trivially for discrete action spaces (evaluate all options) but requires solving a separate optimization problem for continuous spaces — motivating DDPG and TD3.\n\n## Connecting the Pieces\n\nHere's a summary of the key relationships:\n\n| Symbol | Name | Meaning |\n|--------|------|---------|\n| \\(R(\\tau)\\) | Return | Total (discounted) reward from trajectory \\(\\tau\\) |\n| \\(V^\\pi(s)\\) | State-value | Expected return from \\(s\\) following \\(\\pi\\) |\n| \\(Q^\\pi(s,a)\\) | Action-value | Expected return from \\((s,a)\\) following \\(\\pi\\) |\n| \\(A^\\pi(s,a)\\) | Advantage | \\(Q^\\pi(s,a) - V^\\pi(s)\\): how much better is \\(a\\)? |\n| \\(V^*(s)\\) | Optimal state-value | Best achievable \\(V^\\pi(s)\\) |\n| \\(Q^*(s,a)\\) | Optimal action-value | Best achievable \\(Q^\\pi(s,a)\\) |\n\nAlmost every RL algorithm either (a) learns a parameterized approximation of one of these functions, or (b) uses sampled returns as a Monte Carlo estimate of them.",
+  "references": [
+    {
+      "label": "OpenAI Spinning Up",
+      "title": "Part 1: Key Concepts in RL",
+      "url": "https://spinningup.openai.com/en/latest/spinningup/rl_intro.html"
+    },
+    {
+      "label": "Sutton & Barto 2018",
+      "title": "Reinforcement Learning: An Introduction — Ch. 3",
+      "url": "http://incompleteideas.net/book/the-book-2nd.html"
+    }
+  ]
+}

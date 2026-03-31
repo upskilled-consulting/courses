@@ -178,6 +178,19 @@
           "accentLight": "#1776a4",
           "tags": ["Computer Vision", "Compression", "3D Reconstruction", "Neural Rendering"],
           "dataPath": "data/courses/3dgs-compression/course.json"
+        },
+        {
+          "id": "deep-rl",
+          "type": "course",
+          "title": "Deep Reinforcement Learning",
+          "description": "From RL foundations to PPO, SAC, and the Spinning Up toolkit — covering policy gradient theory, VPG, TRPO, PPO, DDPG, TD3, and SAC with PyTorch and TensorFlow labs. 3 modules, 10 readings, 2 labs, 3 quizzes.",
+          "level": "Intermediate",
+          "estimatedHours": 8,
+          "moduleCount": 3,
+          "color": "#63aac9",
+          "accentLight": "#f4eef3",
+          "tags": ["Reinforcement Learning", "Policy Gradients", "Deep Learning", "PyTorch", "TensorFlow"],
+          "dataPath": "data/courses/deep-rl/course.json"
         }
       ]
     }

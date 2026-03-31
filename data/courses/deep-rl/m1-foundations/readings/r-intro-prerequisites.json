@@ -1,0 +1,29 @@
+{
+  "id": "r-intro",
+  "moduleId": "m1",
+  "title": "Before You Start: Prerequisites & Learning Path",
+  "estimatedMinutes": 8,
+  "prevItem": null,
+  "nextItem": { "id": "r0", "type": "reading", "title": "RL Fundamentals: Agents, Environments, and Policies" },
+  "learningObjectives": [
+    {
+      "id": "m1ri-lo1",
+      "verb": "Identify",
+      "description": "Identify which background knowledge areas are assumed by this course and locate the platform supplements that cover each",
+      "skillTags": ["orientation", "prerequisites"]
+    },
+    {
+      "id": "m1ri-lo2",
+      "verb": "Recognize",
+      "description": "Recognize the canonical implementation sequence for deep RL algorithms (VPG → DQN → A2C → PPO → DDPG) and how this course maps onto it",
+      "skillTags": ["orientation", "learning-path"]
+    }
+  ],
+  "content": "Before diving into RL theory and code, it helps to know exactly what background is assumed and where to fill any gaps. This reading maps the prerequisites identified in Joshua Achiam's *Spinning Up as a Deep RL Researcher* essay onto the platform's own supplements — so you can check your footing before starting Module 1.\n\n---\n\n## What This Course Assumes\n\nThe table below lists every background area the essay calls out, with the corresponding platform supplement where each is covered.\n\n### Mathematics\n\n| Topic | What you need | Where to review |\n|-------|--------------|------------------|\n| Probability & statistics | Random variables, expected values, std dev, Bayes' theorem, chain rule of probability, importance sampling | **Probability Foundations** prereq |\n| Linear algebra & calculus | Vectors, matrices, gradients | **Matrix Algebra Foundations** prereq · **Calculus Foundations** prereq |\n| Taylor series | Understanding second-order approximations (used in TRPO) | *Optional — not required for the main track* |\n\n### Deep Learning\n\n| Topic | What you need | Where to review |\n|-------|--------------|------------------|\n| Neural network architectures | MLP, vanilla RNN, LSTM, GRU, convolutional layers, ResNets, attention mechanisms, transformer | **Neural Network Architectures** supplement |\n| Regularization | Weight decay (L2), dropout | **Regularization** supplement |\n| Normalization | Batch normalization, layer normalization, weight normalization | **Normalization** supplement |\n| Optimizers | SGD, momentum SGD, Adam | **Optimizers** supplement |\n| Reparameterization trick | How to backpropagate through a stochastic sample | Covered in this course — r8 (SAC) |\n\n### Framework\n\nYou should be able to write a simple supervised learning loop in PyTorch or TensorFlow before starting. If you can load data, build an `nn.Module`, compute a loss, call `.backward()`, and step an optimizer — you're ready.\n\n---\n\n## The Implementation Sequence\n\nThe essay recommends implementing these five algorithms from scratch, in order, starting with the simplest:\n\n| Order | Algorithm | Why this order |\n|-------|-----------|----------------|\n| 1 | **VPG / REINFORCE** | Simplest policy gradient — bare log-prob × return, ~80–150 lines |\n| 2 | **DQN** | Introduces Q-learning, replay buffer, and target networks for discrete actions |\n| 3 | **A2C** | Synchronous actor-critic; adds a value function baseline to VPG |\n| 4 | **PPO** | Extends VPG with a clipped surrogate objective for stable multi-step updates |\n| 5 | **DDPG** | Extends Q-learning to continuous action spaces with a deterministic policy |\n\nThis course covers VPG (r4), PPO (r6), DDPG (r7), TD3, and SAC. DQN and A2C are outside the Spinning Up scope and not covered here — the exercises in lab1 are the right place to attempt those if you want to follow the full sequence.\n\n**Write single-threaded code first.** Only parallelize after you have a working, correct implementation. Broken RL code almost always fails silently — the agent just never learns — so the ability to read your own code critically and know exactly what it should be doing is more important than any hyperparameter setting.\n\n---\n\n## Debug Environments\n\nWhen testing any implementation, start here before trying anything more complex:\n\n```python\n# Discrete (policy gradients, DQN)\nenv = gym.make('CartPole-v1')        # solves in <100 epochs with VPG\nenv = gym.make('FrozenLake-v1')      # sparse reward, good for Q-learning\n\n# Continuous (actor-critic, DDPG, PPO)\nenv = gym.make('InvertedPendulum-v2')  # fast convergence, good smoke test\nenv = gym.make('HalfCheetah-v2')       # use max_ep_len=150 initially\n```\n\nTarget turnaround: **< 5 minutes per debug experiment** on your local CPU. If an experiment takes 30 minutes and the agent doesn't learn, you've lost 30 minutes to a single bug. Keep it fast until you're confident the implementation is correct, then scale up.\n\n---\n\n## What to Measure\n\nThe essay's debugging checklist — instrument everything from day one:\n\n- `AverageEpRet` — mean cumulative reward per episode (the headline metric)\n- `EpLen` — mean episode length (tells you if the agent is surviving longer)\n- `VVals` — value function estimates (should track actual returns over time)\n- `LossPi` / `LossQ` — policy and Q-function losses\n- `Entropy` — policy entropy for stochastic methods (should not collapse to zero early)\n- `KL` — KL divergence between old and new policy (for TRPO/PPO)\n\nSpinning Up's `progress.txt` logs all of these automatically. Read it, don't just watch the terminal.",
+  "references": [
+    {
+      "title": "Spinning Up as a Deep RL Researcher (Achiam, 2018)",
+      "url": "https://spinningup.openai.com/en/latest/spinningup/spinningup.html"
+    }
+  ]
+}

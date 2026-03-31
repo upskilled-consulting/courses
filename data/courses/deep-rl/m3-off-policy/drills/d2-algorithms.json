@@ -1,0 +1,70 @@
+{
+  "id": "d2",
+  "moduleId": "m3",
+  "title": "Algorithm Mechanics",
+  "prevItem": { "id": "q3", "type": "quiz", "title": "Off-Policy Methods & Tooling Quiz" },
+  "nextItem": { "id": "lab2", "type": "lab", "title": "DDPG & SAC in TensorFlow" },
+  "description": "Flashcard drill on VPG through SAC — pseudocode steps, hyperparameters, and algorithm design choices.",
+  "cards": [
+    {
+      "id": "d2_1",
+      "front": "What are the **two network updates** performed each epoch in VPG, and what loss function drives each one?",
+      "back": "1. **Policy update**: gradient ascent on the pseudo-loss \\(\\hat{g}_k = \\frac{1}{|\\mathcal{D}_k|}\\sum \\sum \\nabla_\\theta \\log \\pi_\\theta(a_t|s_t) \\hat{A}_t\\). One gradient step. 2. **Value function update**: gradient descent on MSE \\(\\frac{1}{|\\mathcal{D}_k|T}\\sum\\sum(V_\\phi(s_t) - \\hat{R}_t)^2\\). Multiple gradient steps (`train_v_iters=80`)."
+    },
+    {
+      "id": "d2_2",
+      "front": "In PPO, what does **`clip_ratio` (ε)** control, and what are typical values?",
+      "back": "`clip_ratio` is the \\(\\epsilon\\) in the PPO-Clip objective. It defines how far the probability ratio \\(r_t(\\theta) = \\pi_\\theta(a|s)/\\pi_{\\theta_k}(a|s)\\) can deviate from 1 before the objective stops improving. Ratio must stay in \\([1-\\epsilon, 1+\\epsilon]\\) to gain from the objective. Typical values: **0.1–0.3** (default 0.2)."
+    },
+    {
+      "id": "d2_3",
+      "front": "What is TRPO's **conjugate gradient** trick, and why is it needed?",
+      "back": "TRPO must compute \\(H^{-1}g\\) (the natural gradient) where \\(H\\) is the Hessian of the KL constraint. Explicitly computing and inverting \\(H\\) is \\(O(n^2)\\) memory — infeasible for large networks. The conjugate gradient algorithm solves \\(Hx = g\\) iteratively, requiring only the ability to compute **Hessian-vector products** \\(Hv\\) (a double backprop operation), which is \\(O(n)\\) in memory."
+    },
+    {
+      "id": "d2_4",
+      "front": "What is DDPG's **polyak averaging** for target networks, and what problem does it solve?",
+      "back": "\\(\\phi_{\\text{targ}} \\leftarrow \\rho \\phi_{\\text{targ}} + (1-\\rho)\\phi\\) after every gradient step, with \\(\\rho \\approx 0.995\\). Problem solved: if the target network is identical to the training network, the Bellman target is a moving goalpost — the network chases itself and can diverge. Polyak averaging makes the target change slowly and smoothly, stabilizing training."
+    },
+    {
+      "id": "d2_5",
+      "front": "Why does DDPG use **random action selection** for the first `start_steps` environment interactions?",
+      "back": "The replay buffer needs diverse experiences to provide stable gradient estimates. Before training begins, the untrained policy produces near-random actions anyway — but random uniform sampling is more efficient and covers the action space more thoroughly. `start_steps=10000` ensures the buffer is pre-filled before policy gradients are computed (`update_after=1000` waits for even fewer samples before updating)."
+    },
+    {
+      "id": "d2_6",
+      "front": "Name TD3's **three tricks** and the DDPG failure mode each addresses.",
+      "back": "1. **Clipped double-Q learning**: learns two Q-functions, uses the minimum for Bellman targets → addresses **Q-value overestimation**. 2. **Delayed policy updates** (`policy_delay=2`): updates policy less frequently than Q-functions → prevents policy updates from destabilizing during volatile Q-function learning. 3. **Target policy smoothing**: adds clipped noise to target actions → smooths Q over nearby actions, preventing exploitation of **sharp Q-function peaks**."
+    },
+    {
+      "id": "d2_7",
+      "front": "SAC adds an **entropy bonus** \\(\\alpha H(\\pi(\\cdot|s))\\) to the reward at each timestep. What is \\(H\\) for a continuous policy?",
+      "back": "For a continuous distribution with density \\(\\pi\\), entropy is \\(H(\\pi(\\cdot|s)) = -\\mathbb{E}_{a \\sim \\pi}[\\log \\pi(a|s)]\\). For a Gaussian, \\(H = \\frac{d}{2}(1 + \\log(2\\pi)) + \\sum_i \\log \\sigma_i\\). In SAC, the entropy bonus is implemented as \\(-\\alpha \\log \\pi(\\tilde{a}|s)\\) in the Bellman target, which is the negative log-probability evaluated at the sampled action."
+    },
+    {
+      "id": "d2_8",
+      "front": "In SAC's Bellman target \\(y = r + \\gamma(1-d)(\\min_j Q_{j,\\text{targ}}(s',\\tilde{a}') - \\alpha \\log \\pi(\\tilde{a}'|s'))\\), why must \\(\\tilde{a}'\\) come from the **current** policy rather than the replay buffer?",
+      "back": "The entropy-regularized Q-function is defined using the *current* policy's action distribution: \\(Q^\\pi(s,a) = \\mathbb{E}_{a' \\sim \\pi}[r + \\gamma(Q^\\pi(s',a') - \\alpha \\log \\pi(a'|s'))]\\). The next action \\(a'\\) must be sampled from \\(\\pi_\\theta\\) to correctly evaluate how the current policy would continue from \\(s'\\). Using old actions from the buffer would evaluate a different (outdated) policy."
+    },
+    {
+      "id": "d2_9",
+      "front": "Which Spinning Up algorithms support **MPI parallelization**, and what does parallelizing with MPI do?",
+      "back": "**VPG, TRPO, and PPO** support MPI. With `--num_cpu N`, \\(N\\) processes each run rollouts independently and then **synchronize gradients** before the policy update (for policy/value networks). This effectively scales `steps_per_epoch` by \\(N\\) without increasing wall-clock time — more data per update = lower variance gradient estimates."
+    },
+    {
+      "id": "d2_10",
+      "front": "What are the two files Spinning Up always writes per experiment run, and what is each used for?",
+      "back": "1. **`config.json`**: a JSON record of all hyperparameters and arguments used. For record-keeping — so you can reproduce or audit runs. There is no tool to re-launch from it automatically. 2. **`progress.txt`**: tab-separated training metrics (Epoch, AverageEpRet, LossPi, etc.) logged each epoch. Read by the Spinning Up plotter via `python -m spinup.run plot path/`."
+    },
+    {
+      "id": "d2_11",
+      "front": "What does `update_every=50` mean in DDPG/TD3/SAC, and what is the implied ratio of env steps to gradient steps?",
+      "back": "`update_every=50` means gradient updates are performed after every 50 environment steps. When updates run, **50 gradient steps** are taken (one per env step that was collected). So the ratio of env steps to gradient steps is exactly **1:1**. This means the algorithms are as computationally expensive as they are data-expensive — each env step requires one gradient update."
+    },
+    {
+      "id": "d2_12",
+      "front": "You want to compare PPO and SAC on `HalfCheetah-v2` across 5 seeds with 3 hidden-layer sizes. How would you set up an **ExperimentGrid** for this?",
+      "back": "```python\nfrom spinup.utils.run_utils import ExperimentGrid\nfrom spinup import ppo_pytorch, sac_pytorch\n\nfor algo in [ppo_pytorch, sac_pytorch]:\n    eg = ExperimentGrid(name=f'{algo.__name__}-sweep')\n    eg.add('env_name', 'HalfCheetah-v2', '', True)\n    eg.add('seed', [10*i for i in range(5)])\n    eg.add('epochs', 200)\n    eg.add('ac_kwargs:hidden_sizes',\n           [(64,64),(128,128),(256,256)], 'hid')\n    eg.run(algo, num_cpu=1)\n```\nThis runs 2 × 5 × 3 = 30 experiments total."
+    }
+  ]
+}

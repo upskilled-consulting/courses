@@ -1,0 +1,66 @@
+{
+  "id": "r3",
+  "moduleId": "m1",
+  "title": "Policy Gradient Theory",
+  "estimatedMinutes": 15,
+  "prevItem": { "id": "r2", "type": "reading", "title": "The RL Algorithm Landscape" },
+  "nextItem": { "id": "q1", "type": "quiz", "title": "RL Foundations Quiz" },
+  "learningObjectives": [
+    {
+      "id": "m1r3-lo1",
+      "verb": "Derive",
+      "description": "Derive the basic policy gradient using the log-derivative trick, arriving at the REINFORCE estimator",
+      "skillTags": ["policy-gradients", "math"]
+    },
+    {
+      "id": "m1r3-lo2",
+      "verb": "Explain",
+      "description": "Explain the reward-to-go trick and why it reduces variance without introducing bias",
+      "skillTags": ["policy-gradients", "variance-reduction"]
+    },
+    {
+      "id": "m1r3-lo3",
+      "verb": "Implement",
+      "description": "Implement a minimal policy gradient training loop in PyTorch, including the pseudo-loss and gradient step",
+      "skillTags": ["policy-gradients", "pytorch", "implementation"]
+    },
+    {
+      "id": "m1r3-lo4",
+      "verb": "Explain",
+      "description": "Explain why a baseline (e.g., the value function) can be subtracted from the return without biasing the gradient",
+      "skillTags": ["policy-gradients", "baselines", "advantage"]
+    }
+  ],
+  "content": "## The Policy Gradient Objective\n\nWe want to find policy parameters \\(\\theta\\) that maximize expected return:\n$$J(\\pi_\\theta) = \\mathbb{E}_{\\tau \\sim \\pi_\\theta}[R(\\tau)]$$\n\nWe'll do this with gradient ascent:\n$$\\theta_{k+1} = \\theta_k + \\alpha \\nabla_\\theta J(\\pi_\\theta)\\big|_{\\theta_k}$$\n\nThe challenge: how do we compute \\(\\nabla_\\theta J(\\pi_\\theta)\\) when the expectation is over trajectories that depend on \\(\\theta\\) in a complex way?\n\n## Deriving the Policy Gradient\n\n### Step 1: Expand the Expectation\n\n$$\\nabla_\\theta J(\\pi_\\theta) = \\nabla_\\theta \\int_\\tau P(\\tau|\\theta)\\, R(\\tau)$$\n\n### Step 2: The <a class=\"lookback-link\" data-lookback=\"log-derivative\">Log-Derivative Trick</a>\n\nFor any differentiable function, \\(\\nabla_\\theta P(\\tau|\\theta) = P(\\tau|\\theta) \\nabla_\\theta \\log P(\\tau|\\theta)\\). This turns the gradient of a probability into an expectation:\n\n$$\\nabla_\\theta J = \\mathbb{E}_{\\tau \\sim \\pi_\\theta}\\left[R(\\tau) \\nabla_\\theta \\log P(\\tau|\\theta)\\right]$$\n\n### Step 3: Simplify the Log-Probability\n\nThe log-probability of a trajectory factors as:\n$$\\log P(\\tau|\\theta) = \\log \\rho_0(s_0) + \\sum_{t=0}^{T} \\left[\\log P(s_{t+1}|s_t,a_t) + \\log \\pi_\\theta(a_t|s_t)\\right]$$\n\nThe gradient \\(\\nabla_\\theta\\) kills all terms that don't depend on \\(\\theta\\): the start-state distribution and the environment transitions. Only the policy log-probs survive:\n$$\\nabla_\\theta \\log P(\\tau|\\theta) = \\sum_{t=0}^T \\nabla_\\theta \\log \\pi_\\theta(a_t|s_t)$$\n\n### The Basic Policy Gradient (REINFORCE)\n\n$$\\nabla_\\theta J(\\pi_\\theta) = \\mathbb{E}_{\\tau \\sim \\pi_\\theta}\\left[\\sum_{t=0}^T \\nabla_\\theta \\log \\pi_\\theta(a_t|s_t) \\cdot R(\\tau)\\right]$$\n\nThis can be estimated from samples. Collect \\(N\\) trajectories and compute:\n$$\\hat{g} = \\frac{1}{N} \\sum_{i=1}^N \\sum_{t=0}^T \\nabla_\\theta \\log \\pi_\\theta(a_t^{(i)}|s_t^{(i)}) \\cdot R(\\tau^{(i)})$$\n\n## Implementing the Policy Gradient in PyTorch\n\n```python\nfrom torch.distributions import Categorical\n\ndef compute_loss(obs, acts, weights, policy_net):\n    \"\"\"Policy gradient pseudo-loss.\n    \n    The gradient of this function (w.r.t. policy parameters)\n    equals the policy gradient estimator.\n    Note: this is NOT a standard supervised loss.\n    \"\"\"\n    logits = policy_net(obs)\n    dist = Categorical(logits=logits)\n    logp = dist.log_prob(acts)         # shape: (batch,)\n    return -(logp * weights).mean()    # negative because we want ascent\n\n# Training step:\noptimizer.zero_grad()\nbatch_loss = compute_loss(obs_batch, act_batch, return_batch, policy)\nbatch_loss.backward()\noptimizer.step()\n```\n\n**Important warning:** This `loss` is *not* a loss function in the usual sense.\n\n1. **Data-dependent parameters**: The data must be collected with the *current* policy. Using stale data breaks the estimator.\n2. **Doesn't measure performance**: Minimizing this loss on a fixed batch will not reliably improve \\(J(\\pi_\\theta)\\). The loss is only useful for *one* gradient step per batch.\n\nThe only metric that matters during training is **average episode return**.\n\n## Reward-to-Go: Don't Let the Past Distract You\n\nIn the REINFORCE gradient, every log-prob at time \\(t\\) is weighted by the *entire* trajectory return \\(R(\\tau)\\). But rewards *before* time \\(t\\) cannot have been caused by action \\(a_t\\). Including them just adds noise.\n\nThe **reward-to-go** \\(\\hat{R}_t\\) is the sum of rewards from time \\(t\\) onward:\n$$\\hat{R}_t = \\sum_{t'=t}^T r_{t'}$$\n\nThe policy gradient can equivalently be written as:\n$$\\nabla_\\theta J = \\mathbb{E}_{\\tau \\sim \\pi_\\theta}\\left[\\sum_{t=0}^T \\nabla_\\theta \\log \\pi_\\theta(a_t|s_t) \\cdot \\hat{R}_t\\right]$$\n\nSame expectation, but lower variance because past rewards (which are uncorrelated with \\(a_t\\)) no longer appear as weights.\n\n## Baselines: Further Variance Reduction\n\nWe can subtract any **baseline** \\(b(s_t)\\) from the return weights without introducing bias, as long as the baseline doesn't depend on the action:\n$$\\nabla_\\theta J = \\mathbb{E}_{\\tau \\sim \\pi_\\theta}\\left[\\sum_{t=0}^T \\nabla_\\theta \\log \\pi_\\theta(a_t|s_t) \\cdot \\left(\\hat{R}_t - b(s_t)\\right)\\right]$$\n\nThis is because \\(\\mathbb{E}_{a \\sim \\pi_\\theta}[\\nabla_\\theta \\log \\pi_\\theta(a|s) \\cdot b(s)] = 0\\) (the EGLP lemma).\n\n**The best baseline** is the on-policy value function \\(V^\\pi(s_t)\\), because then the weight becomes the advantage:\n$$\\hat{R}_t - V^\\pi(s_t) \\approx A^\\pi(s_t, a_t)$$\n\nIn practice, a learned value function \\(V_\\phi(s)\\) is used as a **critic** to estimate \\(V^\\pi\\). This is the **actor-critic** architecture:\n- **Actor** (policy \\(\\pi_\\theta\\)): decides actions.\n- **Critic** (value function \\(V_\\phi\\)): estimates how good the current state is.\n\n## Generalized Advantage Estimation (GAE)\n\nIn practice, VPG and its successors use **Generalized Advantage Estimation (GAE-λ)** to navigate the <a class=\"lookback-link\" data-lookback=\"gae-bv\">bias-variance tradeoff</a> between high-variance Monte Carlo returns (λ=1) and low-variance but biased 1-step TD estimates (λ=0):\n\n$$\\hat{A}_t^{\\text{GAE}(\\lambda)} = \\sum_{l=0}^{\\infty} (\\gamma\\lambda)^l \\delta_{t+l}, \\quad \\delta_t = r_t + \\gamma V_\\phi(s_{t+1}) - V_\\phi(s_t)$$\n\nA typical value is \\(\\lambda = 0.97\\). The Spinning Up implementation uses GAE-Lambda throughout VPG, TRPO, and PPO.",
+  "lookbacks": {
+    "log-derivative": {
+      "title": "Log-Derivative Trick",
+      "source": "Calculus Foundations",
+      "sourcePath": "/prereq/calculus-foundations",
+      "body": "The trick is the chain rule applied to log. For any function \\(f(x) > 0\\):\n$$\\nabla \\log f(x) = \\frac{\\nabla f(x)}{f(x)} \\quad \\Rightarrow \\quad \\nabla f(x) = f(x) \\cdot \\nabla \\log f(x)$$\n\nSubstituting into the policy gradient integral converts \\(\\nabla_\\theta P(\\tau|\\theta)\\) — which you can't easily estimate by sampling — into \\(P(\\tau|\\theta) \\cdot \\nabla_\\theta \\log P(\\tau|\\theta)\\), which **can** be estimated. The gradient of a probability becomes a weighted expectation of the gradient of a log-probability.\n\nThe key payoff: \\(\\nabla_\\theta J = \\mathbb{E}_{\\tau \\sim \\pi_\\theta}[R(\\tau) \\cdot \\nabla_\\theta \\log P(\\tau|\\theta)]\\) — an expectation you can approximate with rollouts."
+    },
+    "gae-bv": {
+      "title": "Bias-Variance Tradeoff",
+      "source": "Regularization",
+      "sourcePath": "/supplement/regularization",
+      "body": "The \\(\\lambda\\) dial in GAE is the bias-variance tradeoff made explicit:\n\n- **\\(\\lambda = 0\\):** one-step TD — \\(\\delta_t = r_t + \\gamma V(s_{t+1}) - V(s_t)\\). Low variance (only one reward sample), high bias (entirely depends on V, which may be wrong early in training).\n- **\\(\\lambda = 1\\):** full Monte Carlo return minus baseline. Unbiased, but high variance across trajectories.\n\nValues like \\(\\lambda = 0.97\\) blend both — accepting a small bias to dramatically reduce gradient variance. The same structure appears in L2 regularisation (how much you trust the prior) and dropout (how much noise you inject): tuning the strength trades off how wrong you might be against how noisy your estimates are."
+    }
+  },
+  "references": [
+    {
+      "label": "OpenAI Spinning Up",
+      "title": "Part 3: Intro to Policy Optimization",
+      "url": "https://spinningup.openai.com/en/latest/spinningup/rl_intro3.html"
+    },
+    {
+      "label": "Schulman et al. 2016",
+      "title": "High Dimensional Continuous Control Using Generalized Advantage Estimation",
+      "url": "https://arxiv.org/abs/1506.02438"
+    },
+    {
+      "label": "Williams 1992",
+      "title": "Simple Statistical Gradient-Following Algorithms for Connectionist Reinforcement Learning (REINFORCE)",
+      "url": "https://link.springer.com/article/10.1007/BF00992696"
+    }
+  ]
+}

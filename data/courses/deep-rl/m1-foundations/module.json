@@ -1,0 +1,65 @@
+{
+  "id": "m1",
+  "title": "RL Foundations",
+  "order": 1,
+  "color": "#63aac9",
+  "accentLight": "#f4eef3",
+  "prereq": null,
+  "learningObjectives": [
+    "Define agents, environments, states, observations, action spaces, policies, and trajectories and explain how they interact in the RL loop.",
+    "Distinguish deterministic and stochastic policies and implement both in PyTorch using categorical and diagonal Gaussian distributions.",
+    "Compute finite-horizon undiscounted and infinite-horizon discounted returns, and explain when each formulation is appropriate.",
+    "Define V^π, Q^π, and A^π and derive the Bellman equations that connect them.",
+    "Classify RL algorithms along the model-free/model-based and policy-optimization/Q-learning axes and name key tradeoffs.",
+    "Derive the basic policy gradient from the log-derivative trick and explain why reward-to-go reduces variance."
+  ],
+  "readings": [
+    {
+      "id": "r-intro",
+      "title": "Before You Start: Prerequisites & Learning Path",
+      "estimatedMinutes": 8,
+      "dataPath": "data/courses/deep-rl/m1-foundations/readings/r-intro-prerequisites.json"
+    },
+    {
+      "id": "r0",
+      "title": "RL Fundamentals: Agents, Environments, and Policies",
+      "estimatedMinutes": 12,
+      "dataPath": "data/courses/deep-rl/m1-foundations/readings/r0-fundamentals.json"
+    },
+    {
+      "id": "r1",
+      "title": "Return, Value Functions & Bellman Equations",
+      "estimatedMinutes": 14,
+      "dataPath": "data/courses/deep-rl/m1-foundations/readings/r1-value-functions.json"
+    },
+    {
+      "id": "r2",
+      "title": "The RL Algorithm Landscape",
+      "estimatedMinutes": 10,
+      "dataPath": "data/courses/deep-rl/m1-foundations/readings/r2-algorithm-landscape.json"
+    },
+    {
+      "id": "r3",
+      "title": "Policy Gradient Theory",
+      "estimatedMinutes": 15,
+      "dataPath": "data/courses/deep-rl/m1-foundations/readings/r3-policy-gradient-theory.json"
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "q1",
+      "title": "RL Foundations Quiz",
+      "questionCount": 6,
+      "passingScore": 0.7,
+      "dataPath": "data/courses/deep-rl/m1-foundations/quizzes/q1-foundations.json"
+    }
+  ],
+  "drills": [
+    {
+      "id": "d1",
+      "title": "RL Terminology & Concepts",
+      "cardCount": 12,
+      "dataPath": "data/courses/deep-rl/m1-foundations/drills/d1-terminology.json"
+    }
+  ]
+}
