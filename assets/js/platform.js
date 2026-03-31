@@ -547,7 +547,7 @@ function setBreadcrumb(parts, contentType) {
   if (!parts || parts.length === 0) { bc.innerHTML = ''; return; }
   bc.innerHTML = parts.map((p, i) => {
     const isLast = i === parts.length - 1;
-    const sep = i > 0 ? '<span class="bc-sep">/</span>' : '';
+    const sep = i > 0 ? '<span class="bc-sep"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="currentColor" viewBox="0 0 16 16" style="vertical-align:-0.05em"><path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"/></svg></span>' : '';
     if (isLast) return `${sep}<span class="bc-current">${p.label}</span>`;
     return `${sep}<a href="${BASE_PATH + p.href}" data-bc-nav="${p.href}">${p.label}</a>`;
   }).join(' ');
@@ -622,13 +622,7 @@ function buildCourseCard(course) {
   const isSupplement = course.type === 'supplement';
   const isCourse = course.type === 'course';
   const typeLabel = isPrereq ? 'Prerequisite' : isSupplement ? 'Supplement' : 'Course';
-  const levelClass = 'level-' + (course.level || '').toLowerCase().replace(/\s+/, '-');
   const tagsHTML = (course.tags || []).map(t => `<span class="tag-chip">${t}</span>`).join('');
-  const countLabel = isCourse
-    ? `${course.moduleCount} modules`
-    : `${course.readingCount} readings`;
-  const hoursLabel = `${course.estimatedHours}h estimated`;
-  const ctaText = isCourse ? 'Explore course' : 'Start reading';
   const seg = isPrereq ? 'prereq' : isSupplement ? 'supplement' : '';
   const nav = isCourse ? `data-nav="/${course.id}"` : seg ? `data-nav="/${seg}/${course.id}"` : '';
   const ext = '';
@@ -756,7 +750,7 @@ async function renderCourseOverview(params, root) {
   root.innerHTML = `
     <div class="course-overview">
       <div class="course-ov-header">
-        <button class="course-ov-back" data-nav="/">← Catalog</button>
+        <button class="course-ov-back" data-nav="/"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align:-0.1em;margin-right:1px"><path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/></svg>Catalog</button>
         <div class="course-ov-kicker">${kickerLabel}</div>
         <h1 class="course-ov-title">${module.title}</h1>
         <p class="course-ov-desc">${module.description}</p>
@@ -906,7 +900,7 @@ async function renderCourseHome(params, root) {
   root.innerHTML = `
     <div class="course-overview">
       <div class="course-ov-header">
-        <button class="course-ov-back" data-nav="/">← Catalog</button>
+        <button class="course-ov-back" data-nav="/"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align:-0.1em;margin-right:1px"><path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/></svg>Catalog</button>
         <div class="course-ov-kicker">Course</div>
         <h1 class="course-ov-title">${courseManifest.title}</h1>
         <p class="course-ov-desc">${courseManifest.subtitle || ''}</p>
@@ -1051,7 +1045,7 @@ async function renderModuleOverview(params, root) {
   root.innerHTML = `
     <div class="course-overview">
       <div class="course-ov-header">
-        <button class="course-ov-back" data-nav="/${id}">← ${courseManifest.title}</button>
+        <button class="course-ov-back" data-nav="/${id}"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align:-0.1em;margin-right:1px"><path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/></svg>${courseManifest.title}</button>
         <div class="course-ov-kicker">Module ${modEntry.order}</div>
         <h1 class="course-ov-title">${modEntry.title}</h1>
         <p class="course-ov-desc">${modEntry.description || ''}</p>
@@ -1228,10 +1222,10 @@ async function renderReading(params, root) {
   // Nav buttons
   const prevItem = reading.prevItem;
   const nextItem = reading.nextItem;
-  const prevLabel = prevItem ? '← Previous' : '← Overview';
+  const prevLabel = prevItem ? '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align:-0.1em;margin-right:1px"><path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/></svg>Previous' : '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align:-0.1em;margin-right:1px"><path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/></svg>Overview';
   const nextLabel = nextItem
     ? (nextItem.type === 'quiz' ? 'Take Quiz →' : nextItem.type === 'lab' ? 'Start Lab →' : 'Next →')
-    : '← Overview';
+    : '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align:-0.1em;margin-right:1px"><path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/></svg>Overview';
   const prevBtn = `<button class="reading-nav-btn prev" data-nav="${navItemUrl(id, prevItem, seg, mid)}">${prevLabel}</button>`;
   const nextBtn = `<button class="reading-nav-btn next" data-nav="${navItemUrl(id, nextItem, seg, mid)}">${nextLabel}</button>`;
 
@@ -1273,7 +1267,7 @@ async function renderReading(params, root) {
   root.innerHTML = `
     <div class="reading-layout">
       <aside class="reading-sidebar">
-        <button class="sidebar-course-link" data-nav="${overviewUrl}">← ${isCourse ? modEntry.title : module.title}</button>
+        <button class="sidebar-course-link" data-nav="${overviewUrl}"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align:-0.1em;margin-right:1px"><path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/></svg>${isCourse ? modEntry.title : module.title}</button>
         <div class="sidebar-nav-label">Readings</div>
         ${sidebarItems}
       </aside>
@@ -1663,7 +1657,7 @@ function renderQuizBody(params, root, module, quiz) {
     }).join('');
     return `
       <aside class="reading-sidebar">
-        <button class="sidebar-course-link" data-nav="${overviewUrl}">← ${modTitle}</button>
+        <button class="sidebar-course-link" data-nav="${overviewUrl}"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align:-0.1em;margin-right:1px"><path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/></svg>${modTitle}</button>
         <div class="sidebar-nav-label">Readings</div>
         ${readingItems}
         <div class="sidebar-nav-label" style="margin-top:12px">Quizzes</div>
@@ -1698,7 +1692,7 @@ function renderQuizBody(params, root, module, quiz) {
         </div>
         <div id="quizResult"></div>
         <div class="reading-nav-row" style="margin-top:40px">
-          <button class="reading-nav-btn prev" data-nav="${navItemUrl(id, quiz.prevItem, seg, mid)}">← Previous</button>
+          <button class="reading-nav-btn prev" data-nav="${navItemUrl(id, quiz.prevItem, seg, mid)}"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align:-0.1em;margin-right:1px"><path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/></svg>Previous</button>
           ${quiz.nextItem ? `<button class="reading-nav-btn next" data-nav="${navItemUrl(id, quiz.nextItem, seg, mid)}">Next →</button>` : ''}
         </div>
       </div>
@@ -1769,7 +1763,7 @@ function renderQuizBody(params, root, module, quiz) {
     const nextNav = quiz.nextItem
       ? `<button class="reading-nav-btn next" data-nav="${navItemUrl(id, quiz.nextItem, seg)}">Continue →</button>`
       : '';
-    const overviewBtn = `<button class="reading-nav-btn prev" data-nav="${overviewUrl}">← Overview</button>`;
+    const overviewBtn = `<button class="reading-nav-btn prev" data-nav="${overviewUrl}"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align:-0.1em;margin-right:1px"><path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/></svg>Overview</button>`;
 
     root.querySelector('#quizResult').innerHTML = `
       <div class="quiz-score-card ${passed ? 'passed' : 'failed'}">
@@ -1880,7 +1874,7 @@ async function renderLab(params, root) {
 
     return `
       <aside class="reading-sidebar">
-        <button class="sidebar-course-link" data-nav="${overviewUrl}">← ${modTitle}</button>
+        <button class="sidebar-course-link" data-nav="${overviewUrl}"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align:-0.1em;margin-right:1px"><path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/></svg>${modTitle}</button>
         <div class="sidebar-nav-label">Readings</div>
         ${readingItems}
         ${quizSection}
@@ -1935,7 +1929,7 @@ async function renderLab(params, root) {
         </div>
 
         <div class="reading-nav-row">
-          <button class="reading-nav-btn prev" data-nav="${navItemUrl(id, lab.prevItem, seg, mid)}">← Previous</button>
+          <button class="reading-nav-btn prev" data-nav="${navItemUrl(id, lab.prevItem, seg, mid)}"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align:-0.1em;margin-right:1px"><path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/></svg>Previous</button>
           ${lab.nextItem ? `<button class="reading-nav-btn next" data-nav="${navItemUrl(id, lab.nextItem, seg, mid)}">Next →</button>` : ''}
         </div>
       </div>
@@ -2869,7 +2863,7 @@ async function renderSyllabus(params, root) {
   root.innerHTML = `
     <div class="outline-page" id="outline-page">
       <div class="outline-header">
-        <button class="course-ov-back" data-nav="/${id}">← ${_escHtml(courseManifest.title)}</button>
+        <button class="course-ov-back" data-nav="/${id}"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align:-0.1em;margin-right:1px"><path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/></svg>${_escHtml(courseManifest.title)}</button>
         <div class="outline-header-title">
           <h1 class="course-ov-title" style="margin:12px 0 4px">Syllabus</h1>
           ${devUnlock ? '<span class="admin-badge">ADMIN</span>' : ''}
@@ -2938,7 +2932,7 @@ async function renderDrill(params, root) {
     const known = Object.values(progress).filter(b => b === 2).length;
     root.innerHTML = `
       <div class="drill-page">
-        <button class="course-ov-back" data-nav="${backUrl}">← ${_escHtml(module.title)}</button>
+        <button class="course-ov-back" data-nav="${backUrl}"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align:-0.1em;margin-right:1px"><path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/></svg>${_escHtml(module.title)}</button>
         <div class="drill-complete">
           <div class="drill-complete-icon">🎉</div>
           <h2>All ${cards.length} cards known!</h2>
@@ -3052,7 +3046,7 @@ async function renderDrill(params, root) {
   root.innerHTML = `
     <div class="drill-page">
       <div class="drill-header">
-        <button class="course-ov-back" data-nav="${backUrl}">← ${_escHtml(module.title)}</button>
+        <button class="course-ov-back" data-nav="${backUrl}"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align:-0.1em;margin-right:1px"><path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/></svg>${_escHtml(module.title)}</button>
         <h1 class="drill-title">${_escHtml(deck.title)}</h1>
         <p class="drill-subtitle">${_escHtml(deck.description || '')}</p>
       </div>
@@ -3305,7 +3299,7 @@ async function renderPrereqSyllabus(params, root) {
   root.innerHTML = `
     <div class="outline-page">
       <div class="outline-header">
-        <button class="course-ov-back" data-nav="${base}">← ${_escHtml(module.title)}</button>
+        <button class="course-ov-back" data-nav="${base}"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align:-0.1em;margin-right:1px"><path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/></svg>${_escHtml(module.title)}</button>
         <div class="outline-header-title">
           <h1 class="course-ov-title" style="margin:12px 0 4px">Syllabus</h1>
           ${devUnlock ? '<span class="admin-badge">ADMIN</span>' : ''}

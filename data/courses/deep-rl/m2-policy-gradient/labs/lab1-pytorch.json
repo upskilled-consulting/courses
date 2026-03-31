@@ -4,7 +4,7 @@
   "title": "VPG & PPO in PyTorch",
   "estimatedMinutes": 60,
   "framework": "PyTorch",
-  "colabUrl": null,
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/deep-rl/lab1-vpg-ppo-pytorch.ipynb",
   "prevItem": { "id": "q2", "type": "quiz", "title": "On-Policy Methods Quiz" },
   "nextItem": null,
   "objectives": [

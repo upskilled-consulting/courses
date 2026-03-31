@@ -4,7 +4,7 @@
   "title": "DDPG & SAC in TensorFlow",
   "estimatedMinutes": 60,
   "framework": "TensorFlow",
-  "colabUrl": null,
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/deep-rl/lab2-ddpg-sac-tensorflow.ipynb",
   "prevItem": { "id": "d2", "type": "drill", "title": "Algorithm Mechanics" },
   "nextItem": null,
   "objectives": [
