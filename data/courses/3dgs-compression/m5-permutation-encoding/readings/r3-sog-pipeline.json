@@ -51,7 +51,7 @@
         {
           "symbol": "\\mathcal{L}_{finetune}",
           "name": "Total finetuning objective",
-          "desc": "The loss minimised during the optional post-encode adaptation step. Gradients update only the Gaussian attributes — the grid structure and codec are fixed. The goal is to recover quality lost during quantization and image compression."
+          "desc": "The loss minimized during the optional post-encode adaptation step. Gradients update only the Gaussian attributes — the grid structure and codec are fixed. The goal is to recover quality lost during quantization and image compression."
         },
         {
           "symbol": "\\mathcal{L}_{render}",
@@ -66,7 +66,7 @@
         {
           "symbol": "\\mathcal{L}_{smooth}",
           "name": "Grid smoothness penalty",
-          "desc": "Penalises large differences between neighbouring cells in the sorted 2D grid. Reducing this term means smaller residuals for the image codec to encode — directly improving the compression ratio of the subsequent JPEG XL / WebP pass."
+          "desc": "Penalizes large differences between neighboring cells in the sorted 2D grid. Reducing this term means smaller residuals for the image codec to encode — directly improving the compression ratio of the subsequent JPEG XL / WebP pass."
         }
       ]
     },
@@ -86,7 +86,7 @@
         {
           "symbol": "\\|A_{grid(i)} - A_{grid(j)}\\|^2",
           "name": "Squared attribute distance between neighbors",
-          "desc": "How dissimilar two adjacent grid cells are in attribute space. A smooth grid has small values here everywhere. Minimising this sum is exactly what good sorting achieves — and what image codecs exploit via local prediction."
+          "desc": "How dissimilar two adjacent grid cells are in attribute space. A smooth grid has small values here everywhere. Minimizing this sum is exactly what good sorting achieves — and what image codecs exploit via local prediction."
         }
       ]
     }

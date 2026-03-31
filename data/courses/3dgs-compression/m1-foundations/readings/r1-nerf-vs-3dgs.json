@@ -61,13 +61,13 @@
       "terms": [
         {
           "symbol": "C(\\mathbf{r})",
-          "name": "Rendered pixel colour",
+          "name": "Rendered pixel color",
           "desc": "The final RGB value assigned to this pixel — the result of accumulating all light contributions along ray r."
         },
         {
           "symbol": "\\int_{t_n}^{t_f}",
           "name": "Ray depth integral",
-          "desc": "Sums contributions from the near plane t_n to the far plane t_f. Every point along the ray potentially contributes colour."
+          "desc": "Sums contributions from the near plane t_n to the far plane t_f. Every point along the ray potentially contributes color."
         },
         {
           "symbol": "T(t)",
@@ -81,8 +81,8 @@
         },
         {
           "symbol": "\\mathbf{c}(\\mathbf{r}(t),\\mathbf{d})",
-          "name": "Emitted colour",
-          "desc": "The RGB colour the scene emits at this position when viewed from direction d. Predicted by the MLP — view-dependent to capture specular highlights."
+          "name": "Emitted color",
+          "desc": "The RGB color the scene emits at this position when viewed from direction d. Predicted by the MLP — view-dependent to capture specular highlights."
         },
         {
           "symbol": "dt",
@@ -98,7 +98,7 @@
         {
           "symbol": "f_i(\\mathbf{p})",
           "name": "Influence at pixel p",
-          "desc": "How much Gaussian i contributes to the colour of pixel p. Used as a weight in the front-to-back alpha-compositing sum."
+          "desc": "How much Gaussian i contributes to the color of pixel p. Used as a weight in the front-to-back alpha-compositing sum."
         },
         {
           "symbol": "\\sigma_\\alpha",
@@ -107,7 +107,7 @@
         },
         {
           "symbol": "\\mathbf{p} - \\mu_i",
-          "name": "Displacement from centre",
+          "name": "Displacement from center",
           "desc": "Vector from the Gaussian's 2D projected mean μ_i to pixel p. Larger displacement means smaller influence."
         },
         {

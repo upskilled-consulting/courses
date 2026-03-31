@@ -68,13 +68,13 @@
       "terms": [
         {
           "symbol": "\\min_{\\{e_k\\}, \\{\\text{idx}_i\\}}",
-          "name": "Joint optimisation over codebook and assignments",
-          "desc": "Simultaneously optimises the K codebook vectors e_k and the per-Gaussian index assignments idx_i. This is harder than standard k-means (which only optimises assignments given fixed centres) but finds better rate-distortion tradeoffs."
+          "name": "Joint optimization over codebook and assignments",
+          "desc": "Simultaneously optimizes the K codebook vectors e_k and the per-Gaussian index assignments idx_i. This is harder than standard k-means (which only optimizes assignments given fixed centers) but finds better rate-distortion tradeoffs."
         },
         {
           "symbol": "\\sum_i \\|a_i - e_{\\text{idx}_i}\\|^2",
           "name": "Reconstruction distortion",
-          "desc": "Mean squared error between each Gaussian's true attribute vector a_i and its codebook reconstruction. This is the quality loss — minimising it alone gives standard VQ."
+          "desc": "Mean squared error between each Gaussian's true attribute vector a_i and its codebook reconstruction. This is the quality loss — minimizing it alone gives standard VQ."
         },
         {
           "symbol": "\\lambda",

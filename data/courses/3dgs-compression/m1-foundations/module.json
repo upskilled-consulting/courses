@@ -9,7 +9,8 @@
     "Describe all 59 parameters of a 3D Gaussian splat and explain why the covariance factorization \\(\\Sigma = RSS^\\top R^\\top\\) is used.",
     "Trace the tile-based rasterization pipeline from 3D Gaussians to a rendered image, including depth sorting and alpha compositing.",
     "Explain the adaptive densification loop: when cloning, splitting, and pruning occur and what gradients drive each decision.",
-    "Summarize the motivation and key ideas behind 2DGS, 4DGS, HierarchicalGS, relighting, and GS editing extensions."
+    "Summarize the motivation and key ideas behind 2DGS, 4DGS, HierarchicalGS, relighting, and GS editing extensions.",
+    "Determine whether a given use of the gaussian-splatting codebase requires authorization from Inria, and identify permissively-licensed alternatives for commercial contexts."
   ],
   "readings": [
     {
@@ -35,6 +36,12 @@
       "title": "Extensions: 2DGS, 4DGS, Hierarchical, Relighting, and Editing",
       "estimatedMinutes": 10,
       "dataPath": "data/courses/3dgs-compression/m1-foundations/readings/r4-extensions.json"
+    },
+    {
+      "id": "r5",
+      "title": "The Gaussian Splatting License: What You Can and Cannot Do",
+      "estimatedMinutes": 8,
+      "dataPath": "data/courses/3dgs-compression/m1-foundations/readings/r5-license.json"
     }
   ],
   "quizzes": [

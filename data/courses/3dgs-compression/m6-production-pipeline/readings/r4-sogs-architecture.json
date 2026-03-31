@@ -54,13 +54,13 @@
         },
         {
           "symbol": "\\arg\\min_{k}",
-          "name": "Nearest-neighbour search",
+          "name": "Nearest-neighbor search",
           "desc": "Finds the grid cell minimising the objective. For N Gaussians and a grid of N cells, this is an O(N) search per sample — parallelised on GPU as a batched matrix norm computation."
         },
         {
           "symbol": "\\|\\mathbf{x} - \\mathbf{w}_k\\|_2",
           "name": "Euclidean feature-space distance",
-          "desc": "Measures how far the current Gaussian's feature vector is from cell k's prototype. Feature normalisation (per-attribute z-scoring) is critical: without it, position differences (in metres) would dominate over SH coefficient differences (near zero)."
+          "desc": "Measures how far the current Gaussian's feature vector is from cell k's prototype. Feature normalization (per-attribute z-scoring) is critical: without it, position differences (in metres) would dominate over SH coefficient differences (near zero)."
         }
       ]
     },
@@ -74,7 +74,7 @@
         },
         {
           "symbol": "h(k,\\, \\text{BMU}(\\mathbf{x}),\\, t)",
-          "name": "Neighbourhood influence",
+          "name": "Neighborhood influence",
           "desc": "How strongly cell k is pulled toward the current sample, based on its grid-distance from the BMU. 1.0 at the BMU itself; decays toward 0 for distant cells. Ensures the map learns a smooth, continuous projection of feature space."
         },
         {
@@ -90,7 +90,7 @@
       ]
     },
     {
-      "label": "Gaussian Neighbourhood Function",
+      "label": "Gaussian Neighborhood Function",
       "terms": [
         {
           "symbol": "d_{\\text{grid}}(k,\\, c)",
@@ -99,8 +99,8 @@
         },
         {
           "symbol": "\\sigma(t)",
-          "name": "Neighbourhood radius",
-          "desc": "Controls the spatial extent of weight updates. At t=0, σ spans most of the grid — the whole map reorganises in response to each sample. As σ → 0, only the BMU cell updates, and the topology is locked in."
+          "name": "Neighborhood radius",
+          "desc": "Controls the spatial extent of weight updates. At t=0, σ spans most of the grid — the whole map reorganizes in response to each sample. As σ → 0, only the BMU cell updates, and the topology is locked in."
         },
         {
           "symbol": "\\exp(-\\cdot / 2\\sigma^2)",

@@ -78,7 +78,7 @@
         {
           "symbol": "S",
           "name": "Scale matrix",
-          "desc": "Diagonal matrix with entries exp(s₀), exp(s₁), exp(s₂). The exponential keeps all scales strictly positive regardless of what the optimiser does to the raw parameters."
+          "desc": "Diagonal matrix with entries exp(s₀), exp(s₁), exp(s₂). The exponential keeps all scales strictly positive regardless of what the optimizer does to the raw parameters."
         },
         {
           "symbol": "S S^\\top",
@@ -118,17 +118,17 @@
         {
           "symbol": "f(\\theta, \\phi)",
           "name": "Directional function",
-          "desc": "The colour (or any quantity) to represent as a function of viewing direction on the unit sphere. For 3DGS this is the RGB colour seen from direction (θ, φ)."
+          "desc": "The color (or any quantity) to represent as a function of viewing direction on the unit sphere. For 3DGS this is the RGB color seen from direction (θ, φ)."
         },
         {
           "symbol": "\\sum_{l=0}^{L}",
           "name": "Sum over bands",
-          "desc": "l is the frequency band (0 = constant, 1 = linear, 2 = quadratic, …). Higher l captures finer directional variation. 3DGS uses up to degree 3 (16 basis functions per colour channel)."
+          "desc": "l is the frequency band (0 = constant, 1 = linear, 2 = quadratic, …). Higher l captures finer directional variation. 3DGS uses up to degree 3 (16 basis functions per color channel)."
         },
         {
           "symbol": "c_l^m",
           "name": "SH coefficients",
-          "desc": "Learned scalar weights, one per (l, m) pair. These are the stored parameters — optimised by gradient descent to best reproduce the observed colour from all training views."
+          "desc": "Learned scalar weights, one per (l, m) pair. These are the stored parameters — optimized by gradient descent to best reproduce the observed color from all training views."
         },
         {
           "symbol": "Y_l^m(\\theta, \\phi)",
@@ -144,7 +144,7 @@
         {
           "symbol": "f_i(\\mathbf{p})",
           "name": "Density at point p",
-          "desc": "Combined contribution of Gaussian i at screen position p — opacity times geometric falloff. This is what gets alpha-composited in depth order to produce the final pixel colour."
+          "desc": "Combined contribution of Gaussian i at screen position p — opacity times geometric falloff. This is what gets alpha-composited in depth order to produce the final pixel color."
         },
         {
           "symbol": "\\sigma_\\alpha",
@@ -153,8 +153,8 @@
         },
         {
           "symbol": "\\mu_i",
-          "name": "Centre (mean)",
-          "desc": "The 3D position of Gaussian i, optimised during training. Initialised from the SfM sparse point cloud; updated freely by gradient descent and Adaptive Density Control."
+          "name": "Center (mean)",
+          "desc": "The 3D position of Gaussian i, optimized during training. Initialized from the SfM sparse point cloud; updated freely by gradient descent and Adaptive Density Control."
         },
         {
           "symbol": "\\Sigma_i^{-1}",
@@ -164,18 +164,18 @@
         {
           "symbol": "-\\tfrac{1}{2}(\\cdots)^\\top \\Sigma_i^{-1}(\\cdots)",
           "name": "Mahalanobis exponent",
-          "desc": "Shape-aware distance from p to the Gaussian centre. Equals 0 at p = μ_i (maximum influence). Grows negative as p moves away, exponentially suppressing influence — with rate controlled by Σ."
+          "desc": "Shape-aware distance from p to the Gaussian center. Equals 0 at p = μ_i (maximum influence). Grows negative as p moves away, exponentially suppressing influence — with rate controlled by Σ."
         }
       ]
     },
     {
-      "label": "View-Dependent Colour from Spherical Harmonics",
+      "label": "View-Dependent Color from Spherical Harmonics",
       "heading": "Gaussian Density Function",
       "terms": [
         {
           "symbol": "c_i(\\mathbf{d})",
-          "name": "View-dependent colour",
-          "desc": "RGB colour Gaussian i contributes when viewed from direction d. Different viewing angles yield different colours — enabling specular highlights and other non-Lambertian effects."
+          "name": "View-dependent color",
+          "desc": "RGB color Gaussian i contributes when viewed from direction d. Different viewing angles yield different colors — enabling specular highlights and other non-Lambertian effects."
         },
         {
           "symbol": "\\sum_{l,m} c_l^m Y_l^m(\\mathbf{d})",
@@ -184,7 +184,7 @@
         },
         {
           "symbol": "\\text{sigmoid}(\\cdots)",
-          "name": "Colour activation",
+          "name": "Color activation",
           "desc": "Maps the unbounded linear SH sum into [0, 1], producing a valid RGB value. Equivalent to 1 / (1 + exp(−x)). Applied independently to each channel."
         }
       ]

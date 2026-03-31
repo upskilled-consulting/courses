@@ -71,18 +71,18 @@
         },
         {
           "symbol": "\\text{row-normalize}",
-          "name": "Row normalisation",
+          "name": "Row normalization",
           "desc": "Divides each row by its sum, making every row sum to 1. Ensures each input element is 'assigned' to output positions with total weight 1."
         },
         {
           "symbol": "\\text{col-normalize}",
-          "name": "Column normalisation",
+          "name": "Column normalization",
           "desc": "Divides each column by its sum, making every column sum to 1. Ensures each output position receives total assignment weight 1."
         },
         {
           "symbol": "\\lim_{k\\to\\infty}(\\cdots)^k",
           "name": "Iterative convergence",
-          "desc": "Alternating row and column normalisation is repeated until convergence. Sinkhorn's theorem guarantees this converges to a unique doubly stochastic matrix — the closest permutation-like matrix to exp(A/τ)."
+          "desc": "Alternating row and column normalization is repeated until convergence. Sinkhorn's theorem guarantees this converges to a unique doubly stochastic matrix — the closest permutation-like matrix to exp(A/τ)."
         },
         {
           "symbol": "P_{soft}",
@@ -122,7 +122,7 @@
         {
           "symbol": "\\mathcal{L}",
           "name": "Total training loss",
-          "desc": "The combined objective minimised during joint 3DGS + permutation training. Gradients flow simultaneously into Gaussian attributes and the sort key, so the scene is encouraged to be both visually accurate and efficiently sortable."
+          "desc": "The combined objective minimized during joint 3DGS + permutation training. Gradients flow simultaneously into Gaussian attributes and the sort key, so the scene is encouraged to be both visually accurate and efficiently sortable."
         },
         {
           "symbol": "\\mathcal{L}_{render}",
@@ -137,7 +137,7 @@
         {
           "symbol": "\\mathcal{L}_{sort}",
           "name": "Grid smoothness loss",
-          "desc": "Penalises large differences between neighbouring cells in the 2D grid after sorting. Encourages Gaussian attributes to take values that, when arranged spatially, vary smoothly — making the resulting attribute images more compressible."
+          "desc": "Penalizes large differences between neighboring cells in the 2D grid after sorting. Encourages Gaussian attributes to take values that, when arranged spatially, vary smoothly — making the resulting attribute images more compressible."
         }
       ]
     }

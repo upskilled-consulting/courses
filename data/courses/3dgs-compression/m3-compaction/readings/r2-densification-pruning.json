@@ -59,12 +59,12 @@
         {
           "symbol": "\\alpha_i(p)",
           "name": "Alpha weight at pixel p",
-          "desc": "How much Gaussian i contributes to pixel p's final colour — its blending weight in the front-to-back alpha-compositing pass. Acts as a responsibility score: the more a Gaussian contributes to a pixel, the more it 'owns' the error there."
+          "desc": "How much Gaussian i contributes to pixel p's final color — its blending weight in the front-to-back alpha-compositing pass. Acts as a responsibility score: the more a Gaussian contributes to a pixel, the more it 'owns' the error there."
         },
         {
           "symbol": "|c(p) - \\hat{c}(p)|",
-          "name": "Per-pixel colour error",
-          "desc": "Absolute difference between the ground-truth colour c(p) and the rendered colour ĉ(p) at pixel p. Computed per channel and summed or averaged. Pixels that render correctly contribute zero to the error budget."
+          "name": "Per-pixel color error",
+          "desc": "Absolute difference between the ground-truth color c(p) and the rendered color ĉ(p) at pixel p. Computed per channel and summed or averaged. Pixels that render correctly contribute zero to the error budget."
         }
       ]
     }

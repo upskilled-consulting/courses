@@ -59,12 +59,12 @@
         {
           "symbol": "d_{\\text{true}}(u,v)",
           "name": "True metric depth",
-          "desc": "The actual distance from the camera centre to the scene surface at pixel (u,v), in world units. This is what 3DGS needs to place Gaussians correctly in 3D space."
+          "desc": "The actual distance from the camera center to the scene surface at pixel (u,v), in world units. This is what 3DGS needs to place Gaussians correctly in 3D space."
         },
         {
           "symbol": "b",
           "name": "Unknown shift (bias)",
-          "desc": "A scene-specific additive offset. Arises because monocular depth models are trained with scale-normalised targets. Together with s, it defines an affine transformation that must be solved before the depths can be used."
+          "desc": "A scene-specific additive offset. Arises because monocular depth models are trained with scale-normalized targets. Together with s, it defines an affine transformation that must be solved before the depths can be used."
         }
       ]
     },
@@ -73,7 +73,7 @@
       "terms": [
         {
           "symbol": "\\min_{s_i, b_i}",
-          "name": "Optimise over scale and shift",
+          "name": "Optimize over scale and shift",
           "desc": "Finds the affine parameters (s_i, b_i) that best map the predicted depths to the metric COLMAP depths for image i. Closed-form solution exists because the objective is quadratic in the unknowns."
         },
         {
@@ -108,18 +108,18 @@
       "terms": [
         {
           "symbol": "\\tilde{\\mathbf{c}}_i",
-          "name": "Exposure-corrected colour",
-          "desc": "The rendered colour after applying the learned affine colour transform for image i. This is what gets compared to the ground-truth pixel during training — not the raw rendered colour c."
+          "name": "Exposure-corrected color",
+          "desc": "The rendered color after applying the learned affine color transform for image i. This is what gets compared to the ground-truth pixel during training — not the raw rendered color c."
         },
         {
           "symbol": "A_i \\in \\mathbb{R}^{3 \\times 3}",
-          "name": "Colour correction matrix",
-          "desc": "A learned 3×3 matrix per image that accounts for white balance shifts, auto-exposure gain changes, and colour casts between frames. Off-diagonal entries handle cross-channel mixing (e.g. blue cast from overcast sky)."
+          "name": "Color correction matrix",
+          "desc": "A learned 3×3 matrix per image that accounts for white balance shifts, auto-exposure gain changes, and color casts between frames. Off-diagonal entries handle cross-channel mixing (e.g. blue cast from overcast sky)."
         },
         {
           "symbol": "\\mathbf{b}_i \\in \\mathbb{R}^3",
-          "name": "Colour offset vector",
-          "desc": "A per-image additive RGB bias, handling global brightness shifts. Together with A_i, it gives the model enough freedom to correct all common camera state variations without needing to bake them into the Gaussian colours."
+          "name": "Color offset vector",
+          "desc": "A per-image additive RGB bias, handling global brightness shifts. Together with A_i, it gives the model enough freedom to correct all common camera state variations without needing to bake them into the Gaussian colors."
         }
       ]
     },
@@ -129,7 +129,7 @@
         {
           "symbol": "\\eta(t)",
           "name": "Exposure learning rate at step t",
-          "desc": "The learning rate applied to the affine colour parameters (A_i, b_i) at training step t. Kept very small during warm-up to prevent early exposure updates from distorting Gaussian initialisation."
+          "desc": "The learning rate applied to the affine color parameters (A_i, b_i) at training step t. Kept very small during warm-up to prevent early exposure updates from distorting Gaussian initialization."
         },
         {
           "symbol": "\\mu^{1 - t/t_{\\text{delay}}}",
@@ -139,7 +139,7 @@
         {
           "symbol": "\\left(\\eta_f/\\eta_0\\right)^{t/T}",
           "name": "Exponential decay (t ≥ t_delay)",
-          "desc": "After warm-up, the LR decays exponentially from η₀=0.001 to η_f=0.0001 over T=30000 steps — a standard cosine/exponential annealing that stabilises training as Gaussians converge."
+          "desc": "After warm-up, the LR decays exponentially from η₀=0.001 to η_f=0.0001 over T=30000 steps — a standard cosine/exponential annealing that stabilizes training as Gaussians converge."
         }
       ]
     },
@@ -148,8 +148,8 @@
       "terms": [
         {
           "symbol": "\\mu_u,\\, \\mu_v",
-          "name": "Projected Gaussian centre",
-          "desc": "The 2D screen-space position of the Gaussian's mean after perspective projection. The bounding rectangle is centred here."
+          "name": "Projected Gaussian center",
+          "desc": "The 2D screen-space position of the Gaussian's mean after perspective projection. The bounding rectangle is centerd here."
         },
         {
           "symbol": "\\sigma_u = \\sqrt{(\\Sigma_{2D})_{00}},\\; \\sigma_v = \\sqrt{(\\Sigma_{2D})_{11}}",

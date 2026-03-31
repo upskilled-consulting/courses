@@ -51,12 +51,12 @@
         {
           "symbol": "\\alpha(t)",
           "name": "Learning rate",
-          "desc": "A scalar that decreases over training iterations t — large at the start (coarse global organisation) and small at the end (fine local refinement). Prevents later updates from undoing earlier structure."
+          "desc": "A scalar that decreases over training iterations t — large at the start (coarse global organization) and small at the end (fine local refinement). Prevents later updates from undoing earlier structure."
         },
         {
           "symbol": "h(i, BMU, t)",
-          "name": "Neighbourhood kernel",
-          "desc": "How strongly cell i is updated based on its distance to the Best Matching Unit (BMU). Typically a Gaussian: h = exp(−dist(i,BMU)² / 2σ(t)²). The neighbourhood radius σ(t) also decays over time, so early iterations update large regions and later ones update only the BMU itself."
+          "name": "Neighborhood kernel",
+          "desc": "How strongly cell i is updated based on its distance to the Best Matching Unit (BMU). Typically a Gaussian: h = exp(−dist(i,BMU)² / 2σ(t)²). The neighborhood radius σ(t) also decays over time, so early iterations update large regions and later ones update only the BMU itself."
         },
         {
           "symbol": "BMU",

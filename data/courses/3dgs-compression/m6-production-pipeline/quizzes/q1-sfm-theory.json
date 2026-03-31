@@ -73,6 +73,6 @@
       "hint": "Consider the tradeoff between model flexibility and overfitting. When is adding parameters harmful?"
     }
   ],
-  "prevItem": { "type": "reading", "id": "r5" },
+  "prevItem": { "type": "reading", "id": "r3" },
   "nextItem": { "type": "quiz", "id": "q2" }
 }

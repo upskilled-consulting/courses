@@ -66,7 +66,7 @@
         {
           "symbol": "f,\\, c_x,\\, c_y",
           "name": "Focal length and principal point",
-          "desc": "f is the effective focal length in pixels (typically 1000–4000 for modern cameras). c_x, c_y are usually near the image centre. Errors in these values cause systematic radial distortion in the rendered 3DGS output."
+          "desc": "f is the effective focal length in pixels (typically 1000–4000 for modern cameras). c_x, c_y are usually near the image center. Errors in these values cause systematic radial distortion in the rendered 3DGS output."
         }
       ]
     },
@@ -75,8 +75,8 @@
       "terms": [
         {
           "symbol": "\\hat{\\mathbf{p}},\\, \\hat{\\mathbf{p}}'",
-          "name": "Normalised image coordinates",
-          "desc": "2D feature locations divided by the intrinsic matrix K: p̂ = K⁻¹p. Working in normalised coordinates removes the camera-specific scaling, making E depend only on the relative pose — not on focal lengths."
+          "name": "Normalized image coordinates",
+          "desc": "2D feature locations divided by the intrinsic matrix K: p̂ = K⁻¹p. Working in normalized coordinates removes the camera-specific scaling, making E depend only on the relative pose — not on focal lengths."
         },
         {
           "symbol": "E",
@@ -96,7 +96,7 @@
         {
           "symbol": "\\mathcal{E}_{BA}",
           "name": "Total reprojection error",
-          "desc": "The scalar objective minimised by bundle adjustment. It accumulates the (robustified) squared distance between each observed 2D keypoint and its predicted projection across all cameras and all 3D points."
+          "desc": "The scalar objective minimized by bundle adjustment. It accumulates the (robustified) squared distance between each observed 2D keypoint and its predicted projection across all cameras and all 3D points."
         },
         {
           "symbol": "\\pi(K_i, R_i, \\mathbf{t}_i, \\mathbf{X}_j)",
@@ -111,7 +111,7 @@
         {
           "symbol": "\\rho(\\cdot)",
           "name": "Robust loss function",
-          "desc": "A function like Huber or Cauchy that grows slower than quadratic for large residuals. This down-weights outlier correspondences (mismatches, moving objects) so they do not dominate the optimisation and corrupt the camera poses."
+          "desc": "A function like Huber or Cauchy that grows slower than quadratic for large residuals. This down-weights outlier correspondences (mismatches, moving objects) so they do not dominate the optimization and corrupt the camera poses."
         }
       ]
     },
@@ -156,12 +156,12 @@
         {
           "symbol": "\\mathbf{r}_i,\\, \\mathbf{r}_j",
           "name": "Ray direction vectors",
-          "desc": "Unit vectors from each camera centre toward the observed 3D point, in world coordinates. Computed from the camera poses and the observed 2D keypoint locations."
+          "desc": "Unit vectors from each camera center toward the observed 3D point, in world coordinates. Computed from the camera poses and the observed 2D keypoint locations."
         },
         {
           "symbol": "\\mathbf{r}_i \\cdot \\mathbf{r}_j",
           "name": "Dot product of rays",
-          "desc": "Equals cos(θ) when the vectors are unit-normalised. A value near 1 means nearly parallel rays (small baseline) — poor triangulation. A value near 0 means the rays are nearly perpendicular — ideal geometry."
+          "desc": "Equals cos(θ) when the vectors are unit-normalized. A value near 1 means nearly parallel rays (small baseline) — poor triangulation. A value near 0 means the rays are nearly perpendicular — ideal geometry."
         }
       ]
     }

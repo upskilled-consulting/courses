@@ -76,18 +76,18 @@
       "terms": [
         {
           "symbol": "\\frac{1}{HWC}",
-          "name": "Normalisation",
-          "desc": "Averages the error over all H×W pixels and all C colour channels (typically 3 for RGB). Without this, larger images would always have larger total error."
+          "name": "Normalization",
+          "desc": "Averages the error over all H×W pixels and all C color channels (typically 3 for RGB). Without this, larger images would always have larger total error."
         },
         {
           "symbol": "\\sum_{h,w,c}",
           "name": "Sum over all pixels and channels",
-          "desc": "Iterates over every spatial location (h, w) and every colour channel c, accumulating the squared per-channel error."
+          "desc": "Iterates over every spatial location (h, w) and every color channel c, accumulating the squared per-channel error."
         },
         {
           "symbol": "\\hat{I}_{h,w,c} - I_{h,w,c}",
           "name": "Per-pixel residual",
-          "desc": "Difference between the rendered (predicted) pixel value and the ground-truth photograph value. Squaring makes it always positive and penalises large errors more than small ones."
+          "desc": "Difference between the rendered (predicted) pixel value and the ground-truth photograph value. Squaring makes it always positive and penalizes large errors more than small ones."
         }
       ]
     },
@@ -126,13 +126,13 @@
         },
         {
           "symbol": "\\frac{1}{H_l W_l}",
-          "name": "Spatial normalisation",
+          "name": "Spatial normalization",
           "desc": "Averages the feature-space error over the H_l×W_l spatial grid of layer l. Deeper layers have smaller spatial grids due to pooling, so their maps are automatically up-weighted per location."
         },
         {
           "symbol": "\\hat{f}_l^{hw},\\, f_l^{hw}",
-          "name": "Unit-normalised feature vectors",
-          "desc": "Feature activations at position (h,w) in layer l, L2-normalised to unit length. Normalisation removes brightness and contrast effects, making the metric focus on structural/perceptual content."
+          "name": "Unit-normalized feature vectors",
+          "desc": "Feature activations at position (h,w) in layer l, L2-normalized to unit length. Normalization removes brightness and contrast effects, making the metric focus on structural/perceptual content."
         },
         {
           "symbol": "w_l",

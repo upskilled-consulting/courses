@@ -75,5 +75,5 @@
     }
   ],
   "prevItem": { "type": "quiz", "id": "q1" },
-  "nextItem": { "type": "quiz", "id": "q3" }
+  "nextItem": { "type": "lab", "id": "lab6" }
 }

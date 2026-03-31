@@ -53,23 +53,23 @@
         },
         {
           "symbol": "\\frac{1}{2\\sqrt{\\pi}}",
-          "name": "Normalisation constant",
+          "name": "Normalization constant",
           "desc": "Chosen so that ∫_{S²} |Y₀⁰|² dω = 1. This orthonormality means SH coefficients can be computed independently for each basis function via projection, and the reconstruction is free of cross-term interference."
         },
         {
           "symbol": "SH_{C0} \\approx 0.28209",
           "name": "Numerical value",
-          "desc": "The constant used in code to convert stored f_dc coefficients to RGB colours. Multiplying f_dc by SH_C0 gives the view-independent colour contribution before adding higher-order view-dependent terms."
+          "desc": "The constant used in code to convert stored f_dc coefficients to RGB colors. Multiplying f_dc by SH_C0 gives the view-independent color contribution before adding higher-order view-dependent terms."
         }
       ]
     },
     {
-      "label": "Full Spherical Harmonic Colour Model",
+      "label": "Full Spherical Harmonic Color Model",
       "terms": [
         {
           "symbol": "\\mathbf{c}(\\boldsymbol{\\omega})",
-          "name": "View-dependent colour",
-          "desc": "The RGB colour of this Gaussian as seen from direction ω. Different viewing directions yield different colours — enabling specular highlights, subsurface scattering approximations, and other non-Lambertian effects."
+          "name": "View-dependent color",
+          "desc": "The RGB color of this Gaussian as seen from direction ω. Different viewing directions yield different colors — enabling specular highlights, subsurface scattering approximations, and other non-Lambertian effects."
         },
         {
           "symbol": "\\sum_{l=0}^{L} \\sum_{m=-l}^{l}",
@@ -79,7 +79,7 @@
         {
           "symbol": "\\mathbf{c}_{lm}",
           "name": "SH coefficient vector",
-          "desc": "A learned 3-vector (RGB) for basis function (l,m). These are the f_dc and f_rest parameters stored in the .ply file. Optimised during 3DGS training via backpropagation through the rasterizer."
+          "desc": "A learned 3-vector (RGB) for basis function (l,m). These are the f_dc and f_rest parameters stored in the .ply file. Optimized during 3DGS training via backpropagation through the rasterizer."
         },
         {
           "symbol": "Y_l^m(\\boldsymbol{\\omega})",
@@ -90,22 +90,22 @@
     },
     null,
     {
-      "label": "DC Colour → uint8 Encoding",
+      "label": "DC Color → uint8 Encoding",
       "terms": [
         {
           "symbol": "0.5 + SH_{C0} \\cdot f_{dc,0}",
-          "name": "Linearised colour value",
-          "desc": "Converts the stored SH coefficient to a [0,1] linear colour value. The 0.5 offset maps f_dc=0 to neutral grey (128), not black. Without it, an untrained Gaussian (f_dc≈0) would render as black rather than grey."
+          "name": "Linearised color value",
+          "desc": "Converts the stored SH coefficient to a [0,1] linear color value. The 0.5 offset maps f_dc=0 to neutral grey (128), not black. Without it, an untrained Gaussian (f_dc≈0) would render as black rather than grey."
         },
         {
           "symbol": "\\times 255",
           "name": "Scale to byte range",
-          "desc": "Converts the [0,1] float to a [0,255] integer range for uint8 storage. The .splat format stores colour as 4 bytes (R,G,B,α), trading the view-dependent AC terms for file compactness."
+          "desc": "Converts the [0,1] float to a [0,255] integer range for uint8 storage. The .splat format stores color as 4 bytes (R,G,B,α), trading the view-dependent AC terms for file compactness."
         },
         {
           "symbol": "\\text{clip}(\\cdot, 0, 255)",
           "name": "Clamp to valid range",
-          "desc": "Prevents overflow/underflow. SH coefficients can theoretically produce values outside [0,1] for extreme view angles; clamping ensures a valid byte value at the cost of colour accuracy for those edge cases."
+          "desc": "Prevents overflow/underflow. SH coefficients can theoretically produce values outside [0,1] for extreme view angles; clamping ensures a valid byte value at the cost of color accuracy for those edge cases."
         }
       ]
     },
@@ -120,7 +120,7 @@
         {
           "symbol": "\\sigma(o) = \\frac{1}{1+e^{-o}}",
           "name": "Sigmoid function",
-          "desc": "Maps any real number to (0,1). Ensures the activated opacity α is always a valid probability — the Gaussian can never be exactly opaque or exactly transparent, which stabilises training."
+          "desc": "Maps any real number to (0,1). Ensures the activated opacity α is always a valid probability — the Gaussian can never be exactly opaque or exactly transparent, which stabilizes training."
         },
         {
           "symbol": "\\alpha",
@@ -156,13 +156,13 @@
       "terms": [
         {
           "symbol": "C",
-          "name": "Final pixel colour",
-          "desc": "The accumulated RGB value for this pixel after blending all Gaussians that cover it. Each Gaussian contributes its colour weighted by its opacity and the fraction of light that survived absorption by all Gaussians in front of it."
+          "name": "Final pixel color",
+          "desc": "The accumulated RGB value for this pixel after blending all Gaussians that cover it. Each Gaussian contributes its color weighted by its opacity and the fraction of light that survived absorption by all Gaussians in front of it."
         },
         {
           "symbol": "\\mathbf{c}_k \\alpha_k",
-          "name": "Colour contribution of Gaussian k",
-          "desc": "How much colour Gaussian k adds to the pixel: its RGB colour scaled by its opacity. A fully transparent Gaussian (α=0) contributes nothing; a fully opaque one contributes its full colour."
+          "name": "Color contribution of Gaussian k",
+          "desc": "How much color Gaussian k adds to the pixel: its RGB color scaled by its opacity. A fully transparent Gaussian (α=0) contributes nothing; a fully opaque one contributes its full color."
         },
         {
           "symbol": "\\prod_{j < k}(1 - \\alpha_j)",
@@ -210,8 +210,8 @@
     }
   ],
   "nextItem": {
-    "type": "reading",
-    "id": "r4"
+    "type": "quiz",
+    "id": "q1"
   },
   "prevItem": {
     "type": "reading",

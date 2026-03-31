@@ -52,7 +52,7 @@
         },
         {
           "symbol": "\\frac{1}{n-1}",
-          "name": "Normalisation by sequence length",
+          "name": "Normalization by sequence length",
           "desc": "Averages the contribution over all n−1 consecutive pairs so that D_p is comparable across sequences of different lengths."
         },
         {
@@ -77,7 +77,7 @@
       "terms": [
         {
           "symbol": "\\text{quality}_{1D}",
-          "name": "Normalised sorting quality",
+          "name": "Normalized sorting quality",
           "desc": "A score in [0, 1] measuring how close the achieved sort is to the theoretical optimum. 1 = perfectly optimal ordering, 0 = random permutation (worst case)."
         },
         {
@@ -103,7 +103,7 @@
         {
           "symbol": "\\frac{1}{|\\mathcal{N}(i)|}",
           "name": "Average over neighbors",
-          "desc": "Normalises by the number of immediate neighbors (4 for interior cells on a torus, fewer at boundaries on a non-wrapped grid). Makes boundary and interior cells comparable."
+          "desc": "Normalizes by the number of immediate neighbors (4 for interior cells on a torus, fewer at boundaries on a non-wrapped grid). Makes boundary and interior cells comparable."
         },
         {
           "symbol": "\\sum_{j \\in \\mathcal{N}(i)}",
@@ -137,7 +137,7 @@
         },
         {
           "symbol": "\\|D_{grid}\\|\\|D_{attr}\\|",
-          "name": "Normalisation",
+          "name": "Normalization",
           "desc": "Divides by the norms of the two distance matrices to produce a value in [−1, 1], analogous to a cosine similarity between the flattened matrices. Values near 1 indicate strong global structure preservation."
         }
       ]

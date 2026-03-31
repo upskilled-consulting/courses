@@ -83,7 +83,7 @@
         {
           "symbol": "\\mu_i(t)",
           "name": "Mean (position) at time t",
-          "desc": "The 3D centre of Gaussian i at time t. As t changes, the Gaussian physically moves through space — modelling a walking person, a waving flag, etc."
+          "desc": "The 3D center of Gaussian i at time t. As t changes, the Gaussian physically moves through space — modeling a walking person, a waving flag, etc."
         },
         {
           "symbol": "\\Sigma_i(t)",
@@ -99,8 +99,8 @@
     }
   ],
   "nextItem": {
-    "type": "quiz",
-    "id": "q1"
+    "type": "reading",
+    "id": "r5"
   },
   "prevItem": {
     "type": "reading",

@@ -47,13 +47,13 @@
       "terms": [
         {
           "symbol": "\\frac{1}{HWC}",
-          "name": "Normalisation factor",
+          "name": "Normalization factor",
           "desc": "Divides by the total number of scalar values in the image (height × width × channels). Ensures MSE is comparable across images of different resolutions. For a 1280×720 RGB image, HWC = 2,764,800."
         },
         {
           "symbol": "\\sum_{c,i,j}",
           "name": "Sum over all pixels and channels",
-          "desc": "Accumulates the squared error at every spatial position (i,j) and colour channel c. Each term is non-negative, so MSE can only increase as more pixels differ — there is no cancellation between positive and negative errors."
+          "desc": "Accumulates the squared error at every spatial position (i,j) and color channel c. Each term is non-negative, so MSE can only increase as more pixels differ — there is no cancellation between positive and negative errors."
         },
         {
           "symbol": "\\bigl(I_{c,i,j} - \\hat{I}_{c,i,j}\\bigr)^2",
