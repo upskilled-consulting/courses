@@ -1,6 +1,7 @@
 {
   "id": "r1",
   "moduleId": "matrix-algebra",
+  "audio": "assets/audio/matrices-and-vectors.m4a",
   "title": "Matrices and Vectors",
   "estimatedMinutes": 14,
   "learningObjectives": [

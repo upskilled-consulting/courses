@@ -1,6 +1,7 @@
 {
   "id": "r2",
   "moduleId": "matrix-algebra",
+  "audio": "assets/audio/matrix-operations.m4a",
   "title": "Matrix Operations",
   "estimatedMinutes": 16,
   "learningObjectives": [

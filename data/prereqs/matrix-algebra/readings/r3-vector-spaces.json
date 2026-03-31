@@ -1,6 +1,7 @@
 {
   "id": "r3",
   "moduleId": "matrix-algebra",
+  "audio": "assets/audio/vector-spaces-and-geometry.m4a",
   "title": "Vector Spaces and Geometry",
   "estimatedMinutes": 14,
   "learningObjectives": [

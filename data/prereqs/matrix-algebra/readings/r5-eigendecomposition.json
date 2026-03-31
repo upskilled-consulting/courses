@@ -1,6 +1,7 @@
 {
   "id": "r5",
   "moduleId": "matrix-algebra",
+  "audio": "assets/audio/eigenvalues-eigenvectors-and-decompositions.m4a",
   "title": "Eigenvalues, Eigenvectors, and Decompositions",
   "estimatedMinutes": 18,
   "learningObjectives": [

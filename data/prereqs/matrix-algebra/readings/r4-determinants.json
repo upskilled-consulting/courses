@@ -1,6 +1,7 @@
 {
   "id": "r4",
   "moduleId": "matrix-algebra",
+  "audio": "assets/audio/determinants-and-matrix-rank.m4a",
   "title": "Determinants and Matrix Rank",
   "estimatedMinutes": 13,
   "learningObjectives": [
