@@ -314,7 +314,7 @@ img, svg { display: block; max-width: 100%; }
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.1em;
-  color: rgba(100, 200, 180, 1);
+  color: #64b0a1;
   text-decoration: none;
   opacity: 0.8;
   transition: opacity 0.2s;
@@ -335,11 +335,11 @@ img, svg { display: block; max-width: 100%; }
 
 .footer-nav a {
   font-size: 0.78rem;
-  color: rgba(100, 200, 180, 0.75);
+  color: #65b1a1;
   text-decoration: none;
   transition: color 0.2s;
 }
-.footer-nav a:hover { color: rgba(100, 200, 180, 1); }
+.footer-nav a:hover { color: #7ecdbf; }
 
 .footer-copy {
   font-size: 0.75rem;

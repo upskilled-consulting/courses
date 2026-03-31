@@ -35,8 +35,7 @@
   font-size: 0.78rem;
   color: rgba(100, 200, 180, 0.8);
   cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  text-decoration: none;
 }
 .consent-privacy-btn:hover { color: rgba(100, 200, 180, 1); }
 
