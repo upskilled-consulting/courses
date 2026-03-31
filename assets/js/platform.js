@@ -1286,14 +1286,16 @@ async function renderReading(params, root) {
         ${sidebarItems}
       </aside>
       <div class="reading-main">
-        <button class="reading-copy-btn" id="readingCopyBtn" title="Copy as Markdown" aria-label="Copy page as Markdown">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-          </svg>
-          <span class="reading-copy-label">Copy MD</span>
-        </button>
         <div class="reading-kicker">${kickerLabel} · ${isCourse ? modEntry.title : module.title}</div>
-        <h1 class="reading-title">${reading.title}</h1>
+        <div class="reading-title-row">
+          <h1 class="reading-title">${reading.title}</h1>
+          <button class="reading-copy-btn" id="readingCopyBtn" title="Copy as Markdown" aria-label="Copy page as Markdown">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            <span class="reading-copy-label">Copy MD</span>
+          </button>
+        </div>
         <div class="reading-meta-row">
           <span>${reading.estimatedMinutes} min read</span>
         </div>
