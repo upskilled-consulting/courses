@@ -1,0 +1,27 @@
+{
+  "id": "m4",
+  "title": "Visual Reinforcement Learning",
+  "order": 4,
+  "color": "#1a3c75",
+  "accentLight": "#c8d9f0",
+  "prereq": "m3",
+  "learningObjectives": [
+    "Explain why pixel-based observations make RL harder than state-based RL, and how convolutional encoders extract useful features from raw frames.",
+    "Build a preprocessing pipeline (grayscale, resize, normalise) and describe why each step is standard practice in visual RL.",
+    "Train a PPO agent with CnnPolicy on a visual control task and interpret the learning curve relative to a random-policy baseline.",
+    "Explain what frame stacking solves (partial observability / motion perception) and implement it with VecFrameStack.",
+    "Compare convergence speed and final performance across single-frame vs stacked inputs on the same environment.",
+    "Identify which ViZDoom scenarios require temporal reasoning vs spatial navigation and justify algorithm or hyperparameter choices accordingly."
+  ],
+  "readings": [],
+  "quizzes": [],
+  "drills": [],
+  "labs": [
+    {
+      "id": "lab3",
+      "title": "Visual RL with ViZDoom",
+      "estimatedMinutes": 75,
+      "dataPath": "data/courses/deep-rl/m4-visual-rl/labs/lab3-vizdoom.json"
+    }
+  ]
+}

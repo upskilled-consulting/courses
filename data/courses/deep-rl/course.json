@@ -34,6 +34,16 @@
       "prereq": "m2",
       "dataPath": "data/courses/deep-rl/m3-off-policy/module.json",
       "color": "#2a5757"
+    },
+    {
+      "id": "m4",
+      "slug": "m4-visual-rl",
+      "title": "Visual Reinforcement Learning",
+      "description": "Train agents directly from pixels using convolutional policies, frame stacking, and ViZDoom — from a stationary-enemy basic scenario to multi-target arena combat.",
+      "order": 4,
+      "prereq": "m3",
+      "dataPath": "data/courses/deep-rl/m4-visual-rl/module.json",
+      "color": "#1a3c75"
     }
   ]
 }
