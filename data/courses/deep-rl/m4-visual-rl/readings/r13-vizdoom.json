@@ -1,0 +1,51 @@
+{
+  "id": "r13",
+  "moduleId": "m4",
+  "title": "ViZDoom and 3D Visual RL",
+  "estimatedMinutes": 11,
+  "prevItem": { "id": "r12", "type": "reading", "title": "Convolutional Policies and Preprocessing" },
+  "nextItem": { "id": "lab3", "type": "lab", "title": "Visual RL with ViZDoom" },
+  "learningObjectives": [
+    {
+      "id": "m4r13-lo1",
+      "verb": "Compare",
+      "description": "Compare ViZDoom to Atari as a benchmark: identify what makes 3D first-person environments harder and what additional skills agents must learn",
+      "skillTags": ["vizdoom", "visual-rl", "benchmarks"]
+    },
+    {
+      "id": "m4r13-lo2",
+      "verb": "Order",
+      "description": "Order ViZDoom's built-in scenarios by difficulty and identify the key skill each scenario isolates",
+      "skillTags": ["vizdoom", "curriculum-learning"]
+    },
+    {
+      "id": "m4r13-lo3",
+      "verb": "Explain",
+      "description": "Explain why ViZDoom Deathmatch requires significantly more training steps and more capable architectures than Basic or DefendCenter",
+      "skillTags": ["vizdoom", "sample-efficiency", "curriculum-learning"]
+    }
+  ],
+  "content": "## Why ViZDoom?\n\nAtari established that CNNs can learn to play 2D games from pixels. ViZDoom (Kempka et al., 2016) asks the harder question: can agents learn in **3D, first-person, partially observable** environments?\n\nThe Doom game engine provides:\n- Fully configurable scenarios (maps, enemies, rewards, available weapons)\n- First-person 3D rendering with genuine depth, perspective, and occlusion\n- Deterministic or stochastic enemy behaviour\n- A Python API for programmatic control\n- A Gymnasium wrapper registering environments as `VizdoomXxx-v0`\n\nThe gap between Atari and ViZDoom is the gap between a flat sprite game and a real 3D world — and it turns out to be large.\n\n## What 3D Adds Over Atari\n\n### Depth and Perspective\n\nIn Atari, objects are sprites at fixed screen positions. In Doom, a monster at distance 10 units appears larger and higher in the frame than the same monster at distance 50 units. The agent must learn that apparent size encodes distance — a form of 3D reasoning implicit in the visual input.\n\n### Genuine Occlusion\n\nEnemies can be fully hidden behind walls and only reveal themselves when the agent (or enemy) moves. A single frame provides zero information about occluded objects. Frame stacking helps only if occlusion is brief — longer occlusion requires memory.\n\n### Active Exploration\n\nAtari games present all relevant information on screen at all times. Many ViZDoom scenarios require the agent to **turn and search** to find enemies or goals. This introduces an exploration component that doesn't exist in most Atari games.\n\n### Navigation\n\nMoving through 3D space with a consistent heading requires integrating a sequence of actions. The agent must learn that a sequence of `TURN_LEFT` actions rotates it to face a new direction — a spatial reasoning problem absent from Atari.\n\n## Scenario Hierarchy\n\nViZDoom ships with built-in scenarios in increasing order of difficulty. Each isolates a specific skill:\n\n| Scenario | Action space | Key skill | Typical steps to learn |\n|---|---|---|---|\n| `VizdoomBasic-v0` | Move L/R, Shoot | Align and fire at stationary target | 100–300k |\n| `VizdoomDefendLine-v0` | Move L/R, Shoot | Eliminate a wave of approaching enemies | 300–500k |\n| `VizdoomDefendCenter-v0` | Turn L/R, Shoot | Track moving targets from a fixed position | 500k–1M |\n| `VizdoomHealthGathering-v0` | Move, Turn | Navigate and collect health packs | 500k–1M |\n| `VizdoomCorridor-v0` | Full movement + shoot | Navigate a corridor with enemies, collect armour | 1–3M |\n| `VizdoomMyWayHome-v0` | Full movement | Maze navigation to a fixed goal | 3–10M |\n| `VizdoomPredictPosition-v0` | Shoot | Predict enemy position behind cover | 5–20M |\n| `VizdoomDeathmatch-v0` | Full movement + all weapons | Kill enemies across the full map | 50–500M |\n\nThe gap between Basic (~200k steps) and Deathmatch (~100M steps) is a factor of 500. This is not just more training time — Deathmatch requires qualitatively different capabilities: navigation, target acquisition, weapon selection, ammo management, and spatial memory.\n\n## Curriculum Learning\n\nTraining directly on hard scenarios often fails: the reward signal is too sparse for the agent to discover the right behaviours from random exploration. **Curriculum learning** — training on progressively harder scenarios — is a practical solution:\n\n1. Train on Basic until the agent reliably kills the stationary enemy\n2. Transfer to DefendCenter (moving enemies) using the Basic policy as initialization\n3. Transfer to Corridor (navigation required)\n4. Transfer to Deathmatch\n\nEach transfer re-uses the learned CNN encoder; only the policy head adapts to the new task. This is a form of **transfer learning within a domain**.\n\n## Frame Stacking vs Recurrence on ViZDoom\n\nFor Basic and DefendCenter, frame stacking (\\(k=4\\)) provides sufficient temporal context — enemies are always visible and their motion is smooth.\n\nFor HealthGathering and MyWayHome, the agent needs to remember where it has been to avoid revisiting dead ends. Frame stacking with \\(k=4\\) covers only ~0.1 seconds at 35 fps — nowhere near enough. These scenarios benefit from recurrent policies:\n\n```python\n# SB3 does not directly expose LSTM-based CnnPolicy,\n# but sb3-contrib provides RecurrentPPO:\n!pip install sb3-contrib\nfrom sb3_contrib import RecurrentPPO\nmodel = RecurrentPPO('CnnLstmPolicy', env, ...)\n```\n\nThe recurrent state persists across steps, giving the agent a trainable memory that is not limited to \\(k\\) frames.\n\n## High-Throughput Training: Sample Factory\n\nStable Baselines3 achieves ~2,000–5,000 environment frames per second on a single Colab GPU. For Deathmatch-level scenarios, this is prohibitively slow: 100M steps would take ~6 hours with an optimistic 5k fps.\n\n**Sample Factory** (Petrenko et al., 2020) is a high-throughput RL framework built around asynchronous actors:\n\n- Separate processes for environment simulation, inference, and learning run concurrently\n- GPU inference is batched across many parallel actors\n- Achieves **100,000–300,000 fps** on a single machine with a modern GPU\n- Native ViZDoom integration via `sf_examples.vizdoom`\n\n```bash\n# Train a PPO agent on VizdoomDoom Deathmatch with Sample Factory:\npython -m sf_examples.vizdoom.train_vizdoom \\\n    --env=doom_deathmatch_bots \\\n    --num_workers=16 \\\n    --num_envs_per_worker=4 \\\n    --train_for_env_steps=100_000_000\n```\n\nAt 200k fps, 100M steps takes ~8 minutes rather than 6 hours.\n\n## Modern Visual RL Beyond ViZDoom\n\nViZDoom remains the standard 3D visual RL benchmark, but the field has expanded:\n\n| Environment | Domain | Key challenge |\n|---|---|---|\n| Atari 100k | Games | Extreme sample efficiency (only 100k steps allowed) |\n| Procgen | Procedural games | Generalisation across level layouts |\n| MineDojo / MineRL | Minecraft | Long-horizon tasks, open-ended goals |\n| Habitat | Indoor navigation | Photo-realistic scenes, embodied AI |\n| Isaac Gym / IsaacLab | Robotics | GPU-accelerated physics, sim-to-real |\n| DM Lab | 3D navigation | Memory, navigation, multi-task |\n\nThe shared challenge across all of these is **sample efficiency**: how do you learn good visual representations faster, with fewer environment interactions? Active research directions include self-supervised auxiliary tasks, data augmentation (RAD, DrQ), world models (DreamerV3), and pre-trained visual encoders.",
+  "references": [
+    {
+      "label": "Kempka et al. 2016",
+      "title": "ViZDoom: A Doom-based AI Research Platform for Visual Reinforcement Learning",
+      "url": "https://arxiv.org/abs/1605.02097"
+    },
+    {
+      "label": "Petrenko et al. 2020",
+      "title": "Sample Factory: Egocentric 3D Control from Pixels at 100000 FPS with Asynchronous Reinforcement Learning",
+      "url": "https://arxiv.org/abs/2006.11751"
+    },
+    {
+      "label": "Hafner et al. 2023",
+      "title": "Mastering Diverse Domains through World Models (DreamerV3)",
+      "url": "https://arxiv.org/abs/2301.04104"
+    },
+    {
+      "label": "Yarats et al. 2021",
+      "title": "Mastering Visual Continuous Control: Improved Data-Augmented Reinforcement Learning (DrQ-v2)",
+      "url": "https://arxiv.org/abs/2107.09645"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "id": "r11",
+  "moduleId": "m4",
+  "title": "Visual RL: From Pixels to Policies",
+  "estimatedMinutes": 12,
+  "prevItem": null,
+  "nextItem": { "id": "r12", "type": "reading", "title": "Convolutional Policies and Preprocessing" },
+  "learningObjectives": [
+    {
+      "id": "m4r11-lo1",
+      "verb": "Explain",
+      "description": "Explain why raw-pixel observations make RL harder than low-dimensional state inputs, and identify the two simultaneous learning problems the agent must solve",
+      "skillTags": ["visual-rl", "representation-learning", "partial-observability"]
+    },
+    {
+      "id": "m4r11-lo2",
+      "verb": "Describe",
+      "description": "Describe the key design decisions in Atari DQN (Mnih et al. 2015) that enabled learning from pixels and explain the role each plays",
+      "skillTags": ["visual-rl", "dqn", "atari"]
+    },
+    {
+      "id": "m4r11-lo3",
+      "verb": "Quantify",
+      "description": "Quantify the sample efficiency gap between state-based and pixel-based RL on equivalent tasks and explain why the gap exists",
+      "skillTags": ["visual-rl", "sample-efficiency"]
+    }
+  ],
+  "content": "## The Observation Gap\n\nAll the algorithms covered so far — VPG, PPO, DDPG, SAC — receive low-dimensional state vectors as input: a handful of numbers representing position, velocity, joint angles, and similar quantities. These state-based agents learn in millions of steps.\n\nThe same algorithms applied to raw pixels require tens to hundreds of millions of steps on equivalent tasks. The reason is that pixel-based RL imposes two simultaneous learning problems:\n\n1. **Representation learning**: extract a compact, task-relevant feature vector from a high-dimensional, redundant image\n2. **Policy learning**: map that feature vector to good actions\n\nState-based RL only has to solve problem 2. Every environment step and every gradient update must serve both problems at once when learning from pixels.\n\n## Why Not a Linear Layer?\n\nA 240×320×3 Doom frame contains 230,400 numbers. A fully connected layer mapping this to a 512-unit representation would have \\(230{,}400 \\times 512 \\approx 118\\text{M}\\) parameters — just for the first layer. Beyond the parameter count, linear layers cannot exploit spatial structure: a corridor detector must re-learn the same pattern for every possible screen position.\n\nConvolutional layers solve both problems:\n- **Weight sharing** across spatial positions drastically reduces parameters\n- **Translation equivariance** means a detector fires wherever the relevant pattern appears, regardless of position\n\nA standard three-layer CNN encoder for RL has roughly 1.7M parameters — 70× fewer than a single fully connected layer from the same input.\n\n## Historical Breakthrough: Atari DQN\n\nMnih et al. (2013/2015) showed that a single convolutional architecture could learn to play 49 Atari 2600 games from raw pixels, achieving human-level or superhuman performance on many of them. The algorithm — DQN — combined three ideas that had existed separately:\n\n1. **Deep convolutional Q-network**: a CNN mapping frames to Q-values for each action\n2. **Experience replay**: storing transitions in a buffer and training on random minibatches to break temporal correlation\n3. **Separate target network**: a frozen copy of the Q-network updated periodically to stabilize the Bellman target\n\nFive key preprocessing and architecture decisions made it work:\n\n| Decision | Value | Why |\n|---|---|---|\n| Frame stacking | $k=4$ frames | Encodes motion without recurrence |\n| Grayscale | Yes | Colour adds no task-relevant signal on Atari |\n| Resize | 84×84 | Reduces dimensionality while preserving game structure |\n| Normalize | pixels ÷ 255 | Keeps inputs in \\([0,1]\\) for stable gradients |\n| CNN architecture | 3 conv layers + 2 FC | Sufficient for Atari; becomes standard |\n\nThis preprocessing pipeline and encoder architecture have been used almost unchanged in visual RL research for the decade since.\n\n## Sample Efficiency Gap\n\n| Setting | Steps to learn CartPole-equivalent task |\n|---|---|\n| PPO, state input (4 numbers) | ~50k |\n| PPO, pixel input (84×84 grayscale) | ~500k–2M |\n| Gap | **10–40×** |\n\nThe gap exists because every gradient signal that arrives from the environment must simultaneously improve the CNN encoder and the policy head. With a fixed pre-trained encoder (as in transfer learning), the gap shrinks dramatically — evidence that representation learning, not policy learning, is the bottleneck.\n\n## Partial Observability in 3D Environments\n\nAtari games are almost fully observable — everything relevant fits in a single frame. 3D environments like ViZDoom introduce genuine **partial observability**: enemies can be behind walls, outside the field of view, or approaching from angles not captured by the current frame.\n\nThis places visual RL in **Partially Observable MDP (POMDP)** territory:\n\n$$o_t = O(s_t)$$\n\nwhere the observation \\(o_t\\) (the current screen frame) provides strictly less information than the full game state \\(s_t\\). The agent must form a belief about hidden state — typically via:\n\n- **Frame stacking**: approximate temporal memory; works well for smooth motion\n- **Recurrent policies (LSTM/GRU)**: explicit memory; handles long-range dependencies at the cost of training complexity\n\nMost practical visual RL systems use frame stacking for short-horizon tasks and add recurrence only when it demonstrably helps.\n\n## What Makes Visual RL Harder in Practice\n\nBeyond sample efficiency, three practical challenges stand out:\n\n**Representation collapse**: early in training, the CNN may learn to ignore moving objects (enemies, goals) and focus on static textures, since static features produce more consistent predictions. Entropy bonuses and auxiliary tasks help.\n\n**Reward sparsity amplified by bad representations**: a sparse reward signal is hard enough with a good state representation. With a poor visual encoder, the agent has almost no gradient signal to improve the encoder — a chicken-and-egg problem.\n\n**Computational cost**: processing 84×84 frames through a CNN is 10–50× more expensive per step than a simple MLP forward pass. Vectorised environments (VecEnv) and GPU-accelerated rendering are standard mitigations.\n\nThe next reading covers the standard CNN encoder architecture and preprocessing pipeline used to address these challenges.",
+  "references": [
+    {
+      "label": "Mnih et al. 2015",
+      "title": "Human-level control through deep reinforcement learning",
+      "url": "https://www.nature.com/articles/nature14236"
+    },
+    {
+      "label": "Mnih et al. 2013",
+      "title": "Playing Atari with Deep Reinforcement Learning",
+      "url": "https://arxiv.org/abs/1312.5602"
+    },
+    {
+      "label": "Laskin et al. 2020",
+      "title": "Reinforcement Learning with Augmented Data (RAD)",
+      "url": "https://arxiv.org/abs/2004.14990"
+    }
+  ]
+}

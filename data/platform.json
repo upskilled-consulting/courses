@@ -183,7 +183,7 @@
           "id": "deep-rl",
           "type": "course",
           "title": "Deep Reinforcement Learning",
-          "description": "From RL foundations to PPO, SAC, and visual RL with ViZDoom — covering policy gradient theory, VPG, TRPO, PPO, DDPG, TD3, SAC, and pixel-based agents with convolutional policies. 4 modules, 10 readings, 3 labs, 3 quizzes.",
+          "description": "From RL foundations to PPO, SAC, and visual RL with ViZDoom — covering policy gradient theory, VPG, TRPO, PPO, DDPG, TD3, SAC, and pixel-based agents with convolutional policies. 4 modules, 13 readings, 3 labs, 3 quizzes.",
           "level": "Intermediate",
           "estimatedHours": 9,
           "moduleCount": 4,

@@ -13,7 +13,26 @@
     "Compare convergence speed and final performance across single-frame vs stacked inputs on the same environment.",
     "Identify which ViZDoom scenarios require temporal reasoning vs spatial navigation and justify algorithm or hyperparameter choices accordingly."
   ],
-  "readings": [],
+  "readings": [
+    {
+      "id": "r11",
+      "title": "Visual RL: From Pixels to Policies",
+      "estimatedMinutes": 12,
+      "dataPath": "data/courses/deep-rl/m4-visual-rl/readings/r11-visual-rl-intro.json"
+    },
+    {
+      "id": "r12",
+      "title": "Convolutional Policies and Preprocessing",
+      "estimatedMinutes": 13,
+      "dataPath": "data/courses/deep-rl/m4-visual-rl/readings/r12-cnn-policies.json"
+    },
+    {
+      "id": "r13",
+      "title": "ViZDoom and 3D Visual RL",
+      "estimatedMinutes": 11,
+      "dataPath": "data/courses/deep-rl/m4-visual-rl/readings/r13-vizdoom.json"
+    }
+  ],
   "quizzes": [],
   "drills": [],
   "labs": [

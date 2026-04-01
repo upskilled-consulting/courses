@@ -5,7 +5,7 @@
   "estimatedMinutes": 75,
   "framework": "PyTorch",
   "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/deep-rl/lab3-doom-vizdoom.ipynb",
-  "prevItem": null,
+  "prevItem": { "id": "r13", "type": "reading", "title": "ViZDoom and 3D Visual RL" },
   "nextItem": null,
   "objectives": [
     "Install ViZDoom with the Gymnasium wrapper and inspect observation and action spaces for VizdoomBasic-v0 and VizdoomDefendCenter-v0",
