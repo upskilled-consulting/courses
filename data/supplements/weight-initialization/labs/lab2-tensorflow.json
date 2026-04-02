@@ -3,9 +3,12 @@
   "moduleId": "weight-initialization",
   "title": "Weight Initialization in TensorFlow",
   "estimatedMinutes": 40,
-  "prevItem": { "type": "lab", "id": "lab1" },
+  "prevItem": {
+    "type": "lab",
+    "id": "lab1"
+  },
   "nextItem": null,
-  "colabUrl": null,
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/supplements/weight-initialization/lab_weight_initialization_tensorflow.ipynb",
   "objectives": [
     "Apply all tf.keras.initializers classes and verify resulting tensors match their documented formulas",
     "Verify parity between PyTorch and TensorFlow initializers: show that kaiming_normal_(a=0) and HeNormal() produce the same variance",

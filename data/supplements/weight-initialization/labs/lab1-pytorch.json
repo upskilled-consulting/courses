@@ -3,9 +3,15 @@
   "moduleId": "weight-initialization",
   "title": "Weight Initialization in PyTorch",
   "estimatedMinutes": 50,
-  "prevItem": { "type": "quiz", "id": "q2" },
-  "nextItem": { "type": "lab", "id": "lab2" },
-  "colabUrl": null,
+  "prevItem": {
+    "type": "quiz",
+    "id": "q2"
+  },
+  "nextItem": {
+    "type": "lab",
+    "id": "lab2"
+  },
+  "colabUrl": "https://colab.research.google.com/github/upskilled-consulting/courses/blob/main/notebooks/supplements/weight-initialization/lab_weight_initialization_pytorch.ipynb",
   "objectives": [
     "Apply every torch.nn.init function from scratch and verify the resulting mean, variance, and shape of initialized tensors",
     "Run a variance propagation experiment: measure activation variance at every layer of a 20-layer MLP under zeros_, N(0,1), Xavier, and He initialization",
