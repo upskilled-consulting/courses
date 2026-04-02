@@ -33,8 +33,10 @@ test.describe('catalog page', () => {
 
     const platform = readJSON('data/platform.json');
     for (const section of platform.sections) {
-      // Section heading visible
-      await expect(page.getByText(section.title, { exact: false })).toBeVisible();
+      // Use getByRole to scope to the heading only — section titles also
+      // appear in course card descriptions, which causes strict mode violations
+      // with getByText.
+      await expect(page.getByRole('heading', { name: section.title })).toBeVisible();
       // At least one course card per section
       for (const course of section.courses) {
         await expect(page.getByText(course.title, { exact: false }).first()).toBeVisible();

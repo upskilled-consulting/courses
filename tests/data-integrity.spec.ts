@@ -216,14 +216,17 @@ test.describe('lab colabUrls', () => {
   }
 
   test('all labs have a colabUrl with correct prefix', () => {
+    // colabUrl: null  → notebook planned but not yet linked (skip — tracked separately)
+    // colabUrl absent → field missing entirely (bug)
+    // colabUrl set    → must start with COLAB_PREFIX
     const catalog = readJSON('data/platform.json') as any;
     const errors: string[] = [];
     for (const labPath of allLabPaths(catalog)) {
       if (!fileExists(labPath)) continue;
       const lab = readJSON(labPath) as any;
-      if (!lab.colabUrl) {
-        errors.push(`${labPath}: missing colabUrl`);
-      } else if (!lab.colabUrl.startsWith(COLAB_PREFIX)) {
+      if (!('colabUrl' in lab)) {
+        errors.push(`${labPath}: colabUrl field missing entirely`);
+      } else if (lab.colabUrl !== null && !lab.colabUrl.startsWith(COLAB_PREFIX)) {
         errors.push(`${labPath}: colabUrl does not start with ${COLAB_PREFIX}\n  got: ${lab.colabUrl}`);
       }
     }

@@ -21,9 +21,10 @@ export default defineConfig({
     },
   ],
 
-  // Serve the static site with Python's built-in HTTP server
+  // Serve the static site with a SPA-aware server (serves index.html for
+  // any path without an extension, mirroring the GH Pages 404→?r= flow).
   webServer: {
-    command: 'python -m http.server 8080',
+    command: 'python serve-spa.py 8080',
     url: 'http://localhost:8080',
     reuseExistingServer: !process.env.CI,
     timeout: 10_000,
