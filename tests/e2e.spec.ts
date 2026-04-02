@@ -65,8 +65,8 @@ test.describe('prereq routes', () => {
     const first = mod.readings[0];
     await page.goto(`/prereq/${PREREQ}/reading/${first.id}`);
     await page.waitForLoadState('networkidle');
-    // Reading title should appear
-    await expect(page.getByText(first.title, { exact: false })).toBeVisible();
+    // Reading title should appear in the heading
+    await expect(page.getByRole('heading', { name: first.title })).toBeVisible();
     // Content area should have text (not be empty)
     const content = page.locator('.reading-content, .content, article, main').first();
     await expect(content).not.toBeEmpty();
@@ -105,7 +105,7 @@ test.describe('supplement routes', () => {
     const first = mod.readings[0];
     await page.goto(`/supplement/${SUPP}/reading/${first.id}`);
     await page.waitForLoadState('networkidle');
-    await expect(page.getByText(first.title, { exact: false })).toBeVisible();
+    await expect(page.getByRole('heading', { name: first.title })).toBeVisible();
     expect(errors.filter(e => !e.includes('favicon'))).toHaveLength(0);
   });
 });
@@ -130,7 +130,7 @@ test.describe('deep-rl course routes', () => {
     const course = readJSON('data/courses/deep-rl/course.json');
     // At least the first module title should appear
     const firstMod = course.modules[0];
-    await expect(page.getByText(firstMod.title, { exact: false })).toBeVisible();
+    await expect(page.getByText(firstMod.title, { exact: true }).first()).toBeVisible();
     expect(errors.filter(e => !e.includes('favicon'))).toHaveLength(0);
   });
 
@@ -152,7 +152,7 @@ test.describe('deep-rl course routes', () => {
     const firstReading = mod.readings[0];
     await page.goto(`/${COURSE}/${firstMod.id}/reading/${firstReading.id}`);
     await page.waitForLoadState('networkidle');
-    await expect(page.getByText(firstReading.title, { exact: false })).toBeVisible();
+    await expect(page.getByRole('heading', { name: firstReading.title })).toBeVisible();
     const content = page.locator('.reading-content, .content, article, main').first();
     await expect(content).not.toBeEmpty();
     expect(errors.filter(e => !e.includes('favicon'))).toHaveLength(0);
@@ -223,7 +223,7 @@ test.describe('3dgs-compression course routes', () => {
     const firstReading = mod.readings[0];
     await page.goto(`/${COURSE}/${firstMod.id}/reading/${firstReading.id}`);
     await page.waitForLoadState('networkidle');
-    await expect(page.getByText(firstReading.title, { exact: false })).toBeVisible();
+    await expect(page.getByRole('heading', { name: firstReading.title })).toBeVisible();
     expect(errors.filter(e => !e.includes('favicon'))).toHaveLength(0);
   });
 });
@@ -254,16 +254,14 @@ test.describe('prev/next navigation', () => {
 // ── 404 / unknown routes ──────────────────────────────────────────────────
 
 test.describe('unknown routes', () => {
-  test('unknown route does not crash the app', async ({ page }) => {
+  test('unknown route returns a 404 response without JS errors', async ({ page }) => {
     const errors = collectErrors(page);
-    await page.goto('/this-route-does-not-exist-xyz');
-    await page.waitForLoadState('networkidle');
-    // App should still render something (not a blank white page)
-    const body = await page.locator('body').textContent();
-    expect(body?.trim().length).toBeGreaterThan(0);
-    // No uncaught JS errors
+    const response = await page.goto('/this-route-does-not-exist-xyz');
+    // Server should return a 4xx status for unknown paths
+    expect(response?.status()).toBeGreaterThanOrEqual(400);
+    // No uncaught JS errors (even on 404 pages; ignore header-size errors from serve)
     expect(errors.filter(e =>
-      !e.includes('favicon') && !e.includes('404') && !e.includes('not found')
+      !e.includes('favicon') && !e.includes('404') && !e.includes('not found') && !e.includes('431')
     )).toHaveLength(0);
   });
 });

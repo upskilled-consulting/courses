@@ -8,7 +8,7 @@ export default defineConfig({
   reporter: [['html', { open: 'never' }], ['list']],
 
   use: {
-    baseURL: 'http://localhost:8080',
+    baseURL: 'http://localhost:8085',
     trace: 'on-first-retry',
     // Capture console errors automatically
     ignoreHTTPSErrors: false,
@@ -21,12 +21,12 @@ export default defineConfig({
     },
   ],
 
-  // Serve the static site with a SPA-aware server (serves index.html for
-  // any path without an extension, mirroring the GH Pages 404→?r= flow).
+  // Serve the pre-generated dist/ directory.
+  // Run `npm run build` before running e2e tests locally.
   webServer: {
-    command: 'python serve-spa.py 8080',
-    url: 'http://localhost:8080',
+    command: 'npx serve dist -p 8085 --no-clipboard',
+    url: 'http://localhost:8085',
     reuseExistingServer: !process.env.CI,
-    timeout: 10_000,
+    timeout: 15_000,
   },
 });

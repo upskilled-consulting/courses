@@ -3,10 +3,17 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "build": "node build/generate.js",
+    "preview": "npx serve dist -p 8085",
     "test": "playwright test",
     "test:data": "playwright test tests/data-integrity.spec.ts",
     "test:e2e": "playwright test tests/e2e.spec.ts",
     "test:ui": "playwright test --ui"
+  },
+  "dependencies": {
+    "fs-extra": "^11.2.0",
+    "katex": "^0.16.9",
+    "marked": "^9.1.6"
   },
   "devDependencies": {
     "@playwright/test": "^1.44.0"
