@@ -1,4 +1,6 @@
 node_modules/
+playwright-report/
+test-results/
 3dgs-course/
 url_audit.csv
 audit_urls.py
