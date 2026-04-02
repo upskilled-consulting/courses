@@ -266,6 +266,7 @@ test.describe('prevItem/nextItem chains', () => {
             ...(data.readings ?? []),
             ...(data.quizzes ?? []),
             ...(data.labs ?? []),
+            ...(data.drills ?? []),
           ];
           if (allItems.length) checkChain(allItems, course.dataPath);
 
@@ -277,6 +278,7 @@ test.describe('prevItem/nextItem chains', () => {
               ...(mod.readings ?? []),
               ...(mod.quizzes ?? []),
               ...(mod.labs ?? []),
+              ...(mod.drills ?? []),
             ];
             if (modItems.length) checkChain(modItems, m.dataPath);
           }
