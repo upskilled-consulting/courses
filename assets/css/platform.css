@@ -483,18 +483,23 @@ img, svg { display: block; max-width: 100%; }
   background-clip: text;
 }
 
-/* "& Training" — clip-path wipe, outside the gradient span to avoid
-   background-clip:text conflicts */
+/* "& Training" — clip-path wipe; gradient continues from where hero-accent ends */
 .catalog-hero-inner h1 .hero-suffix {
   display: inline-block;
-  color: #52ab97;
+  background: linear-gradient(90deg, #1e4d68 0%, #2a6585 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   padding-bottom: 0.15em;
   clip-path: inset(0 100% 0 0);
   animation: heroSuffixReveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.5s forwards;
 }
 
 [data-theme="light"] .catalog-hero-inner h1 .hero-suffix {
-  color: #2a6585;
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  -webkit-text-fill-color: #2a6585;
 }
 
 @keyframes heroSuffixReveal {
