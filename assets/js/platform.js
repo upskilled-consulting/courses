@@ -2094,6 +2094,7 @@ const Search = {
   moduleCache: {},     // dataPath → module JSON (for catalog enrichment)
   platformData: null,  // cached platform.json for global index
   catalogReady: false, // true after first buildCatalogIndex completes
+  _catalogPromise: null, // shared promise — prevents duplicate builds
   debounceTimer: null,
   activeIdx: -1,       // keyboard-selected result index
 };
@@ -2206,6 +2207,26 @@ async function enrichReadingContent(item, dataPath) {
       }
     }
   } catch { /* ignore */ }
+}
+
+// Idempotent: starts the catalog build once and returns the same promise on
+// subsequent calls. Callers can pass platform data if already in hand.
+function _ensureCatalog(platform) {
+  if (platform) Search.platformData = platform;
+  if (Search.catalogReady) return Promise.resolve();
+  if (!Search._catalogPromise) {
+    Search._catalogPromise = (async () => {
+      try {
+        if (!Search.platformData)
+          Search.platformData = await fetchJSON('data/platform.json');
+        if (Search.platformData) {
+          await buildCatalogIndex(Search.platformData);
+          Search.catalogReady = true;
+        }
+      } catch { /* ignore */ }
+    })();
+  }
+  return Search._catalogPromise;
 }
 
 async function buildCatalogIndex(platform) {
@@ -2431,16 +2452,7 @@ async function setSearchContext(type, data) {
   }
 
   // Always use the global catalog index — build once per session
-  if (data?.platform) Search.platformData = data.platform;
-  if (!Search.catalogReady) {
-    if (!Search.platformData) {
-      try { Search.platformData = await fetchJSON('data/platform.json'); } catch { /* ignore */ }
-    }
-    if (Search.platformData) {
-      await buildCatalogIndex(Search.platformData);
-      Search.catalogReady = true;
-    }
-  }
+  await _ensureCatalog(data?.platform);
 
   Search.contextLabel = 'All content';
   if (scopeLabel) scopeLabel.textContent = 'All content';
@@ -2461,6 +2473,19 @@ function runSearch(query) {
     list.innerHTML = query.length === 0
       ? '<div class="search-hint-state">Type to search…</div>'
       : '<div class="search-hint-state">Keep typing…</div>';
+    return;
+  }
+
+  // Index not built yet — show a loading state and re-run once ready
+  if (!Search.catalogReady) {
+    list.innerHTML = '<div class="search-hint-state">Loading index…</div>';
+    _ensureCatalog().then(() => {
+      const field   = document.getElementById('searchField');
+      const overlay = document.getElementById('searchOverlay');
+      if (overlay?.classList.contains('is-open') && field?.value.trim() === query) {
+        runSearch(query);
+      }
+    });
     return;
   }
 
@@ -2692,6 +2717,10 @@ function initSearch() {
     clearTimeout(Search.debounceTimer);
     Search.debounceTimer = setTimeout(() => runSearch(e.target.value), 150);
   });
+
+  // Kick off catalog index build immediately so it's ready before the user
+  // opens search — don't wait for a page handler to call setSearchContext.
+  _ensureCatalog();
 }
 
 // Start search system once DOM is ready
