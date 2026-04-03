@@ -2621,7 +2621,7 @@ function openSearch() {
   const field = document.getElementById('searchField');
   if (field) {
     field.value = '';
-    setTimeout(() => field.focus(), 50);
+    field.focus();
   }
   const list = document.getElementById('searchResultsList');
   if (list) list.innerHTML = '<div class="search-hint-state">Type to search…</div>';
