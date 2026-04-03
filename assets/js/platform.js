@@ -513,7 +513,7 @@ function handleRoute() {
     history.replaceState(null, '', BASE_PATH + clean);
   }
   // Migrate legacy path URLs: /course/foo/module/bar → /foo/bar
-  let path = window.location.pathname.slice(BASE_PATH.length) || '/';
+  let path = (window.location.pathname.slice(BASE_PATH.length) || '/').replace(/\/$/, '') || '/';
   if (path.startsWith('/course/') || /\/module\//.test(path)) {
     path = path.replace(/^\/course\//, '/').replace(/\/module\//, '/');
     history.replaceState(null, '', BASE_PATH + path);

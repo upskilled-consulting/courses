@@ -36,7 +36,7 @@ function patchPlatformJs() {
   if (_ssgRoot && _ssgRoot.getAttribute('data-ssg') === '1') {
     _ssgRoot.removeAttribute('data-ssg');
     _ssgRoot.querySelectorAll('[data-nav]').forEach(el =>
-      el.addEventListener('click', () => navigate(el.dataset.nav))
+      el.addEventListener('click', e => { e.preventDefault(); navigate(el.dataset.nav); })
     );
     const _aw = _ssgRoot.querySelector('[data-audio-src]');
     if (_aw && typeof initAudioWidget === 'function') initAudioWidget(_ssgRoot, _aw.dataset.audioSrc);
