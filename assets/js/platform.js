@@ -2193,7 +2193,18 @@ async function enrichReadingContent(item, dataPath) {
       for (const term of (bd.terms || [])) paras.push(`${term.name}: ${term.desc}`);
       addNotationTerms(bd.terms || [], item.title, item.url);
     }
-    if (paras.length) item.paragraphs = paras;
+    if (paras.length) {
+      item.paragraphs = paras;
+      // If search is open with an active query, re-run it so freshly-indexed
+      // content appears (important on slow connections where enrichment finishes
+      // after the user has already started typing).
+      const field   = document.getElementById('searchField');
+      const overlay = document.getElementById('searchOverlay');
+      if (overlay?.classList.contains('is-open') && field?.value.trim().length >= 2) {
+        clearTimeout(Search.debounceTimer);
+        Search.debounceTimer = setTimeout(() => runSearch(field.value), 150);
+      }
+    }
   } catch { /* ignore */ }
 }
 
