@@ -3371,6 +3371,16 @@ async function renderPrereqSyllabus(params, root) {
     });
   });
 
+  // Quiz links are plain <a> tags (no data-nav) — intercept so they use SPA navigation
+  root.querySelectorAll('.outline-item-flat a.outline-item-link').forEach(a => {
+    a.addEventListener('click', e => {
+      const href = a.getAttribute('href');
+      if (!href) return;
+      e.preventDefault();
+      navigate(href);
+    });
+  });
+
   root.querySelector('#outline-expand-all')?.addEventListener('click', () => {
     root.querySelectorAll('.outline-module').forEach(el => el.open = true);
   });
