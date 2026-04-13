@@ -2125,6 +2125,8 @@ function stripMd(text) {
     .replace(/\$[^$\n]+\$/g, '')      // inline math
     .replace(/\\\([\s\S]*?\\\)/g, '') // \(...\) math
     .replace(/\\\[[\s\S]*?\\\]/g, '') // \[...\] math
+    .replace(/<[^>]+>/g, ' ')          // HTML tags
+    .replace(/\s{2,}/g, ' ')           // collapse whitespace from removed tags
     .trim();
 }
 
