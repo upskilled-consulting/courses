@@ -1,0 +1,64 @@
+{
+  "id": "m2",
+  "title": "Context Engineering & Memory",
+  "order": 2,
+  "color": "#1776a4",
+  "accentLight": "#63aac9",
+  "prereq": "m1",
+  "learningObjectives": [
+    "Explain how the planner classifies task type and complexity and generates targeted search queries from memory context.",
+    "Describe the quality-floor fallback mechanism and explain when it activates in the dual-search loop.",
+    "Implement saturation gating — the novelty assessment loop that stops searching when marginal information value drops below threshold.",
+    "Explain how ChromaDB semantic retrieval and SQLite FTS5 serve different retrieval roles in the persistent memory system.",
+    "Describe the chunker's two extraction strategies (section extraction vs. semantic chunk retrieval) and the provenance metadata format."
+  ],
+  "readings": [
+    {
+      "id": "r0",
+      "title": "The Planning Stage",
+      "estimatedMinutes": 10,
+      "dataPath": "data/courses/harness-engineering/m2-context/readings/r0-planning-stage.json"
+    },
+    {
+      "id": "r1",
+      "title": "The Dual-Search Foundation",
+      "estimatedMinutes": 12,
+      "dataPath": "data/courses/harness-engineering/m2-context/readings/r1-dual-search.json"
+    },
+    {
+      "id": "r2",
+      "title": "Saturation Gating",
+      "estimatedMinutes": 15,
+      "dataPath": "data/courses/harness-engineering/m2-context/readings/r2-saturation-gating.json"
+    },
+    {
+      "id": "r3",
+      "title": "Memory Systems",
+      "estimatedMinutes": 12,
+      "dataPath": "data/courses/harness-engineering/m2-context/readings/r3-memory-systems.json"
+    },
+    {
+      "id": "r4",
+      "title": "Large Document Context",
+      "estimatedMinutes": 12,
+      "dataPath": "data/courses/harness-engineering/m2-context/readings/r4-large-document-context.json"
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "q2",
+      "title": "Context Engineering & Memory Quiz",
+      "questionCount": 6,
+      "passingScore": 0.7,
+      "dataPath": "data/courses/harness-engineering/m2-context/quizzes/q2-context.json"
+    }
+  ],
+  "labs": [
+    {
+      "id": "lab1",
+      "title": "Building a Saturation Search Loop",
+      "estimatedMinutes": 60,
+      "dataPath": "data/courses/harness-engineering/m2-context/labs/lab1-search-loop.json"
+    }
+  ]
+}

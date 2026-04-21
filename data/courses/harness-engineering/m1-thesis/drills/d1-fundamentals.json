@@ -1,0 +1,58 @@
+{
+  "id": "d1",
+  "moduleId": "m1",
+  "title": "Harness Fundamentals",
+  "description": "Flashcard drill on the harness thesis, pipeline stages, experimental methodology, and model roles.",
+  "cards": [
+    {
+      "id": "d1_1",
+      "front": "State the **harness thesis** in one sentence.",
+      "back": "The harness — the pipeline, verification, memory, planning, and observability infrastructure surrounding the model — is the dominant factor in output quality, accounting for ~80% of quality variance; the model is a commodity input that accounts for the remaining ~10–15%."
+    },
+    {
+      "id": "d1_2",
+      "front": "What is **design principle 2** and why does it rule out asking the model to verify its own output?",
+      "back": "**Principle 2: Verify externally at every stage boundary.** Model self-report cannot be trusted because the same weights that produced the output apply the same reasoning to verify it — a model that miscounts sections will also miscount when checking whether sections are present. External checks use Python (os.path.exists, len(), count()) rather than model judgment."
+    },
+    {
+      "id": "d1_3",
+      "front": "In the single-focus run lifecycle, what does **auto_activate()** consume and produce?",
+      "back": "**Consumes:** the task string and the `Plan` dataclass (from make_plan()). **Produces:** the full set of active skills for the run. It fires auto-trigger predicates (keyword matches, plan.complexity checks) to determine which skills activate beyond those explicitly invoked with /skillname prefixes."
+    },
+    {
+      "id": "d1_4",
+      "front": "What are the **three response variables** measured in every harness experiment, and what does each capture?",
+      "back": "**first_wiggum_score** — output quality before any revision (rewards getting it right first time). **wiggum_rounds** — how many evaluate/revise cycles were needed (lower = more efficient). **final** — PASS/FAIL/ERROR (the binary success outcome). Together they measure quality, efficiency, and reliability."
+    },
+    {
+      "id": "d1_5",
+      "front": "Why is run order **randomized** in a harness CRD experiment?",
+      "back": "To prevent systematic bias from two sources: (1) **search result drift** — the same query on the same day returns similar results, so runs of the same task type executed together would share more search context than runs of different types; (2) **model cache effects** — a warm Ollama model (keep_alive) responds faster and sometimes differently than a cold model. Randomization distributes these effects uniformly across conditions."
+    },
+    {
+      "id": "d1_6",
+      "front": "What is the **Modelfile** in Ollama, and which harness parameter lives there?",
+      "back": "A Modelfile defines a custom Ollama model: which base GGUF file to load, the system prompt, temperature, context window size (num_ctx), and max output tokens (num_predict). The system prompt — the persistent synthesis instruction that autoresearch optimizes — lives in the Modelfile, not in the per-request user prompt. This keeps the synthesis call clean and makes the system instruction the sole optimization target."
+    },
+    {
+      "id": "d1_7",
+      "front": "Why must the evaluator model be from a **different family or significantly larger** than the producer?",
+      "back": "To break circular evaluation. A model evaluating its own output reproduces the same systematic biases it used to produce it — if it generated placeholder implementations, it will score placeholders as meeting the depth criterion. A model from a different family or training distribution applies independent judgment. Experiment 3 quantified the effect: upgrading the evaluator from glm4:9b to Qwen3-Coder:30b (different family, 3× larger) improved composite score by ~1.2 points without changing the producer."
+    },
+    {
+      "id": "d1_8",
+      "front": "What does **compress_and_store()** produce, and how does it affect the next run on a related topic?",
+      "back": "After a successful run, compress_and_store() calls the planner model to produce a structured **Observation**: a one-line title, a 2–3 sentence narrative, and 5–10 key fact bullet points. This is stored in both SQLite (FTS5 keyword index) and ChromaDB (semantic similarity index). The next run on a related topic retrieves the observation in stage 2 (memory.get_context()), injecting it into the planning prompt so the planner knows what prior work already covers — reducing redundant research."
+    },
+    {
+      "id": "d1_9",
+      "front": "State the **composite score formula** and explain why first-pass quality gets 70% of the weight.",
+      "back": "`composite = 0.7 × mean_wiggum_r1 + 0.3 × criteria_rate × 10`. First-pass quality gets 70% because a system that reaches the PASS threshold on round 1 is strictly better than one that requires revision rounds — both may end at the same final score, but the revision-dependent system costs more tokens and latency. The metric rewards building a harness that gets it right the first time, which is the correct optimization target for production."
+    },
+    {
+      "id": "d1_10",
+      "front": "What is **VLLM_MODEL_MAP**, and why does it make the harness backend-agnostic?",
+      "back": "VLLM_MODEL_MAP is a JSON dict (set as an environment variable) that maps logical Ollama model names ('pi-qwen-32b', 'Qwen3-Coder:30b') to vLLM HuggingFace model identifiers ('Qwen/Qwen2.5-14B-Instruct-AWQ'). The inference shim performs this remapping transparently — calling code uses the same model name regardless of backend. Swapping from Ollama to vLLM (or back) is a single env var change; no code changes required."
+    }
+  ]
+}

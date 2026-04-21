@@ -1,0 +1,58 @@
+{
+  "id": "m3",
+  "title": "Verification & Failure Modes",
+  "order": 3,
+  "color": "#6b4d8a",
+  "accentLight": "#c0b0d4",
+  "prereq": "m2",
+  "learningObjectives": [
+    "Explain why external, harness-side verification is required and identify three categories of model self-report that cannot be trusted.",
+    "Implement the evaluate → revise → verify loop, applying a multi-round rubric and stopping at a configurable PASS threshold.",
+    "Compute a weighted Wiggum score across five dimensions and derive the composite score formula that combines first-pass quality with hard criteria.",
+    "Classify a given agent failure into the taxonomy (task drift, placeholder generation, role ambiguity, encoding corruption) and prescribe a harness-side countermeasure.",
+    "Describe how a 3-persona parallel evaluation panel differs from single-evaluator Wiggum and when each is appropriate."
+  ],
+  "readings": [
+    {
+      "id": "r0",
+      "title": "Why External Verification",
+      "estimatedMinutes": 10,
+      "dataPath": "data/courses/harness-engineering/m3-verification/readings/r0-external-verification.json"
+    },
+    {
+      "id": "r1",
+      "title": "The Wiggum Loop",
+      "estimatedMinutes": 15,
+      "dataPath": "data/courses/harness-engineering/m3-verification/readings/r1-wiggum-loop.json"
+    },
+    {
+      "id": "r2",
+      "title": "The Evaluation Rubric",
+      "estimatedMinutes": 12,
+      "dataPath": "data/courses/harness-engineering/m3-verification/readings/r2-evaluation-rubric.json"
+    },
+    {
+      "id": "r3",
+      "title": "Failure Taxonomy",
+      "estimatedMinutes": 15,
+      "dataPath": "data/courses/harness-engineering/m3-verification/readings/r3-failure-taxonomy.json"
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "q3",
+      "title": "Verification & Failure Modes Quiz",
+      "questionCount": 6,
+      "passingScore": 0.7,
+      "dataPath": "data/courses/harness-engineering/m3-verification/quizzes/q3-verification.json"
+    }
+  ],
+  "labs": [
+    {
+      "id": "lab2",
+      "title": "Building the Verification Loop",
+      "estimatedMinutes": 60,
+      "dataPath": "data/courses/harness-engineering/m3-verification/labs/lab2-verification-loop.json"
+    }
+  ]
+}

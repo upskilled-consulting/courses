@@ -191,6 +191,19 @@
           "accentLight": "#f4eef3",
           "tags": ["Reinforcement Learning", "Policy Gradients", "Deep Learning", "PyTorch", "TensorFlow"],
           "dataPath": "data/courses/deep-rl/course.json"
+        },
+        {
+          "id": "harness-engineering",
+          "type": "course",
+          "title": "Harness Engineering for AI Agents",
+          "description": "Build production-grade agentic systems with open-source local models — from saturation-gated research loops and external verification to skills hooks, orchestration, and self-improvement via autoresearch and QLoRA fine-tuning. 5 modules, 23 readings, 3 labs, 5 quizzes.",
+          "level": "Intermediate",
+          "estimatedHours": 12,
+          "moduleCount": 5,
+          "color": "#1d2d44",
+          "accentLight": "#4a6fa5",
+          "tags": ["AI Agents", "LLM Engineering", "Python", "Ollama", "Fine-tuning"],
+          "dataPath": "data/courses/harness-engineering/course.json"
         }
       ]
     }

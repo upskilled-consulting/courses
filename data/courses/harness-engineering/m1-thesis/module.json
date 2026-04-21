@@ -1,0 +1,64 @@
+{
+  "id": "m1",
+  "title": "The Harness Thesis",
+  "order": 1,
+  "color": "#1a3c75",
+  "accentLight": "#c8d9f0",
+  "prereq": null,
+  "learningObjectives": [
+    "State the harness thesis and explain why model choice accounts for only 10–15% of output quality variance compared to harness design.",
+    "Trace every stage of the run lifecycle — from parse_skills() through compress_and_store() — and name the file responsible for each.",
+    "Design a one-factor completely randomized experiment for evaluating a harness change, identifying response variables, controlled variables, and randomization strategy.",
+    "Explain why the evaluator and producer must be different models and describe the consequences of circular self-evaluation.",
+    "List the six harness engineering design principles and apply them to a hypothetical agentic system design."
+  ],
+  "readings": [
+    {
+      "id": "r-intro",
+      "title": "Before You Start: Prerequisites & Learning Path",
+      "estimatedMinutes": 8,
+      "dataPath": "data/courses/harness-engineering/m1-thesis/readings/r-intro-prerequisites.json"
+    },
+    {
+      "id": "r0",
+      "title": "The Harness Thesis",
+      "estimatedMinutes": 12,
+      "dataPath": "data/courses/harness-engineering/m1-thesis/readings/r0-harness-thesis.json"
+    },
+    {
+      "id": "r1",
+      "title": "Pipeline Architecture",
+      "estimatedMinutes": 15,
+      "dataPath": "data/courses/harness-engineering/m1-thesis/readings/r1-pipeline-architecture.json"
+    },
+    {
+      "id": "r2",
+      "title": "Experimental Methodology",
+      "estimatedMinutes": 12,
+      "dataPath": "data/courses/harness-engineering/m1-thesis/readings/r2-experimental-methodology.json"
+    },
+    {
+      "id": "r3",
+      "title": "Model Roles & Separation",
+      "estimatedMinutes": 10,
+      "dataPath": "data/courses/harness-engineering/m1-thesis/readings/r3-model-roles.json"
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "q1",
+      "title": "The Harness Thesis Quiz",
+      "questionCount": 6,
+      "passingScore": 0.7,
+      "dataPath": "data/courses/harness-engineering/m1-thesis/quizzes/q1-thesis.json"
+    }
+  ],
+  "drills": [
+    {
+      "id": "d1",
+      "title": "Harness Fundamentals",
+      "cardCount": 10,
+      "dataPath": "data/courses/harness-engineering/m1-thesis/drills/d1-fundamentals.json"
+    }
+  ]
+}

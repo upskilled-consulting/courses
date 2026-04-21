@@ -1,0 +1,36 @@
+{
+  "id": "r3",
+  "moduleId": "m4",
+  "title": "Cost & Inference Management",
+  "estimatedMinutes": 12,
+  "prevItem": { "id": "r2", "type": "reading", "title": "Security Layer" },
+  "nextItem": { "id": "r4", "type": "reading", "title": "Observability" },
+  "learningObjectives": [
+    {
+      "id": "m4r3-lo1",
+      "verb": "Calculate",
+      "description": "Calculate the token cost of a multi-stage run from a runs.jsonl entry and identify which stage consumes the most tokens",
+      "skillTags": ["cost-management", "token-accounting"]
+    },
+    {
+      "id": "m4r3-lo2",
+      "verb": "Explain",
+      "description": "Explain the Ollama keep-alive model hot-loading strategy and quantify the latency savings for consecutive runs on the same model",
+      "skillTags": ["cost-management", "inference"]
+    },
+    {
+      "id": "m4r3-lo3",
+      "verb": "Describe",
+      "description": "Describe the vLLM AWQ quantization approach and explain the memory-quality tradeoff compared to full-precision inference",
+      "skillTags": ["cost-management", "vllm", "quantization"]
+    }
+  ],
+  "content": "## Why Cost Management Matters for Local Models\n\nThe harness runs on local hardware with no per-token billing — but cost is real. The cost is measured in:\n\n- **Latency**: a single run with the 32B model takes 3–8 minutes depending on output length and Wiggum rounds\n- **VRAM**: running multiple models simultaneously or models larger than VRAM capacity causes swapping that multiplies latency\n- **Power**: on a laptop, a 4-hour autoresearch session is meaningful energy consumption\n\nCost management for local models is primarily about latency minimization and VRAM allocation — not dollar billing.\n\n## Token Accounting by Stage\n\nEvery run logs token consumption by stage:\n\n```json\n\"tokens_by_stage\": {\n  \"memory_retrieval\":    0,      // embedding only, no generation\n  \"planning\":            1240,   // planner model call\n  \"research_compression\": 3820,  // compress_knowledge() × N rounds\n  \"search_query_gen\":    420,    // plan_query() × N rounds beyond 2\n  \"synthesis\":           8450,   // producer model, main call\n  \"count_check_retry\":   0,      // 0 if count was correct first time\n  \"wiggum_r1\":          2100,   // evaluator call\n  \"wiggum_r2\":          1980,   // revision + re-evaluation\n  \"memory_compression\": 890      // compress_and_store()\n}\n```\n\nTypical run breakdown by percentage of total tokens:\n\n| Stage | ~% of total |\n|-------|-------------|\n| Synthesis | 45–55% |\n| Research compression | 15–25% |\n| Wiggum (all rounds) | 15–25% |\n| Planning + memory | 5–10% |\n\nSynthesis dominates — but it is also the least reducible because it is the output-producing stage. Research compression and Wiggum are the most reducible: using a smaller compress model (glm4:9b instead of the producer) and avoiding unnecessary Wiggum rounds.\n\n## Token Cost Reduction Strategies\n\n**Use a smaller compress model:**\n```bash\nexport COMPRESS_MODEL=qwen2.5:7b   # instead of the producer\n```\nThe compression task (\"summarize these search results into 5-8 bullets\") does not require the producer's full capability. A 7B model handles it well and costs ~4x less latency.\n\n**Use a smaller planner:**\n```bash\nexport PLANNER_MODEL=glm4:9b\n```\nAlready the default, but worth making explicit. The planning task is structured and low-creativity — a fast 9B model is appropriate.\n\n**Use the research cache:**\n```bash\nexport RESEARCH_CACHE=1\n```\nCaches the complete research context (not just individual search results) for up to 24 hours. Subsequent runs on the same task skip the entire gather_research() stage. Essential for autoresearch sessions that run the same 5 tasks dozens of times.\n\n**Reduce Wiggum rounds:**\nInvest in better synthesis instructions (the autoresearch objective) to improve first-pass scores above threshold, eliminating revision rounds entirely for most runs.\n\n## Model Hot-Loading with Ollama Keep-Alive\n\nWhen a model is loaded for the first time in a run, Ollama loads its weights from disk into VRAM — this takes 20–60 seconds for large models. Subsequent calls to the same model within the keep-alive window skip loading:\n\n```python\n# Set a long keep-alive to avoid reloading between calls in the same run:\nresponse = ollama.chat(\n    model=\"pi-qwen-32b\",\n    messages=messages,\n    options={\"keep_alive\": \"10m\"}  # keep weights in VRAM for 10 minutes\n)\n```\n\nFor a run with synthesis + 2 Wiggum revision rounds (3 producer calls total), keep-alive saves 40–180 seconds of model loading. For autoresearch sessions with dozens of consecutive runs, the savings compound significantly.\n\nThe tradeoff: keeping a 20 GB model in VRAM blocks VRAM for other processes. Set keep_alive to the approximate duration between producer calls within a session (typically 2–5 minutes).\n\n## vLLM with AWQ Quantization\n\nFor systems where the 32B model exceeds VRAM capacity, vLLM with AWQ int4 quantization offers a meaningful alternative:\n\n| Configuration | Model Size | VRAM Required | Quality vs. Full |\n|--------------|-----------|---------------|------------------|\n| Qwen2.5-32B Q4_K_M (Ollama) | 20 GB | 20+ GB | 100% (reference) |\n| Qwen2.5-14B-AWQ (vLLM) | ~9.4 GB | ~10 GB | ~90–95% |\n| Qwen2.5-7B Q4 (Ollama) | ~5 GB | ~6 GB | ~75–80% |\n\nAWQ (Activation-aware Weight Quantization) is a post-training quantization method that identifies and preserves the weights most important for output quality. The result is a 4-bit model that degrades less than naive int4 quantization.\n\n```bash\n# vLLM serve in WSL2 Ubuntu:\nvllm serve Qwen/Qwen2.5-14B-Instruct-AWQ \\\n  --dtype half \\\n  --quantization awq_marlin \\\n  --max-model-len 8192 \\\n  --enable-prefix-caching \\\n  --gpu-memory-utilization 0.90\n```\n\n`--enable-prefix-caching` is important for autoresearch: when the same system prompt appears at the start of every call, vLLM caches the KV entries for the prefix, saving prefill computation on every subsequent call that shares the prefix.\n\n## The Inference Backend Shim Cost\n\nThe shim (`inference.py`) adds negligible overhead — one dictionary lookup per call to resolve the model name to a backend-specific identifier. The benefit is that all token accounting, logging, and error handling is centralized in the shim rather than scattered across callers:\n\n```python\nclass OllamaLike:\n    def chat(self, model, messages, options=None, stream=False):\n        with trace.span(f\"llm:{model}\"):\n            if self.backend == \"vllm\":\n                response = self._vllm_chat(model, messages, options)\n            else:\n                response = ollama.chat(model=model, messages=messages,\n                                        options=options, stream=stream)\n            # Centralized token logging — all callers get this automatically\n            trace.log_usage(response, stage=self._current_stage)\n            return response\n```",
+  "references": [
+    {
+      "label": "AWQ",
+      "title": "AWQ: Activation-aware Weight Quantization for LLM Compression and Acceleration",
+      "url": "https://arxiv.org/abs/2306.00978"
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "id": "q1",
+  "moduleId": "m1",
+  "title": "The Harness Thesis Quiz",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "id": "r3", "type": "reading", "title": "Model Roles & Separation" },
+  "nextItem": { "id": "d1", "type": "drill", "title": "Harness Fundamentals" },
+  "questions": [
+    {
+      "id": "q1_1",
+      "type": "multiple-choice",
+      "prompt": "Across four controlled experiments, harness upgrades (adding count constraints, a rubric, task-type-specific criteria) improved mean composite score by approximately how much more than upgrading the producer model from 7B to 32B?",
+      "options": [
+        { "id": "a", "text": "They did not — model upgrades always produce larger improvements than harness changes", "correct": false },
+        { "id": "b", "text": "About the same — both produce roughly equal improvements", "correct": false },
+        { "id": "c", "text": "Roughly 2× as much — harness changes ~1.8 points vs. model upgrade ~0.9 points", "correct": true },
+        { "id": "d", "text": "10× as much — harness changes completely dominate over model quality", "correct": false }
+      ],
+      "explanation": "Experiment data: upgrading the producer model (7B → 32B) improved mean composite score by ~0.9 points (~10–12%). Harness upgrades in Experiment 2 (count constraint + rubric + task-type criteria) improved by ~1.8 points (~20–25%) — roughly 2× the model upgrade, at zero hardware cost.",
+      "hint": "Think about the experiment results described in the Harness Thesis reading."
+    },
+    {
+      "id": "q1_2",
+      "type": "multiple-choice",
+      "prompt": "Design principle 2 states 'verify externally at every stage boundary.' Which of the following is an example of correctly applying this principle?",
+      "options": [
+        { "id": "a", "text": "Asking the model 'did you save the file?' and accepting its answer", "correct": false },
+        { "id": "b", "text": "Using a larger model to verify the output of a smaller model", "correct": false },
+        { "id": "c", "text": "Calling os.path.exists() to verify file existence after the model reports writing it", "correct": true },
+        { "id": "d", "text": "Running the synthesis twice and comparing the outputs", "correct": false }
+      ],
+      "explanation": "External verification means using non-model mechanisms — Python's os.path.exists(), file size checks, Python count functions — to verify facts the model claims. Asking the model is circular (you're trusting the same source that made the original claim). Using a larger model is qualitative evaluation, not external verification of behavioral claims.",
+      "hint": "The key word is 'external' — the check cannot involve the model itself."
+    },
+    {
+      "id": "q1_3",
+      "type": "multiple-choice",
+      "prompt": "A pipeline stage is added that generates a knowledge graph from the output. It works well, but no trace spans are added. Which design principle does this violate?",
+      "options": [
+        { "id": "a", "text": "Principle 1 (Build for deletion)", "correct": false },
+        { "id": "b", "text": "Principle 3 (Add observability before adding features)", "correct": true },
+        { "id": "c", "text": "Principle 5 (Evaluator and producer must be different models)", "correct": false },
+        { "id": "d", "text": "Principle 4 (Start with the simplest pattern)", "correct": false }
+      ],
+      "explanation": "Principle 3: 'Add observability before adding features.' A new pipeline stage without trace instrumentation is unobservable — you cannot measure its latency, its token cost, or its failure rate. The principle requires that every stage boundary emit trace data before the stage ships.",
+      "hint": "Which principle is specifically about measuring pipeline stages?"
+    },
+    {
+      "id": "q1_4",
+      "type": "multiple-choice",
+      "prompt": "In the run lifecycle, which stage immediately precedes gather_research()? What does it produce that gather_research() uses?",
+      "options": [
+        { "id": "a", "text": "wiggum_loop() — it produces the evaluated output that research refines", "correct": false },
+        { "id": "b", "text": "compress_and_store() — it produces the stored observation for retrieval", "correct": false },
+        { "id": "c", "text": "auto_activate() — it produces the final set of active skills that modify research behavior", "correct": true },
+        { "id": "d", "text": "synthesize() — it produces the synthesis prompt that guides search queries", "correct": false }
+      ],
+      "explanation": "The lifecycle: parse_skills → memory.get_context → make_plan → auto_activate → gather_research. auto_activate() fires skill predicates (including /deep, which forces MAX_SEARCH_ROUNDS and disables the novelty gate) and produces the active skill set that gather_research() uses to configure its behavior.",
+      "hint": "Trace the lifecycle: parse_skills → memory → plan → ? → gather_research."
+    },
+    {
+      "id": "q1_5",
+      "type": "multiple-choice",
+      "prompt": "Why must the evaluator and producer be different models? Which option describes the core failure mode of same-model evaluation?",
+      "options": [
+        { "id": "a", "text": "Different models are faster, reducing overall latency of the verification loop", "correct": false },
+        { "id": "b", "text": "The same model reproduces its own generation biases in evaluation, scoring its systematic errors as acceptable", "correct": true },
+        { "id": "c", "text": "Different models provide redundant outputs that can be compared for consistency", "correct": false },
+        { "id": "d", "text": "The evaluator must be smaller than the producer to avoid over-fitting to the task", "correct": false }
+      ],
+      "explanation": "Circular evaluation: the same model weights that produced the output apply the same reasoning and systematic biases when evaluating it. If the model generates placeholder implementations and considers them adequate, it will score placeholder implementations as meeting the depth criterion. An external model — different weights, different training distribution — applies genuinely independent judgment.",
+      "hint": "Think about what 'same weights' means for evaluation vs. generation."
+    },
+    {
+      "id": "q1_6",
+      "type": "multiple-choice",
+      "prompt": "The inference backend shim (inference.py) routes calls to either Ollama or vLLM. When INFERENCE_BACKEND=vllm is set, the harness code calls model='pi-qwen-32b'. What happens to this model name?",
+      "options": [
+        { "id": "a", "text": "The call fails — vLLM does not support Ollama model names", "correct": false },
+        { "id": "b", "text": "The shim remaps 'pi-qwen-32b' to the vLLM model identifier via VLLM_MODEL_MAP, transparently to the caller", "correct": true },
+        { "id": "c", "text": "The harness code must be updated to use the vLLM model name directly", "correct": false },
+        { "id": "d", "text": "The shim downloads the pi-qwen-32b model to the vLLM server", "correct": false }
+      ],
+      "explanation": "VLLM_MODEL_MAP is a JSON dict that maps logical model names ('pi-qwen-32b') to vLLM model identifiers ('Qwen/Qwen2.5-14B-Instruct-AWQ'). The shim performs this remapping transparently — the calling code uses the same model name regardless of backend. This is what 'build for deletion' looks like: swapping backends is a configuration change, not a code change.",
+      "hint": "What is VLLM_MODEL_MAP for, and how does the shim use it?"
+    }
+  ]
+}

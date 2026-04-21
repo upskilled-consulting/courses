@@ -1,0 +1,90 @@
+{
+  "id": "q5",
+  "moduleId": "m5",
+  "title": "Self-Improvement Quiz",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "id": "r3", "type": "reading", "title": "The Literature Review Pipeline" },
+  "nextItem": { "id": "lab3", "type": "lab", "title": "Building a DPO Dataset from Run Logs" },
+  "questions": [
+    {
+      "id": "q5_1",
+      "type": "multiple-choice",
+      "prompt": "Autoresearch Session 1 ran 13 experiments. The best-performing change (exp 3, delta +0.560) was kept. Experiments 2, 4, 5, 7–13 were discarded. Experiment 8 scored 8.530 but was also discarded. Why?",
+      "options": [
+        { "id": "a", "text": "8.530 is below the PASS threshold of 8.0 for autoresearch — it needed to reach 9.0", "correct": false },
+        { "id": "b", "text": "The baseline after exp 3 updated to 8.845; exp 8's delta of 8.530 − 8.845 = −0.315 is negative", "correct": true },
+        { "id": "c", "text": "Exp 8 ran after the session limit of 7 experiments was reached", "correct": false },
+        { "id": "d", "text": "Exp 8 used a different set of eval tasks than exp 3, making comparison invalid", "correct": false }
+      ],
+      "explanation": "The keep rule evaluates delta against the current baseline, not the original baseline. After exp 3 was kept (score 8.845), the baseline updated to 8.845. Exp 8's score of 8.530 produces delta = 8.530 − 8.845 = −0.315 < 0.1 threshold → discard. The baseline ratchets up with each kept change.",
+      "hint": "The baseline updates when a change is kept. Later experiments compare against the updated baseline."
+    },
+    {
+      "id": "q5_2",
+      "type": "multiple-choice",
+      "prompt": "A runs.jsonl entry has wiggum_rounds=2 and output_r1 and output_r2 fields. build_dpo_dataset.py is run with --source revision --min-delta 0.5. The r1 score is 7.2 and r2 score is 7.6. Is a DPO pair generated from this run?",
+      "options": [
+        { "id": "a", "text": "Yes — wiggum_rounds=2 means a revision exists, which is all that's needed", "correct": false },
+        { "id": "b", "text": "No — delta = 7.6 − 7.2 = 0.4 < min_delta=0.5, so the preference signal is too weak", "correct": true },
+        { "id": "c", "text": "Yes — the revision always improves quality so it always qualifies as a preference pair", "correct": false },
+        { "id": "d", "text": "No — --source revision only generates pairs from cross-run comparisons, not within-run revisions", "correct": false }
+      ],
+      "explanation": "delta = r2_score − r1_score = 7.6 − 7.2 = 0.4. min_delta=0.5. 0.4 < 0.5 → pair not generated. The min_delta threshold exists because weak preference signals (small deltas) introduce noise into DPO training. Only clear preferences (chosen clearly better than rejected) produce useful training signal.",
+      "hint": "Apply the min_delta filter: delta = r2_score − r1_score, compared against min_delta."
+    },
+    {
+      "id": "q5_3",
+      "type": "multiple-choice",
+      "prompt": "The Nanda 8-move framework is applied to an abstract. The annotator produces a move 7 (Implication) that says: 'If the results hold, this approach could improve agent reliability.' Why might the Wiggum loop flag this annotation for revision?",
+      "options": [
+        { "id": "a", "text": "Move 7 should not exist in the annotation — only 7 moves are required", "correct": false },
+        { "id": "b", "text": "The implication is too vague — it lacks specificity about which systems would benefit and by how much", "correct": true },
+        { "id": "c", "text": "Wiggum does not evaluate annotations — only synthesis outputs", "correct": false },
+        { "id": "d", "text": "The implication contradicts the claim (move 1) and should be revised to match", "correct": false }
+      ],
+      "explanation": "The same depth/specificity dimensions apply to annotation outputs. 'Could improve agent reliability' is vague — the specificity dimension asks for named tools, systems, and concrete magnitudes, not generic claims. A strong move 7 would say something like: 'If these results generalize, saturation-gated search could reduce token waste by 30–50% in production RAG pipelines while maintaining comparable quality.'",
+      "hint": "The Wiggum rubric applies to annotation outputs too. Which dimension catches vague generalities?"
+    },
+    {
+      "id": "q5_4",
+      "type": "multiple-choice",
+      "prompt": "The SFT dataset is built with --sft-min-score 8.0. Of 1,500 runs, 420 have final_score >= 8.0. Of those, 280 are PASS runs. How many examples are in the SFT dataset?",
+      "options": [
+        { "id": "a", "text": "1,500 — all runs are included for SFT", "correct": false },
+        { "id": "b", "text": "420 — all runs with score >= 8.0, regardless of PASS/FAIL status", "correct": false },
+        { "id": "c", "text": "280 — only PASS runs with score >= 8.0 qualify as training examples", "correct": true },
+        { "id": "d", "text": "140 — only runs where Wiggum passed on round 1 (first-pass quality)", "correct": false }
+      ],
+      "explanation": "SFT uses high-quality runs as instruction-following examples. Both quality filters must apply: final_score >= min_score AND final == 'PASS'. A FAIL run with final_score=8.1 (which could happen if the score barely misses the Wiggum threshold in a weird edge case) would not be a valid training example — it represents a run where the harness itself deemed the output inadequate.",
+      "hint": "SFT training examples should be demonstrations of success. What defines a successful run?"
+    },
+    {
+      "id": "q5_5",
+      "type": "multiple-choice",
+      "prompt": "Semantic Scholar returns hub_score=0.94 for a 2019 paper with only 12 direct citations. What does this indicate, and how should the lit-review pipeline treat it?",
+      "options": [
+        { "id": "a", "text": "The score is likely an API error — a paper with 12 citations cannot have high hub score", "correct": false },
+        { "id": "b", "text": "The paper is cited by many high-hub papers, making it structurally foundational despite low absolute citation count — treat as high priority for inclusion", "correct": true },
+        { "id": "c", "text": "Hub score measures abstract quality, not citation importance — low citations mean the paper is obscure and should be deprioritized", "correct": false },
+        { "id": "d", "text": "The paper was published too recently to accumulate citations — hub score should be ignored for papers under 5 years old", "correct": false }
+      ],
+      "explanation": "Hub score is eigenvector centrality in the citation graph — a paper can have a high hub score with few direct citations if those citations come from other highly-cited papers. A 2019 paper with hub=0.94 was cited by foundational work in the field shortly after publication. This is precisely the kind of gap candidate the pipeline identifies: influential but not widely read.",
+      "hint": "Hub score is eigenvector centrality, not raw citation count. What does that mean structurally?"
+    },
+    {
+      "id": "q5_6",
+      "type": "multiple-choice",
+      "prompt": "The autoresearch proposer has clustered in the 'add code examples' space for 10 consecutive experiments. Which strategy most directly breaks this pattern?",
+      "options": [
+        { "id": "a", "text": "Increase KEEP_THRESHOLD from 0.1 to 0.3 to force the proposer to find larger improvements", "correct": false },
+        { "id": "b", "text": "Add a gather_proposal_context() step that researches prompt engineering literature before the proposer generates a change", "correct": true },
+        { "id": "c", "text": "Reduce MAX_SEARCH_ROUNDS in the autoresearch eval to make the session faster", "correct": false },
+        { "id": "d", "text": "Switch to a different producer model for the autoresearch proposer", "correct": false }
+      ],
+      "explanation": "The proposer clusters because its training distribution skews toward code-centric solutions for technical tasks. Grounding proposals in recent prompt engineering literature (via a research step before proposing) breaks the proposer out of its prior — it discovers techniques it would not generate from memory alone. This is described as the key intervention added in Session 2.",
+      "hint": "The Autoresearch Loop reading describes this specific problem and the Session 2 solution."
+    }
+  ]
+}

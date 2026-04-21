@@ -1,0 +1,30 @@
+{
+  "id": "r0",
+  "moduleId": "m2",
+  "title": "The Planning Stage",
+  "estimatedMinutes": 10,
+  "prevItem": null,
+  "nextItem": { "id": "r1", "type": "reading", "title": "The Dual-Search Foundation" },
+  "learningObjectives": [
+    {
+      "id": "m2r0-lo1",
+      "verb": "Explain",
+      "description": "Explain how the planner classifies task type and complexity and why these classifications affect downstream pipeline behavior",
+      "skillTags": ["planning", "task-classification"]
+    },
+    {
+      "id": "m2r0-lo2",
+      "verb": "Describe",
+      "description": "Describe how memory context from prior runs is incorporated into the planning prompt and why this reduces redundant research",
+      "skillTags": ["planning", "memory"]
+    },
+    {
+      "id": "m2r0-lo3",
+      "verb": "Trace",
+      "description": "Trace how a Plan dataclass is produced from a task string and used by the research and synthesis stages",
+      "skillTags": ["planning", "pipeline"]
+    }
+  ],
+  "content": "## Why Plan Before Searching?\n\nThe naive approach to agentic research is: take the task string, turn it directly into a search query, search, synthesize. This produces mediocre results because a task string like \"research cost envelope management best practices for production AI agents and save to ~/Desktop/output.md\" is a poor search query. It is too long, too specific in the wrong ways, and too vague in the right ones.\n\nThe planning stage separates *task understanding* from *task execution*. A dedicated model pass analyzes the task, classifies it, extracts what is already known, and produces targeted search queries. The research stage then executes against those queries rather than against the raw task string.\n\n## The Plan Dataclass\n\n```python\n@dataclass\nclass Plan:\n    task_type: str           # \"enumerated\" | \"best_practices\" | \"research\"\n    complexity: str          # \"low\" | \"medium\" | \"high\"\n    search_queries: list     # 2+ targeted search strings\n    prior_work: str          # summary of what memory already covers\n    expected_sections: list  # expected output structure\n    subtasks: list           # for orchestrator compound tasks\n```\n\nThe planner model (glm4:9b) produces this dataclass from two inputs: the task string and the memory context retrieved in the previous stage.\n\n## Task Type Classification\n\nThe `task_type` field drives two important downstream behaviors:\n\n**`enumerated`** tasks have an explicit count constraint: \"find the top 5 techniques\", \"identify the 3 most common failure modes\". For these tasks, the harness activates count-checking after synthesis — it verifies that exactly N items were produced and retries once if not. The Wiggum evaluator also applies a completeness criterion tied to the count.\n\n**`best_practices`** tasks ask for recommendations without a count constraint: \"what are the best practices for X\". The synthesis instruction leans toward concrete implementation guidance. Wiggum checks for actionable steps per recommendation rather than item count.\n\n**`research`** tasks ask for synthesis across sources: \"survey the literature on X\", \"compare approaches A, B, and C\". Wiggum checks for multi-source integration and appropriate uncertainty acknowledgment.\n\nClassification errors propagate through the entire run. A `best_practices` task misclassified as `enumerated` will trigger the count check on output that was never intended to enumerate exactly N items, causing spurious retries.\n\n## Complexity Classification\n\nThe `complexity` field drives skill auto-activation. When `complexity == \"high\"`, the `/panel` skill auto-activates — the output gets a full 3-persona parallel evaluation in addition to the standard Wiggum loop. High-complexity tasks also influence how many search rounds the research loop runs before applying the saturation gate.\n\n```python\n# From skills.py — auto-activation predicate for /panel\ndef auto_trigger(task: str, plan: Plan) -> bool:\n    return plan.complexity == \"high\"\n```\n\n## Memory Context Injection\n\nBefore calling the planner, the harness retrieves relevant observations from memory:\n\n```python\nmemory_context = memory.get_context(task, top_k=3)\nplan = make_plan(task, memory_context=memory_context)\n```\n\nThe memory context is embedded in the planning prompt:\n\n```\nPrevious work on related topics:\n{memory_context}\n\nTask: {task}\n\nClassify the task type, assess complexity, generate 2-3 targeted search queries,\nand note what the previous work already covers so we don't repeat it.\n```\n\nThe planner's `prior_work` output tells the research stage which aspects of the topic are already covered. This prevents the search loop from re-fetching information already in memory and injecting it redundantly into the synthesis context.\n\n## Search Query Generation\n\nThe planner generates 2–3 targeted search queries rather than one. For a task like \"explain the top 5 context engineering techniques for production LLM agents\", the planner might generate:\n\n```\n[\"context engineering LLM agents production techniques 2024\",\n \"retrieval augmented generation context window management\",\n \"chain of thought few shot prompting production deployment\"]\n```\n\nThese queries are more focused than the raw task string and are designed to fetch complementary information — the first hits survey papers and blog posts, the second hits RAG-specific sources, the third hits prompting-specific sources. The research stage runs these queries sequentially, assessing the novelty of each round before continuing.\n\n## Testing the Planner in Isolation\n\nBecause the planner is a separate module, it can be tested independently:\n\n```bash\npython planner.py \"Search for the top 5 context engineering techniques and save to output.md\"\n```\n\nThis prints the full `Plan` object without running any subsequent stages. Useful for debugging classification errors or evaluating query quality before committing to a full run.",
+  "references": []
+}

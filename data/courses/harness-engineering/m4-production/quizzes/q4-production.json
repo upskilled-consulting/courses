@@ -1,0 +1,90 @@
+{
+  "id": "q4",
+  "moduleId": "m4",
+  "title": "Production Systems Quiz",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "id": "r4", "type": "reading", "title": "Observability" },
+  "nextItem": { "id": "d4", "type": "drill", "title": "Skills, Security & Observability" },
+  "questions": [
+    {
+      "id": "q4_1",
+      "type": "multiple-choice",
+      "prompt": "A skill is registered with hook='post_synthesis' and explicit_only=True. Under what conditions does it activate?",
+      "options": [
+        { "id": "a", "text": "It activates automatically when task complexity == 'high'", "correct": false },
+        { "id": "b", "text": "It activates only when the user prefixes the task with /skillname", "correct": true },
+        { "id": "c", "text": "It activates after every successful Wiggum pass", "correct": false },
+        { "id": "d", "text": "It activates when the auto_trigger predicate returns True, regardless of the explicit_only flag", "correct": false }
+      ],
+      "explanation": "explicit_only=True means the auto_trigger predicate is never evaluated. The skill only activates when the user explicitly includes /skillname in the task string. The post_synthesis hook determines when the handler runs (after output is written), not when the skill activates.",
+      "hint": "explicit_only overrides auto_trigger — it means the skill will never self-activate."
+    },
+    {
+      "id": "q4_2",
+      "type": "multiple-choice",
+      "prompt": "The orchestrator is given a task: 'Research the complete history of reinforcement learning and write a comprehensive guide.' Subtask 1 covers 1950–1990, subtask 2 covers 1990–2010, subtask 3 covers 2010–present. Subtask 3's output repeatedly covers material from Mnih et al. 2013 (DQN), which subtask 2 also covered. What caused this?",
+      "options": [
+        { "id": "a", "text": "MAX_WORKERS=4 caused thread-safety issues in the shared search cache", "correct": false },
+        { "id": "b", "text": "The subtask prompts used only positive scope boundaries ('cover 2010–present') without explicitly marking what subtask 2 covers as out-of-scope", "correct": true },
+        { "id": "c", "text": "The Wiggum loop should have caught this before assembly", "correct": false },
+        { "id": "d", "text": "The research cache served both subtasks the same results", "correct": false }
+      ],
+      "explanation": "Role ambiguity failure: DQN (2013) falls in the boundary zone between subtask 2 (1990–2010) and subtask 3 (2010–present). Without explicit out-of-scope boundaries, both subtasks include it. The fix is adding out_of_scope=['DQN, 2013, Mnih et al. covered in subtask 2'] to subtask 3's prompt.",
+      "hint": "Which failure class from Module 3 describes this? What countermeasure does the orchestrator reading prescribe?"
+    },
+    {
+      "id": "q4_3",
+      "type": "multiple-choice",
+      "prompt": "The AST-based code scanner blocks `import requests`. A model-generated script uses `urllib.request.urlopen()` instead. What happens?",
+      "options": [
+        { "id": "a", "text": "The scanner catches it — urllib is in BLOCKED_IMPORTS", "correct": true },
+        { "id": "b", "text": "The scanner misses it — only 'requests' is blocked, not 'urllib'", "correct": false },
+        { "id": "c", "text": "The scanner catches it — urlopen is in BLOCKED_BUILTINS", "correct": false },
+        { "id": "d", "text": "The scanner runs the code in a sandbox first to detect network calls", "correct": false }
+      ],
+      "explanation": "urllib is explicitly in BLOCKED_IMPORTS: {\"os\", \"subprocess\", \"sys\", \"shutil\", \"socket\", \"requests\", \"urllib\", \"pathlib\", \"ftplib\", \"smtplib\"}. An `import urllib.request` statement will be caught when the scanner checks the root module name (urllib).",
+      "hint": "Check the full BLOCKED_IMPORTS set from the Security Layer reading."
+    },
+    {
+      "id": "q4_4",
+      "type": "multiple-choice",
+      "prompt": "A run with the 32B producer makes 4 model calls: plan (glm4:9b), synthesis, wiggum_r1, wiggum_r2 (Qwen3-Coder:30b for both). Ollama keep_alive='5m'. The run takes 8 minutes. How many times does the 32B model load from disk?",
+      "options": [
+        { "id": "a", "text": "3 times — synthesis, and once per wiggum call (wiggum uses a different model but the 32B must reload between calls)", "correct": false },
+        { "id": "b", "text": "1 time — keep_alive holds it in VRAM for 5 minutes; the synthesis call is the only 32B call", "correct": true },
+        { "id": "c", "text": "2 times — once at synthesis, once again when wiggum revises (revision uses the producer)", "correct": false },
+        { "id": "d", "text": "4 times — keep_alive only helps for the exact same model name, and each call reloads", "correct": false }
+      ],
+      "explanation": "The 32B producer (pi-qwen-32b) is called only at the synthesis stage. The wiggum evaluator uses Qwen3-Coder:30b — a different model. The planner uses glm4:9b. The revision is done by the producer, but the keep_alive='5m' window covers the 2-minute gap between synthesis and the revision call (wiggum_r2 calls the producer for revision). Total 32B loads: 1 initial + 0 reloads if revision falls within keep_alive window.",
+      "hint": "How many of the 4 calls actually use pi-qwen-32b? What does keep_alive do for consecutive same-model calls?"
+    },
+    {
+      "id": "q4_5",
+      "type": "multiple-choice",
+      "prompt": "A Chrome Trace Event JSON shows two events with `ph: 'X'`, same `ts` timestamp, and `tid: 2` and `tid: 3`. What does this indicate in Perfetto UI?",
+      "options": [
+        { "id": "a", "text": "Both events failed — duplicate timestamps indicate an error in the trace", "correct": false },
+        { "id": "b", "text": "Both events ran in parallel — different thread IDs at the same start time appear in separate Perfetto lanes simultaneously", "correct": true },
+        { "id": "c", "text": "The events ran sequentially but the logger recorded the same timestamp due to rounding", "correct": false },
+        { "id": "d", "text": "The events are the same operation logged twice under different thread IDs", "correct": false }
+      ],
+      "explanation": "The tid (thread ID) field maps to a separate lane in the Perfetto waterfall. Two events with the same ts and different tids appear in parallel lanes starting at the same time — this is how the panel's 3-persona parallel evaluation is visualized. Same timestamp + different tids = genuine parallelism.",
+      "hint": "In Perfetto, each unique tid gets its own horizontal lane. What does same start time + different lanes mean?"
+    },
+    {
+      "id": "q4_6",
+      "type": "multiple-choice",
+      "prompt": "A model-generated script contains: `__builtins__['exec']('import os; os.system(\"rm -rf /\")')`. Does the AST scanner catch this?",
+      "options": [
+        { "id": "a", "text": "Yes — exec is in BLOCKED_BUILTINS and the scanner checks all Call nodes", "correct": false },
+        { "id": "b", "text": "No — the scanner checks for function calls like exec(), not dictionary subscript access like __builtins__['exec']", "correct": true },
+        { "id": "c", "text": "Yes — os is in BLOCKED_IMPORTS and the string 'import os' is flagged", "correct": false },
+        { "id": "d", "text": "Yes — the scanner detects 'rm -rf' as an injection pattern", "correct": false }
+      ],
+      "explanation": "This is an obfuscation attack. The AST scanner checks for ast.Call nodes where node.func is an ast.Name (direct function calls like exec()). Dictionary subscript access __builtins__['exec'] is an ast.Subscript node, not an ast.Name — the scanner misses it. The security reading explicitly notes: 'The scanner cannot detect obfuscation.' This is a known limitation of the AST-based approach.",
+      "hint": "The Security Layer reading explicitly describes what the AST scanner cannot catch."
+    }
+  ]
+}

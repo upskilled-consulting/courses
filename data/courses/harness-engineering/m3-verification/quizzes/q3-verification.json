@@ -1,0 +1,90 @@
+{
+  "id": "q3",
+  "moduleId": "m3",
+  "title": "Verification & Failure Modes Quiz",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "id": "r3", "type": "reading", "title": "Failure Taxonomy" },
+  "nextItem": { "id": "lab2", "type": "lab", "title": "Building the Verification Loop" },
+  "questions": [
+    {
+      "id": "q3_1",
+      "type": "multiple-choice",
+      "prompt": "A run produces output with wiggum_scores: {r1: {relevance: 8, completeness: 9, depth: 6, specificity: 5, structure: 9}}. What is the weighted r1 score?",
+      "options": [
+        { "id": "a", "text": "7.6", "correct": false },
+        { "id": "b", "text": "7.3", "correct": true },
+        { "id": "c", "text": "8.1", "correct": false },
+        { "id": "d", "text": "6.9", "correct": false }
+      ],
+      "explanation": "Weighted score = 8×0.20 + 9×0.25 + 6×0.30 + 5×0.15 + 9×0.10 = 1.60 + 2.25 + 1.80 + 0.75 + 0.90 = 7.30. Depth (weight 0.30) and specificity (weight 0.15) are the two dimensions dragging the score below 8.0 — depth at 6 costs 1.20 points off a perfect 9, and specificity at 5 costs 0.60.",
+      "hint": "Apply the weights: relevance×0.20 + completeness×0.25 + depth×0.30 + specificity×0.15 + structure×0.10."
+    },
+    {
+      "id": "q3_2",
+      "type": "multiple-choice",
+      "prompt": "The composite score formula is `0.7 * mean_wiggum_r1 + 0.3 * criteria_rate * 10`. A session of 15 runs has mean_wiggum_r1=7.8 and 12/15 runs pass hard criteria. What is the composite score?",
+      "options": [
+        { "id": "a", "text": "7.86", "correct": true },
+        { "id": "b", "text": "8.20", "correct": false },
+        { "id": "c", "text": "7.60", "correct": false },
+        { "id": "d", "text": "9.12", "correct": false }
+      ],
+      "explanation": "criteria_rate = 12/15 = 0.80. composite = 0.7 × 7.8 + 0.3 × 0.80 × 10 = 5.46 + 2.40 = 7.86.",
+      "hint": "criteria_rate = passing_runs / total_runs. Plug into 0.7 × wiggum_r1 + 0.3 × criteria_rate × 10."
+    },
+    {
+      "id": "q3_3",
+      "type": "multiple-choice",
+      "prompt": "The Wiggum loop runs with WIGGUM_PASS_THRESHOLD=8.0 and WIGGUM_MAX_ROUNDS=3. Round 1 score: 7.2. Round 2 score: 7.9. Round 3 score: 8.1. What is the outcome?",
+      "options": [
+        { "id": "a", "text": "PASS — the final score (8.1) is above threshold", "correct": true },
+        { "id": "b", "text": "FAIL — the score never reached 8.0 by round 2, so max rounds are exhausted", "correct": false },
+        { "id": "c", "text": "FAIL — the first-pass score (7.2) is below 8.0, so the run automatically fails", "correct": false },
+        { "id": "d", "text": "PASS — the average score across rounds (7.73) is close enough to threshold", "correct": false }
+      ],
+      "explanation": "The loop terminates at PASS when ANY round's score meets the threshold. Round 3 scores 8.1 ≥ 8.0 → PASS. The first-pass score (r1=7.2) affects the composite metric but does not determine PASS/FAIL — that is the responsibility of any round meeting the threshold within max_rounds.",
+      "hint": "The loop terminates at PASS as soon as any round's score meets or exceeds the threshold."
+    },
+    {
+      "id": "q3_4",
+      "type": "multiple-choice",
+      "prompt": "A Wiggum issue string reads: 'Section 2 lacks a specific implementation example; only describes the concept without showing how to apply it.' Which failure class does this belong to?",
+      "options": [
+        { "id": "a", "text": "Task Completion Drift — the agent didn't produce the output", "correct": false },
+        { "id": "b", "text": "Encoding Corruption — the section content is malformed", "correct": false },
+        { "id": "c", "text": "Placeholder Content Generation — the section describes without implementing", "correct": true },
+        { "id": "d", "text": "Count Constraint Violation — Section 2 should not exist", "correct": false }
+      ],
+      "explanation": "This is the most common failure class (45+ occurrences). 'Describes the concept without showing how to apply it' is the definition of placeholder content — the section exists and is on-topic (not task drift), but it describes what to do rather than showing how to do it. The depth dimension catches this.",
+      "hint": "Which failure class specifically describes content that describes rather than implements?"
+    },
+    {
+      "id": "q3_5",
+      "type": "multiple-choice",
+      "prompt": "Why is the revision prompt designed to give the producer the full issue list (specific problems) rather than a general 'improve this output' instruction?",
+      "options": [
+        { "id": "a", "text": "Specific issues are required by the Wiggum protocol — it's a formatting constraint, not a pedagogical choice", "correct": false },
+        { "id": "b", "text": "Specific issues produce targeted revisions rather than wholesale rewrites, reducing token cost and preserving the parts that scored well", "correct": true },
+        { "id": "c", "text": "General instructions cause the model to hallucinate new content unrelated to the original task", "correct": false },
+        { "id": "d", "text": "The producer model cannot interpret general feedback — it requires structured JSON input", "correct": false }
+      ],
+      "explanation": "Targeted revision is the design goal. The evaluator has already done the work of identifying what is wrong. A general 'improve' prompt causes the model to rewrite sections that scored 9/10 as well as sections that scored 5/10 — wasting tokens and potentially degrading the high-scoring sections. A specific issue list focuses revision on the actual problems.",
+      "hint": "Think about what 'improve this output' would cause the model to do vs. a specific issue list."
+    },
+    {
+      "id": "q3_6",
+      "type": "multiple-choice",
+      "prompt": "An orchestrator subtask produces output that overlaps substantially with a sibling subtask. Which harness-side countermeasure most directly addresses this?",
+      "options": [
+        { "id": "a", "text": "Running Wiggum on each subtask independently before assembly", "correct": false },
+        { "id": "b", "text": "Adding explicit out-of-scope boundaries to each subtask prompt, telling each agent what the other subtasks cover", "correct": true },
+        { "id": "c", "text": "Reducing MAX_WORKERS to 1 so subtasks run sequentially and can reference each other", "correct": false },
+        { "id": "d", "text": "Increasing the novelty threshold to filter out overlapping search results", "correct": false }
+      ],
+      "explanation": "Role ambiguity (the failure class this belongs to) is caused by insufficient scope boundaries in the subtask prompts. The countermeasure is explicit out-of-scope declarations: 'The following material is covered by other subtasks and must NOT appear in your output: [...]'. This is more constraining than positive scope descriptions because it directly prohibits the overlapping content.",
+      "hint": "The failure taxonomy reading describes a specific countermeasure for role ambiguity in orchestration."
+    }
+  ]
+}

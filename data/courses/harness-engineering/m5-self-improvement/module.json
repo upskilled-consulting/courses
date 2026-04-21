@@ -1,0 +1,58 @@
+{
+  "id": "m5",
+  "title": "Self-Improvement",
+  "order": 5,
+  "color": "#8b5a2b",
+  "accentLight": "#d4a476",
+  "prereq": "m4",
+  "learningObjectives": [
+    "Explain the autoresearch keep rule (delta > 0.1 composite score) and describe how the Karpathy-style loop proposes, tests, and discards synthesis instruction changes.",
+    "Parse a runs.jsonl entry and identify which fields map to SFT training examples, DPO preference pairs, and reward model data.",
+    "Describe the Nanda 8-move annotated abstract framework and explain why QLoRA fine-tuning on domain-annotated data produces a better annotator than a general-purpose model.",
+    "Trace the literature review pipeline from arXiv fetch through Semantic Scholar enrichment, 5-persona curation, annotation, and Jinja2 template rendering.",
+    "Identify the three self-improvement mechanisms in the harness (autoresearch, fine-tuning, literature synthesis) and explain how they compound over time."
+  ],
+  "readings": [
+    {
+      "id": "r0",
+      "title": "The Autoresearch Loop",
+      "estimatedMinutes": 12,
+      "dataPath": "data/courses/harness-engineering/m5-self-improvement/readings/r0-autoresearch.json"
+    },
+    {
+      "id": "r1",
+      "title": "The Data Pipeline",
+      "estimatedMinutes": 12,
+      "dataPath": "data/courses/harness-engineering/m5-self-improvement/readings/r1-data-pipeline.json"
+    },
+    {
+      "id": "r2",
+      "title": "QLoRA Fine-Tuning",
+      "estimatedMinutes": 15,
+      "dataPath": "data/courses/harness-engineering/m5-self-improvement/readings/r2-fine-tuning.json"
+    },
+    {
+      "id": "r3",
+      "title": "The Literature Review Pipeline",
+      "estimatedMinutes": 12,
+      "dataPath": "data/courses/harness-engineering/m5-self-improvement/readings/r3-lit-review-pipeline.json"
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "q5",
+      "title": "Self-Improvement Quiz",
+      "questionCount": 6,
+      "passingScore": 0.7,
+      "dataPath": "data/courses/harness-engineering/m5-self-improvement/quizzes/q5-self-improvement.json"
+    }
+  ],
+  "labs": [
+    {
+      "id": "lab3",
+      "title": "Building a DPO Dataset from Run Logs",
+      "estimatedMinutes": 60,
+      "dataPath": "data/courses/harness-engineering/m5-self-improvement/labs/lab3-dpo-dataset.json"
+    }
+  ]
+}

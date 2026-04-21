@@ -1,0 +1,30 @@
+{
+  "id": "r-intro",
+  "moduleId": "m1",
+  "title": "Before You Start: Prerequisites & Learning Path",
+  "estimatedMinutes": 8,
+  "prevItem": null,
+  "nextItem": { "id": "r0", "type": "reading", "title": "The Harness Thesis" },
+  "learningObjectives": [
+    {
+      "id": "m1ri-lo1",
+      "verb": "Identify",
+      "description": "Identify the technical prerequisites for this course and assess your own readiness",
+      "skillTags": ["prerequisites", "learning-path"]
+    },
+    {
+      "id": "m1ri-lo2",
+      "verb": "Describe",
+      "description": "Describe the five-module arc of the course and what you will be able to build by the end",
+      "skillTags": ["prerequisites", "learning-path"]
+    }
+  ],
+  "content": "## What This Course Is About\n\nThis course teaches you to build reliable, production-grade agentic AI systems using open-source models running locally — no API keys, no per-token billing, no black-box model locks.\n\nThe central thesis is simple but counterintuitive: **the harness matters more than the model.** Swapping from a 7B to a 32B producer shifts quality by 10–15%. Fixing a fundamental harness flaw — missing verification, no memory, naive search — can shift quality by 50–80%. The four randomized experiments that underpin this course demonstrate this empirically.\n\nBy the end of this course you will be able to:\n\n- Design and run a rigorous experiment to evaluate harness changes\n- Build a saturation-gated research loop that stops searching when new results stop adding information\n- Implement an evaluate → revise → verify loop with a decimalized rubric\n- Wire a custom skill into the pipeline at any of four hook points\n- Instrument any pipeline stage with structured tracing\n- Build a DPO preference dataset from your own run logs and fine-tune a domain-specific model\n\n---\n\n## Prerequisites\n\n**Required:**\n\n- **Python fluency** — you should be comfortable reading and modifying 500–1,000 line Python scripts. The harness is not a library you install; it is code you read, understand, and adapt.\n- **Basic ML literacy** — you should know what a language model is, what fine-tuning means at a high level, and what a context window is. You do not need deep ML theory.\n- **Command-line comfort** — installing Ollama models, running Python scripts, reading log output. The course runs everything locally; there is no managed infrastructure.\n\n**Helpful but not required:**\n\n- Experience with any LLM API (OpenAI, Anthropic, etc.) — the mental model transfers even though the infrastructure differs\n- Familiarity with SQLite and/or vector databases — memory.py uses both, and knowing what they are makes the Memory Systems reading click faster\n- Basic familiarity with PyTorch or transformers — useful for the QLoRA fine-tuning reading in Module 5\n\n**Not required:**\n\n- Frontier model API access (the course runs on Ollama with local models)\n- A GPU (though one speeds up fine-tuning in Module 5 significantly)\n- Deep knowledge of transformer architecture\n\n---\n\n## Hardware\n\nThe harness is designed to run on commodity hardware. Practical minimums:\n\n| Component | Minimum | Recommended |\n|-----------|---------|-------------|\n| RAM | 16 GB | 32 GB |\n| VRAM | 0 GB (CPU fallback) | 8 GB+ |\n| Storage | 30 GB free | 60 GB+ |\n| OS | Windows/macOS/Linux | Any |\n\nThe default producer model (`pi-qwen-32b`, Qwen2.5-32B Q4_K_M) requires ~20 GB of RAM+VRAM. On a 16 GB machine you can use the 7B fallback (`pi-qwen`) — quality is lower but the pipeline logic is identical.\n\n---\n\n## Software Setup\n\nInstall Ollama and pull the required models:\n\n```bash\n# Install Ollama (ollama.ai)\nollama pull qwen2.5:7b            # base producer (fallback)\nollama pull glm4:9b               # planner + memory compression\nollama pull Qwen3-Coder:30b       # evaluator\nollama pull llama3.2-vision       # vision preprocessing\n\n# Create custom producer Modelfiles\nollama create pi-qwen -f Modelfile\nollama create pi-qwen-32b -f Modelfile.32b   # if 32B available\n```\n\nPython environment:\n\n```bash\nconda create -n ollama-pi python=3.11\nconda activate ollama-pi\npip install ollama ddgs \"markitdown[all]\" chromadb sentence-transformers datasets\n```\n\n---\n\n## Module Arc\n\n| Module | Title | Core Question |\n|--------|-------|---------------|\n| M1 | The Harness Thesis | What is harness engineering, and why does it dominate quality? |\n| M2 | Context Engineering & Memory | What information reaches the model, and how is it selected? |\n| M3 | Verification & Failure Modes | How do we know the output is good, and what goes wrong? |\n| M4 | Production Systems | How do we extend, orchestrate, secure, and observe the harness? |\n| M5 | Self-Improvement | How does the harness improve itself over time? |\n\nModules build on each other — M3 assumes you understand M2's research pipeline, and M5's autoresearch loop only makes sense once you can read a wiggum score. Work through them in order.",
+  "references": [
+    {
+      "label": "Ollama",
+      "title": "Ollama — run large language models locally",
+      "url": "https://ollama.ai"
+    }
+  ]
+}

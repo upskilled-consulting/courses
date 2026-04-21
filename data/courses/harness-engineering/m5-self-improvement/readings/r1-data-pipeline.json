@@ -1,0 +1,36 @@
+{
+  "id": "r1",
+  "moduleId": "m5",
+  "title": "The Data Pipeline",
+  "estimatedMinutes": 12,
+  "prevItem": { "id": "r0", "type": "reading", "title": "The Autoresearch Loop" },
+  "nextItem": { "id": "r2", "type": "reading", "title": "QLoRA Fine-Tuning" },
+  "learningObjectives": [
+    {
+      "id": "m5r1-lo1",
+      "verb": "Identify",
+      "description": "Identify which fields in a runs.jsonl entry map to SFT training examples, DPO preference pairs, and reward model data",
+      "skillTags": ["data-pipeline", "runs-log"]
+    },
+    {
+      "id": "m5r1-lo2",
+      "verb": "Explain",
+      "description": "Explain the two sources of DPO preference pairs (cross-run pairs and wiggum-revision pairs) and why each represents a valid preference signal",
+      "skillTags": ["data-pipeline", "dpo"]
+    },
+    {
+      "id": "m5r1-lo3",
+      "verb": "Trace",
+      "description": "Trace how hf_export.py transforms runs.jsonl into HuggingFace-ready datasets and describe the quality filter applied to each dataset type",
+      "skillTags": ["data-pipeline", "huggingface"]
+    }
+  ],
+  "content": "## runs.jsonl as Training Data Source\n\nEvery harness run is a labeled example. The task string is the input. The final output (after Wiggum verification) is the generated text. The Wiggum score is the quality label. The revision history is a preference signal.\n\nThe data pipeline converts `runs.jsonl` into four HuggingFace-ready dataset formats, each suited to a different training objective.\n\n## Dataset Types\n\n### SFT (Supervised Fine-Tuning)\n\nHigh-quality runs as instruction-following examples:\n\n```python\n# Format: {prompt, completion} pairs\n{\n  \"prompt\": \"<system>...synthesis instruction...</system>\\n<user>\" + task + \"</user>\",\n  \"completion\": final_output\n}\n```\n\nQuality filter: `final_score >= sft_min_score` (default 8.0). Only PASS runs with strong Wiggum scores are used — SFT on mediocre examples degrades the model.\n\nTypical SFT dataset size: ~300–500 examples after applying the quality filter to 1,500 runs.\n\n### DPO (Direct Preference Optimization)\n\nPreference pairs where the model sees a task and must prefer one completion over another:\n\n```python\n# Format: {prompt, chosen, rejected}\n{\n  \"prompt\": task,\n  \"chosen\": high_score_output,    # the preferred completion\n  \"rejected\": low_score_output     # the rejected completion\n}\n```\n\nTwo sources of preference pairs:\n\n**Cross-run pairs:** Two runs on the same task (or semantically similar tasks) with different Wiggum scores. The higher-scoring run is `chosen`; the lower is `rejected`. Pairs are only kept when `score_delta >= min_delta` (default 0.5).\n\n**Wiggum-revision pairs:** For runs with multiple Wiggum rounds, round 1 output and round 2 output are available. Round 2 has higher quality (it's the revision). Using (round 1 output, round 2 output) as (rejected, chosen) creates preference pairs from a single run.\n\n```python\n# build_dpo_dataset.py\ndef build_revision_pairs(runs, min_delta=0.5):\n    pairs = []\n    for run in runs:\n        if run['wiggum_rounds'] < 2:\n            continue  # no revision available\n        r1_score = run['wiggum_r1_score']\n        r2_score = run['wiggum_scores']['r2']['weighted']\n        delta = r2_score - r1_score\n        if delta < min_delta:\n            continue  # preference signal too weak\n        pairs.append({\n            \"prompt\": run['task'],\n            \"chosen\": run['output_r2'],   # revised, higher quality\n            \"rejected\": run['output_r1']  # original, lower quality\n        })\n    return pairs\n```\n\n### Reward Model\n\nInputs paired with scalar scores for training a reward model:\n\n```python\n{\n  \"prompt\": task,\n  \"completion\": output,\n  \"score\": final_score  # 0.0 – 10.0\n}\n```\n\nAll runs are included (not filtered by score) — the reward model needs to learn the full quality distribution, including bad examples.\n\n### Trajectory\n\nMulti-turn records showing the evaluation → revision history:\n\n```python\n{\n  \"task\": task,\n  \"turns\": [\n    {\"role\": \"assistant\", \"content\": output_r1},\n    {\"role\": \"user\",      \"content\": issues_from_wiggum_r1},\n    {\"role\": \"assistant\", \"content\": output_r2},\n    {\"role\": \"user\",      \"content\": issues_from_wiggum_r2},\n    # ...\n  ],\n  \"final_score\": final_score\n}\n```\n\nTrajectory data is useful for training models that understand revision as a multi-turn process — not just produce-and-submit, but produce-receive-feedback-revise.\n\n## hf_export.py\n\n```bash\n# Export to hf_datasets/ directory:\npython hf_export.py\npython hf_export.py --sft-min-score 8.5   # stricter quality filter\n\n# Push to HuggingFace Hub:\npython hf_export.py --push nickmccarty/ollama-pi-harness-datasets\n```\n\nThe script reads `runs.jsonl`, applies the format conversions above, and writes:\n\n```\nhf_datasets/\n  sft.jsonl         # instruction-following examples (high score only)\n  preference.jsonl  # {prompt, chosen, rejected}\n  reward.jsonl      # {prompt, completion, score}\n  trajectory.jsonl  # multi-turn revision histories\n  dpo.jsonl         # built by build_dpo_dataset.py (separate script)\n```\n\n## DPO Dataset Statistics\n\nFrom 1,500 runs with default settings (`--min-delta 0.5`):\n\n```bash\npython build_dpo_dataset.py --stats\n# Cross-run pairs:      142 (delta >= 0.5)\n# Revision pairs:        89 (wiggum_rounds >= 2, delta >= 0.5)\n# Total DPO pairs:      231\n```\n\nIncreasing `--min-delta` to 1.0 reduces the dataset but makes preference signals stronger — less noise, fewer pairs. For fine-tuning, stronger preference signals are generally preferred over larger noisy datasets.\n\n## Why This Matters\n\nThe data pipeline closes the self-improvement loop:\n\n```\nruns.jsonl → SFT/DPO datasets → fine-tuned model → improved producer\n     ↑                                                      ↓\n     └──────────── better runs → better data ←─────────────┘\n```\n\nEach iteration of the harness produces training data that makes the next iteration's model better, which produces better runs, which produces better training data. The compound effect requires many cycles — but the data generation is free (it's the work the harness is already doing) and the fine-tuning is local (no API costs).",
+  "references": [
+    {
+      "label": "DPO",
+      "title": "Direct Preference Optimization: Your Language Model is Secretly a Reward Model",
+      "url": "https://arxiv.org/abs/2305.18290"
+    }
+  ]
+}

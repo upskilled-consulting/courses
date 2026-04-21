@@ -1,0 +1,36 @@
+{
+  "id": "r3",
+  "moduleId": "m1",
+  "title": "Model Roles & Separation",
+  "estimatedMinutes": 10,
+  "prevItem": { "id": "r2", "type": "reading", "title": "Experimental Methodology" },
+  "nextItem": { "id": "q1", "type": "quiz", "title": "The Harness Thesis Quiz" },
+  "learningObjectives": [
+    {
+      "id": "m1r3-lo1",
+      "verb": "Explain",
+      "description": "Explain the circular evaluation problem and why a model cannot reliably score its own output",
+      "skillTags": ["model-roles", "evaluation"]
+    },
+    {
+      "id": "m1r3-lo2",
+      "verb": "Describe",
+      "description": "Describe each model role in the harness (producer, evaluator, planner, vision) and the constraints on model selection for each",
+      "skillTags": ["model-roles", "architecture"]
+    },
+    {
+      "id": "m1r3-lo3",
+      "verb": "Configure",
+      "description": "Configure the inference backend shim to route model calls to Ollama or vLLM using environment variables",
+      "skillTags": ["inference", "configuration"]
+    }
+  ],
+  "content": "## The Circular Evaluation Problem\n\nDesign principle 5 states: *evaluator and producer must be different models*. This is not aesthetic preference — it is a correctness requirement.\n\nWhen a model evaluates its own output, it reproduces the same reasoning and the same systematic biases it used to produce the output. If the model tends to overcount sections, it will also overcount when verifying them. If the model's training led it to prefer confident-sounding prose over concrete implementation detail, it will score confident-sounding prose highly regardless of whether implementation detail is present.\n\nExternal evaluation, by a model from a different family or a significantly larger model, breaks this circularity. The evaluator applies genuinely independent judgment. The revision feedback it produces is more likely to identify the actual problems rather than rationalize existing choices.\n\nThis is the same reason academic peer review uses external reviewers, and the same reason code review is valuable even when the author is competent.\n\n## Model Roles\n\nThe harness assigns different models to different roles based on their required capabilities and the latency budget for each stage:\n\n| Role | Model | Why |\n|------|-------|-----|\n| Producer (default) | `pi-qwen-32b` (Qwen2.5-32B Q4_K_M) | Largest available model for maximum depth; custom Modelfile with optimized system prompt |\n| Producer (fallback) | `pi-qwen` (qwen2.5:7b) | ~3× faster; use on 16 GB RAM systems or for fast iteration |\n| Evaluator | `Qwen3-Coder:30b` | Must be larger than producer or from a different family; coding background improves specificity scoring |\n| Planner / Compressor | `glm4:9b` | Fast enough for per-round compression; different architecture from producer prevents prompt echo |\n| Annotator | `nanda-annotator` | QLoRA fine-tuned Qwen2.5-7B on domain-specific annotations; produced in Module 5 |\n| Vision | `llama3.2-vision` | Image-to-text preprocessing only; does not synthesize or evaluate |\n| GitHub skill | `llama3.2:3b` | Commit message and PR generation only; fast, low-stakes |\n\n## The Custom Modelfile\n\nOllama Modelfiles define a model's system prompt, temperature, context window, and other parameters. The producer model uses a custom Modelfile that sets:\n\n```dockerfile\nFROM qwen2.5:32b-instruct-q4_K_M\n\nSYSTEM \"\"\"\nYou are a research and synthesis assistant. Your task is to produce comprehensive,\nwell-structured Markdown documents based on the provided research context.\n\nAlways:\n- Begin output with a top-level Markdown heading (# Title)\n- Use concrete examples, named tools, and specific implementation steps\n- Provide implementation notes for each technique or concept covered\n- Output ONLY valid Markdown — no preamble, no commentary about your approach\n\"\"\"\n\nPARAMETER temperature 0.3\nPARAMETER num_ctx 32768\nPARAMETER num_predict 4096\n```\n\nThe system prompt is where synthesis instruction engineering lives — not in the per-request user prompt. This keeps the synthesis prompt clean and makes the system instruction the sole target of autoresearch optimization.\n\n## The Inference Backend Shim\n\n`inference.py` provides a unified interface that routes model calls to either Ollama (default) or vLLM, using the same call signature throughout the codebase:\n\n```python\nfrom inference import OllamaLike\n\nclient = OllamaLike()  # reads INFERENCE_BACKEND env var\nresponse = client.chat(\n    model=\"pi-qwen-32b\",\n    messages=[{\"role\": \"user\", \"content\": prompt}],\n    options={\"temperature\": 0.3, \"num_predict\": 4096}\n)\ncontent = response[\"message\"][\"content\"]\ntokens  = response[\"usage\"][\"total_tokens\"]\n```\n\nWhen `INFERENCE_BACKEND=vllm`, the shim remaps model names via `VLLM_MODEL_MAP` and translates the Ollama response format to match what the rest of the harness expects. The harness code never checks which backend is running.\n\n## vLLM Setup (GPU-Limited Systems)\n\nFor systems where the 32B model is too large for Ollama (requires ~20 GB unified RAM+VRAM), vLLM with AWQ int4 quantization reduces the memory footprint to ~9.4 GB:\n\n```bash\n# In WSL2 Ubuntu:\nvllm serve Qwen/Qwen2.5-14B-Instruct-AWQ \\\n  --dtype half --quantization awq_marlin \\\n  --max-model-len 8192 \\\n  --enable-prefix-caching \\\n  --gpu-memory-utilization 0.90\n```\n\nThen in `.env`:\n```\nINFERENCE_BACKEND=vllm\nVLLM_BASE_URL=http://localhost:8000/v1\nVLLM_MODEL_MAP={\"pi-qwen-32b\":\"Qwen/Qwen2.5-14B-Instruct-AWQ\"}\n```\n\nThe model map is how a single physical model serves multiple logical roles — `pi-qwen-32b` in the harness code becomes `Qwen/Qwen2.5-14B-Instruct-AWQ` on the vLLM server. The harness never sees the underlying model name.\n\n## Configuration via Environment Variables\n\nAll model role assignments are configurable without code changes:\n\n```bash\n# Override producer\nexport HARNESS_PRODUCER_MODEL=mistral-small3.1:24b\n\n# Override evaluator\nexport WIGGUM_EVALUATOR_MODEL=phi4:14b\n\n# Override planner/compressor\nexport PLANNER_MODEL=qwen2.5:7b\nexport COMPRESS_MODEL=qwen2.5:7b   # can differ from planner\n\n# Switch inference backend\nexport INFERENCE_BACKEND=vllm\n```\n\nThis is what \"build for deletion\" looks like in practice: any model in any role can be replaced with a single environment variable change. The harness does not hardcode model names in business logic.",
+  "references": [
+    {
+      "label": "vLLM",
+      "title": "vLLM: Easy, Fast, and Cheap LLM Serving",
+      "url": "https://vllm.ai"
+    }
+  ]
+}

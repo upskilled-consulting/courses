@@ -1,0 +1,90 @@
+{
+  "id": "q2",
+  "moduleId": "m2",
+  "title": "Context Engineering & Memory Quiz",
+  "passingScore": 0.7,
+  "allowRetry": true,
+  "showAnswersAfterSubmit": true,
+  "prevItem": { "id": "r4", "type": "reading", "title": "Large Document Context" },
+  "nextItem": { "id": "lab1", "type": "lab", "title": "Building a Saturation Search Loop" },
+  "questions": [
+    {
+      "id": "q2_1",
+      "type": "multiple-choice",
+      "prompt": "A task is classified as 'enumerated' with count_constraint=5. How does this classification affect the pipeline downstream?",
+      "options": [
+        { "id": "a", "text": "It tells the search loop to run exactly 5 search queries", "correct": false },
+        { "id": "b", "text": "It activates the count check after synthesis and applies enumeration-specific Wiggum criteria", "correct": true },
+        { "id": "c", "text": "It restricts the synthesis model to producing at most 5 paragraphs", "correct": false },
+        { "id": "d", "text": "It has no effect downstream — task_type is only used for logging", "correct": false }
+      ],
+      "explanation": "task_type='enumerated' has two downstream effects: (1) the harness runs a Python count check after synthesis, verifying exactly N top-level sections were produced, and (2) the Wiggum evaluator receives enumeration-specific criteria — checking that the count is correct is part of the completeness score.",
+      "hint": "The task_type field is described as affecting 'two important downstream behaviors' in the Planning Stage reading."
+    },
+    {
+      "id": "q2_2",
+      "type": "multiple-choice",
+      "prompt": "The saturation gate uses a novelty threshold of 3 (0–10 scale). After round 2, a new search returns a novelty score of 2. What does the harness do?",
+      "options": [
+        { "id": "a", "text": "Accepts the round, compresses the results into knowledge_state, and continues to round 3", "correct": false },
+        { "id": "b", "text": "Stops searching — saturation reached. The round is rejected and knowledge_state is not updated.", "correct": true },
+        { "id": "c", "text": "Stops searching but still compresses the results to maintain a complete knowledge_state", "correct": false },
+        { "id": "d", "text": "Regenerates the search query and retries with a different query before deciding", "correct": false }
+      ],
+      "explanation": "novelty=2 < NOVELTY_THRESHOLD=3, and round > SEARCHES_PER_TASK (minimum 2 rounds). The loop breaks — saturation reached. compress_knowledge() is only called for accepted rounds (those that pass the novelty gate). The rejected round produces no model call and no state update.",
+      "hint": "The saturation loop only calls compress_knowledge() after the novelty check passes."
+    },
+    {
+      "id": "q2_3",
+      "type": "multiple-choice",
+      "prompt": "The search cache uses SHA-256(query) as the cache key. What is the consequence of this design for an autoresearch session that runs the same 5 tasks 20 times with different synthesis instructions?",
+      "options": [
+        { "id": "a", "text": "Each run fetches fresh search results because the synthesis instruction is included in the cache key", "correct": false },
+        { "id": "b", "text": "All 20 runs on the same task share the same cached search results, so only the first run fetches from the web", "correct": true },
+        { "id": "c", "text": "Results are cached per-session, so the 20 runs share results only within the same session", "correct": false },
+        { "id": "d", "text": "The cache key includes both the query and the producer model name, so different models get different cached results", "correct": false }
+      ],
+      "explanation": "The cache key is SHA-256(query string). The synthesis instruction does not affect the query string — it affects only the synthesis stage. So all 20 autoresearch runs on a task with the same planner-generated queries hit the same cache entries. Only the first run within the 24h TTL fetches from DDGS.",
+      "hint": "The cache key is SHA-256(query). What determines the query string?"
+    },
+    {
+      "id": "q2_4",
+      "type": "multiple-choice",
+      "prompt": "The memory system uses both ChromaDB and SQLite FTS5. A new task asks about 'Qwen3-Coder:30b evaluation performance'. Which retrieval mechanism is more likely to find a relevant prior observation about this specific model?",
+      "options": [
+        { "id": "a", "text": "ChromaDB semantic search — because semantic similarity handles specific model names better than keyword matching", "correct": false },
+        { "id": "b", "text": "SQLite FTS5 — because 'Qwen3-Coder' is a specific technical term that FTS5 can match exactly", "correct": true },
+        { "id": "c", "text": "Both are equally likely — they always return the same results", "correct": false },
+        { "id": "d", "text": "Neither — specific model names are not stored in memory observations", "correct": false }
+      ],
+      "explanation": "FTS5 excels at exact technical term matching. 'Qwen3-Coder:30b' is a specific string that may not have semantic neighbors in the embedding space (especially if the corpus is small). ChromaDB would excel at finding an observation about 'model evaluation' even without the exact model name. Both mechanisms serve different retrieval scenarios.",
+      "hint": "When would semantic similarity retrieval beat keyword matching, and vice versa?"
+    },
+    {
+      "id": "q2_5",
+      "type": "multiple-choice",
+      "prompt": "A 180,000-character PDF with fewer than 3 Markdown headings is passed to the chunker. Which extraction strategy is used?",
+      "options": [
+        { "id": "a", "text": "Section extraction — because the file is very large", "correct": false },
+        { "id": "b", "text": "Semantic chunk retrieval — because the file has fewer than 3 Markdown headings", "correct": true },
+        { "id": "c", "text": "The file is passed verbatim because MarkItDown handles it", "correct": false },
+        { "id": "d", "text": "The chunker rejects the file — it only handles files smaller than 50,000 characters", "correct": false }
+      ],
+      "explanation": "Strategy selection: ≥3 markdown headings → section extraction. Otherwise → semantic chunk retrieval (overlapping windows + ChromaDB cosine similarity). The file size only determines whether the chunker is invoked at all (>12,000 chars). A large file without headings uses semantic retrieval.",
+      "hint": "Review the chunker strategy selection logic: heading count determines which path is taken."
+    },
+    {
+      "id": "q2_6",
+      "type": "multiple-choice",
+      "prompt": "A provenance tag reads: `=== Results [source:paper.pdf | p.8 | ¶23 | §Results | @11,200] ===`. What does `¶23` mean?",
+      "options": [
+        { "id": "a", "text": "The chunk is the 23rd chunk extracted from the document", "correct": false },
+        { "id": "b", "text": "The chunk starts at paragraph 23, counted by double newlines before the chunk's start offset", "correct": true },
+        { "id": "c", "text": "The document has 23 paragraphs total", "correct": false },
+        { "id": "d", "text": "The chunk is from page 23, not page 8 (¶ overrides p. in the tag)", "correct": false }
+      ],
+      "explanation": "¶N is the paragraph number — the count of \\n\\n sequences before the chunk's character offset in the original document. It gives the model a rough sense of where in the document's flow the passage comes from, complementing the page estimate (p.N) and character offset (@N).",
+      "hint": "Each field in the provenance tag is defined in the Large Document Context reading."
+    }
+  ]
+}

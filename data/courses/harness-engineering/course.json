@@ -1,0 +1,59 @@
+{
+  "id": "harness-engineering",
+  "title": "Harness Engineering for AI Agents",
+  "subtitle": "Build Production-Grade Agentic Systems with Open-Source Models",
+  "version": "1.0.0",
+  "unlockThreshold": 0.6,
+  "modules": [
+    {
+      "id": "m1",
+      "slug": "m1-thesis",
+      "title": "The Harness Thesis",
+      "description": "The central claim — the harness matters more than the model — and the pipeline architecture, experimental methodology, and model-role separation that put it on rigorous footing.",
+      "order": 1,
+      "prereq": null,
+      "dataPath": "data/courses/harness-engineering/m1-thesis/module.json",
+      "color": "#1a3c75"
+    },
+    {
+      "id": "m2",
+      "slug": "m2-context",
+      "title": "Context Engineering & Memory",
+      "description": "Planning, dual-search, saturation gating, persistent memory, and large-document context extraction — the research half of the pipeline that determines what the model sees.",
+      "order": 2,
+      "prereq": "m1",
+      "dataPath": "data/courses/harness-engineering/m2-context/module.json",
+      "color": "#1776a4"
+    },
+    {
+      "id": "m3",
+      "slug": "m3-verification",
+      "title": "Verification & Failure Modes",
+      "description": "The evaluate → revise → verify loop, the decimalized 5-dimension rubric, harness-side verification, failure taxonomy from 1,500 logged runs, and the 3-persona evaluation panel.",
+      "order": 3,
+      "prereq": "m2",
+      "dataPath": "data/courses/harness-engineering/m3-verification/module.json",
+      "color": "#6b4d8a"
+    },
+    {
+      "id": "m4",
+      "slug": "m4-production",
+      "title": "Production Systems",
+      "description": "The skills hook system, multi-subtask orchestration, security layer (AST scanning, path sandbox, injection detection), cost and inference management, and structured observability.",
+      "order": 4,
+      "prereq": "m3",
+      "dataPath": "data/courses/harness-engineering/m4-production/module.json",
+      "color": "#2a5c52"
+    },
+    {
+      "id": "m5",
+      "slug": "m5-self-improvement",
+      "title": "Self-Improvement",
+      "description": "Autonomous synthesis optimization (autoresearch), the full data pipeline from runs.jsonl to SFT and DPO datasets, QLoRA fine-tuning, and the literature review pipeline.",
+      "order": 5,
+      "prereq": "m4",
+      "dataPath": "data/courses/harness-engineering/m5-self-improvement/module.json",
+      "color": "#8b5a2b"
+    }
+  ]
+}

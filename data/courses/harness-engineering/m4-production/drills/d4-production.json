@@ -1,0 +1,58 @@
+{
+  "id": "d4",
+  "moduleId": "m4",
+  "title": "Skills, Security & Observability",
+  "description": "Flashcard drill on the skills hook system, orchestration, security layers, cost management, and Perfetto tracing.",
+  "cards": [
+    {
+      "id": "d4_1",
+      "front": "Name the **four skill hook points** in order of pipeline position and give one example skill for each.",
+      "back": "**pre_research** — before gather_research(); example: `/deep` (forces MAX_SEARCH_ROUNDS, disables novelty gate). **pre_synthesis** — injected into synthesis prompt; example: `/annotate` (Nanda 8-move framework), `/cite` (source attribution). **post_synthesis** — after output is written; example: `/kg` (D3.js knowledge graph). **post_wiggum** — after verification loop completes; example: `/panel` (3-persona parallel evaluation)."
+    },
+    {
+      "id": "d4_2",
+      "front": "What is the difference between **explicit** and **auto-triggered** skill activation?",
+      "back": "**Explicit activation:** user prefixes the task with `/skillname` — e.g. `python agent.py '/cite /deep Explain LoRA...'`. The skill activates regardless of task content. **Auto-triggered activation:** the skill's `auto_trigger` predicate fires based on task keywords or plan properties — e.g. `/panel` activates automatically when `plan.complexity == 'high'`. `explicit_only=True` disables auto-triggering for a skill."
+    },
+    {
+      "id": "d4_3",
+      "front": "The orchestrator uses **explicit out-of-scope boundaries** in subtask prompts. Why are these more effective than positive scope descriptions alone?",
+      "back": "Positive scope ('cover 2010–present') leaves boundary ambiguity — a topic like DQN (2013) could plausibly belong to multiple adjacent subtasks. Negative scope ('do NOT cover DQN, Mnih et al. 2013 — covered by subtask 2') is a direct prohibition that eliminates the ambiguity. The model finds it easier to avoid explicitly listed topics than to infer what adjacent subtasks are covering."
+    },
+    {
+      "id": "d4_4",
+      "front": "The AST code scanner uses `ast.walk()` to find `ast.Import` nodes. What specific field does it check to identify blocked imports?",
+      "back": "For `ast.Import` nodes, it checks `alias.name` for each alias in `node.names`. For `ast.ImportFrom` nodes, it checks `node.module`. In both cases, it extracts the **root module name** by splitting on '.' and taking the first segment — `urllib.request` → root `urllib`. If the root is in `BLOCKED_IMPORTS`, the scan returns False (unsafe)."
+    },
+    {
+      "id": "d4_5",
+      "front": "What is **prefix caching** in vLLM and why is it valuable for autoresearch?",
+      "back": "Prefix caching (`--enable-prefix-caching`) stores the KV cache entries for prompt prefixes that are shared across calls. In autoresearch, every call to the producer shares the same system prompt (Modelfile contents) — a potentially 300–500 token prefix. With prefix caching, the first call computes and caches the KV entries for this prefix; all subsequent calls in the session skip prefill for those tokens. For 15-run eval sessions, this can save 10–15% of total prefill compute."
+    },
+    {
+      "id": "d4_6",
+      "front": "A `runs.jsonl` entry shows `tokens_by_stage.research_compression = 9,400`. The session had COMPRESS_MODEL=pi-qwen-32b (instead of the default glm4:9b). What would the token count look like with glm4:9b as COMPRESS_MODEL?",
+      "back": "The token count itself would be similar — token counts reflect the size of inputs and outputs, not which model processed them. What changes is **latency and VRAM cost**: glm4:9b is ~4–6× faster than pi-qwen-32b for the compression task (a straightforward summarization, not a deep synthesis). Switching COMPRESS_MODEL to glm4:9b reduces wall-clock time for research_compression by 4–6× without meaningfully reducing compression quality."
+    },
+    {
+      "id": "d4_7",
+      "front": "What does `trace.name_thread('panel/Critical-Reviewer')` do in Perfetto output?",
+      "back": "It emits a thread metadata event (`ph: 'M'`, `name: 'thread_name'`) that assigns a human-readable label to the thread. In the Perfetto waterfall, this thread appears in its own lane labeled 'panel/Critical-Reviewer' rather than 'Thread 3'. For the 3-persona panel (3 threads in parallel), this makes it immediately clear which lane corresponds to which persona — essential for diagnosing which evaluator is the bottleneck."
+    },
+    {
+      "id": "d4_8",
+      "front": "The path sandbox allows `~/Desktop` and `~/Documents` but has a blocklist that takes precedence. A task asks to `read_file('~/Desktop/.env')`. What happens?",
+      "back": "The blocklist check runs before the allowlist. `.env` matches the blocked pattern — `check_path()` returns `(False, 'blocked pattern: .env')`. The read is denied even though `~/Desktop` is an allowed root. The blocklist protects sensitive files that happen to live inside allowed directories."
+    },
+    {
+      "id": "d4_9",
+      "front": "What is the injection scanner's response to a detected injection pattern in a search result body?",
+      "back": "The line is **stripped silently** — removed from the result body before it enters the synthesis context, with no message to the model. Flagging the injection to the model would provide the injected content another path into the synthesis prompt (the model would read and potentially follow the instruction while 'warning' about it). Stripping without acknowledgment is the correct defense."
+    },
+    {
+      "id": "d4_10",
+      "front": "In `inspect_run.py` output, a run shows `Depth: 7.0 → 8.0` between rounds. What does this tell you about the revision?",
+      "back": "The depth dimension (weight 0.30) improved from 7.0 to 8.0 in the revision round. This means the evaluator's feedback in round 1 specifically identified missing implementation depth, the producer's revision added concrete examples or implementation steps, and the evaluator confirmed the improvement in round 2. The arrow notation shows per-dimension score evolution across Wiggum rounds."
+    }
+  ]
+}
