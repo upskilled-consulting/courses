@@ -8,7 +8,7 @@
   "learningObjectives": [
     "Implement a skill with a named hook point (pre_research, pre_synthesis, post_synthesis, or post_wiggum) and wire an auto-trigger predicate to it.",
     "Describe how the orchestrator decomposes compound tasks into subtasks, executes them in parallel via ThreadPoolExecutor, and assembles the final output.",
-    "Explain the three layers of the security module (AST scanner, path sandbox, injection scanner) and identify what each layer can and cannot catch.",
+    "Explain the five layers of the security module (raw scan + AST code scanner, path sandbox, injection scanner, CDP navigation check, scratch path enforcement) and identify what each layer can and cannot catch.",
     "Calculate the token cost of a multi-stage run from a runs.jsonl entry and explain the keep-alive model hot-loading strategy.",
     "Instrument a new pipeline stage with Chrome Trace Event spans and verify the output in Perfetto UI."
   ],
@@ -48,7 +48,7 @@
     {
       "id": "q4",
       "title": "Production Systems Quiz",
-      "questionCount": 6,
+      "questionCount": 7,
       "passingScore": 0.7,
       "dataPath": "data/courses/harness-engineering/m4-production/quizzes/q4-production.json"
     }
