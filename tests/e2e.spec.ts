@@ -200,6 +200,26 @@ test.describe('deep-rl course routes', () => {
     await expect(page.locator('.quiz-question, [class*="question"]').first()).toBeVisible();
     expect(errors.filter(e => !e.includes('favicon'))).toHaveLength(0);
   });
+
+  test('drill page renders cards', async ({ page }) => {
+    const errors = collectErrors(page);
+    const course = readJSON('data/courses/deep-rl/course.json');
+    let drillModId: string | null = null;
+    let drillId: string | null = null;
+    for (const m of course.modules) {
+      const mod = readJSON(m.dataPath);
+      if (mod.drills?.length) {
+        drillModId = m.id;
+        drillId = mod.drills[0].id;
+        break;
+      }
+    }
+    if (!drillModId || !drillId) test.skip();
+    await page.goto(`/${COURSE}/${drillModId}/drill/${drillId}`);
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('.drill-card, [class*="drill"]').first()).toBeVisible();
+    expect(errors.filter(e => !e.includes('favicon'))).toHaveLength(0);
+  });
 });
 
 // ── 3DGS course ───────────────────────────────────────────────────────────

@@ -7,8 +7,8 @@
   "prereq": "m2",
   "learningObjectives": [
     "Explain why external, harness-side verification is required and identify three categories of model self-report that cannot be trusted.",
-    "Implement the evaluate → revise → verify loop, applying a multi-round rubric and stopping at a configurable PASS threshold.",
-    "Compute a weighted Wiggum score across five dimensions and derive the composite score formula that combines first-pass quality with hard criteria.",
+    "Implement the evaluate → revise → verify loop with its three safeguards (hallucination stub detection, cycling detection, best-round restoration), applying a multi-round rubric and stopping at a configurable PASS threshold.",
+    "Compute a weighted Wiggum score across six dimensions and derive the composite score formula that combines first-pass quality with hard criteria.",
     "Classify a given agent failure into the taxonomy (task drift, placeholder generation, role ambiguity, encoding corruption) and prescribe a harness-side countermeasure.",
     "Describe how a 3-persona parallel evaluation panel differs from single-evaluator Wiggum and when each is appropriate."
   ],
@@ -30,6 +30,12 @@
       "title": "The Evaluation Rubric",
       "estimatedMinutes": 12,
       "dataPath": "data/courses/harness-engineering/m3-verification/readings/r2-evaluation-rubric.json"
+    },
+    {
+      "id": "r-summarizer",
+      "title": "Pre-evaluation Summarization",
+      "estimatedMinutes": 10,
+      "dataPath": "data/courses/harness-engineering/m3-verification/readings/r-summarizer.json"
     },
     {
       "id": "r3",

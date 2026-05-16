@@ -186,6 +186,14 @@ function genCourse(courseRef) {
         });
       } catch (e) { console.warn(`  ⚠ Skipping lab ${lRef.id}: ${e.message}`); }
     }
+
+    for (const d of module.drills || []) {
+      writePage(`${modBase}/drill/${d.id}/index.html`, {
+        title:       `${d.title} · ${modEntry.title} — Upskilled`,
+        description: `Practice drill: ${d.title}. ${d.cardCount} cards.`,
+        bodyContent: null,
+      });
+    }
   }
 }
 

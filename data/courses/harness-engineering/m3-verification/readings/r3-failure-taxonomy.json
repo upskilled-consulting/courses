@@ -3,7 +3,7 @@
   "moduleId": "m3",
   "title": "Failure Taxonomy",
   "estimatedMinutes": 15,
-  "prevItem": { "id": "r2", "type": "reading", "title": "The Evaluation Rubric" },
+  "prevItem": { "id": "r-summarizer", "type": "reading", "title": "Pre-evaluation Summarization" },
   "nextItem": { "id": "q3", "type": "quiz", "title": "Verification & Failure Modes Quiz" },
   "learningObjectives": [
     {

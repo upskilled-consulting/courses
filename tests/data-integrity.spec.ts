@@ -93,6 +93,20 @@ test.describe('prereqs & supplements', () => {
     expect(missing, `Missing lab files:\n${missing.join('\n')}`).toHaveLength(0);
   });
 
+  test('every drill dataPath resolves', () => {
+    const missing: string[] = [];
+    for (const section of catalog.sections) {
+      if (!['prerequisites', 'supplements'].includes(section.id)) continue;
+      for (const course of section.courses) {
+        const mod = readJSON(course.dataPath) as any;
+        for (const d of mod.drills ?? []) {
+          if (!fileExists(d.dataPath)) missing.push(d.dataPath);
+        }
+      }
+    }
+    expect(missing, `Missing drill files:\n${missing.join('\n')}`).toHaveLength(0);
+  });
+
   test('every reading JSON has required fields', () => {
     const errors: string[] = [];
     for (const section of catalog.sections) {
@@ -191,6 +205,21 @@ test.describe('courses', () => {
       }
     }
     expect(missing, `Missing quiz files:\n${missing.join('\n')}`).toHaveLength(0);
+  });
+
+  test('every drill dataPath in course modules resolves', () => {
+    const missing: string[] = [];
+    for (const course of getCourses()) {
+      const c = readJSON(course.dataPath) as any;
+      for (const m of c.modules ?? []) {
+        if (!fileExists(m.dataPath)) continue;
+        const mod = readJSON(m.dataPath) as any;
+        for (const d of mod.drills ?? []) {
+          if (!fileExists(d.dataPath)) missing.push(d.dataPath);
+        }
+      }
+    }
+    expect(missing, `Missing drill files:\n${missing.join('\n')}`).toHaveLength(0);
   });
 });
 

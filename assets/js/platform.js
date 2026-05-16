@@ -290,13 +290,15 @@ function navItemUrl(courseId, item, seg = 'prereq', moduleId = null) {
   if (seg === 'course' && moduleId) {
     const base = `/${courseId}/${moduleId}`;
     if (!item) return base;
-    if (item.type === 'quiz') return `${base}/quiz/${item.id}`;
-    if (item.type === 'lab')  return `${base}/lab/${item.id}`;
+    if (item.type === 'quiz')  return `${base}/quiz/${item.id}`;
+    if (item.type === 'lab')   return `${base}/lab/${item.id}`;
+    if (item.type === 'drill') return `${base}/drill/${item.id}`;
     return `${base}/reading/${item.id}`;
   }
   if (!item) return `/${seg}/${courseId}`;
-  if (item.type === 'quiz') return `/${seg}/${courseId}/quiz/${item.id}`;
-  if (item.type === 'lab')  return `/${seg}/${courseId}/lab/${item.id}`;
+  if (item.type === 'quiz')  return `/${seg}/${courseId}/quiz/${item.id}`;
+  if (item.type === 'lab')   return `/${seg}/${courseId}/lab/${item.id}`;
+  if (item.type === 'drill') return `/${seg}/${courseId}/drill/${item.id}`;
   return `/${seg}/${courseId}/reading/${item.id}`;
 }
 
@@ -1035,12 +1037,40 @@ async function renderModuleOverview(params, root) {
       </div>`;
   }).join('');
 
+  const drillsHTML = (module.drills || []).map(d => {
+    const started = isDrillStarted(module.id, d.id);
+    const progress = getDrillProgress(module.id, d.id);
+    const known = Object.values(progress).filter(b => b === 2).length;
+    const total = d.cardCount || 0;
+    const pct = total ? Math.round((known / total) * 100) : 0;
+    const statusLabel = !started ? `${total} cards` : `${known}/${total} known`;
+    return `
+      <div class="drill-row" data-nav="${base}/drill/${d.id}" role="button" tabindex="0">
+        <div class="drill-row-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+        </div>
+        <div class="drill-row-info">
+          <div class="drill-row-title">${d.title}</div>
+          <div class="drill-row-meta">${statusLabel}${d.estimatedMinutes ? ` · ${d.estimatedMinutes} min` : ''}</div>
+          ${started && total ? `<div class="drill-row-bar"><div class="drill-row-fill" style="width:${pct}%"></div></div>` : ''}
+        </div>
+        ${started && known === total ? '<div class="drill-row-done">✓</div>' : ''}
+      </div>`;
+  }).join('');
+
   const quizSection = quizzesHTML ? `
     <div class="reading-list-label">Quizzes</div>
     <div class="reading-list">${quizzesHTML}</div>` : '';
   const labSection = labsHTML ? `
     <div class="reading-list-label">Labs</div>
     <div class="reading-list">${labsHTML}</div>` : '';
+  const drillSection = drillsHTML ? `
+    <div class="reading-list-label">Practice</div>
+    <div class="reading-list">${drillsHTML}</div>` : '';
+
+  const drillCount = (module.drills || []).length;
 
   root.innerHTML = `
     <div class="course-overview">
@@ -1053,12 +1083,14 @@ async function renderModuleOverview(params, root) {
           <span class="meta-pill">${(module.readings || []).length} readings</span>
           ${(module.quizzes || []).length ? `<span class="meta-pill">${module.quizzes.length} quiz${module.quizzes.length !== 1 ? 'zes' : ''}</span>` : ''}
           ${labs.length ? `<span class="meta-pill">${labs.length} lab${labs.length !== 1 ? 's' : ''}</span>` : ''}
+          ${drillCount ? `<span class="meta-pill">${drillCount} drill deck${drillCount !== 1 ? 's' : ''}</span>` : ''}
         </div>
       </div>
       <div class="reading-list-label">Readings</div>
       <div class="reading-list">${readingsHTML}</div>
       ${quizSection}
       ${labSection}
+      ${drillSection}
     </div>`;
 
   root.querySelectorAll('[data-nav]').forEach(el => {
@@ -1761,7 +1793,7 @@ function renderQuizBody(params, root, module, quiz) {
       ? `<button class="quiz-retry-btn" id="quizRetry">Try Again</button>`
       : '';
     const nextNav = quiz.nextItem
-      ? `<button class="reading-nav-btn next" data-nav="${navItemUrl(id, quiz.nextItem, seg)}">Continue →</button>`
+      ? `<button class="reading-nav-btn next" data-nav="${navItemUrl(id, quiz.nextItem, seg, mid)}">Continue →</button>`
       : '';
     const overviewBtn = `<button class="reading-nav-btn prev" data-nav="${overviewUrl}"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align:-0.1em;margin-right:1px"><path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/></svg>Overview</button>`;
 
@@ -2938,12 +2970,20 @@ async function renderSyllabus(params, root) {
 // ── DRILL VIEW ────────────────────────────────────────────────
 async function renderDrill(params, root) {
   const { id, did } = params;
+  const mid = params.mid || null;
   showLoading(root);
 
-  let courseRef, module, deck;
+  let courseRef, module, deck, courseManifest, modEntry;
   try {
     courseRef = await findCourse(id);
-    module    = await fetchJSON(courseRef.dataPath);
+    if (courseRef.type === 'course') {
+      courseManifest = await fetchJSON(courseRef.dataPath);
+      modEntry = courseManifest.modules.find(m => m.id === mid);
+      if (!modEntry) throw new Error('Module not found: ' + mid);
+      module = await fetchJSON(modEntry.dataPath);
+    } else {
+      module = await fetchJSON(courseRef.dataPath);
+    }
     const deckMeta = (module.drills || []).find(d => d.id === did);
     if (!deckMeta) throw new Error('Drill deck not found: ' + did);
     deck = await fetchJSON(deckMeta.dataPath);
@@ -2953,11 +2993,13 @@ async function renderDrill(params, root) {
   }
 
   const seg = courseSegment(courseRef);
-  const backUrl = `/${seg}/${id}`;
+  const isCourse = seg === 'course';
+  const backUrl = isCourse ? `/${id}/${mid}` : `/${seg}/${id}`;
+  const backLabel = isCourse ? modEntry.title : module.title;
 
   setBreadcrumb([
     { label: 'Catalog', href: '/' },
-    { label: module.title, href: backUrl },
+    ...(isCourse ? [{ label: courseManifest.title, href: `/${id}` }, { label: modEntry.title, href: backUrl }] : [{ label: module.title, href: backUrl }]),
     { label: deck.title },
   ], 'drill');
 
@@ -2974,7 +3016,7 @@ async function renderDrill(params, root) {
     const known = Object.values(progress).filter(b => b === 2).length;
     root.innerHTML = `
       <div class="drill-page">
-        <button class="course-ov-back" data-nav="${backUrl}"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align:-0.1em;margin-right:1px"><path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/></svg>${_escHtml(module.title)}</button>
+        <button class="course-ov-back" data-nav="${backUrl}"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align:-0.1em;margin-right:1px"><path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/></svg>${_escHtml(backLabel)}</button>
         <div class="drill-complete">
           <div class="drill-complete-icon">🎉</div>
           <h2>All ${cards.length} cards known!</h2>
@@ -3088,7 +3130,7 @@ async function renderDrill(params, root) {
   root.innerHTML = `
     <div class="drill-page">
       <div class="drill-header">
-        <button class="course-ov-back" data-nav="${backUrl}"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align:-0.1em;margin-right:1px"><path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/></svg>${_escHtml(module.title)}</button>
+        <button class="course-ov-back" data-nav="${backUrl}"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="vertical-align:-0.1em;margin-right:1px"><path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/></svg>${_escHtml(backLabel)}</button>
         <h1 class="drill-title">${_escHtml(deck.title)}</h1>
         <p class="drill-subtitle">${_escHtml(deck.description || '')}</p>
       </div>
@@ -3413,3 +3455,4 @@ addRoute('/:id/:mid', renderModuleOverview);
 addRoute('/:id/:mid/reading/:rid', renderReading);
 addRoute('/:id/:mid/quiz/:qid', renderQuiz);
 addRoute('/:id/:mid/lab/:lid', renderLab);
+addRoute('/:id/:mid/drill/:did', renderDrill);

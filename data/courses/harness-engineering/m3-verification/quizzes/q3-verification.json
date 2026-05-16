@@ -11,15 +11,15 @@
     {
       "id": "q3_1",
       "type": "multiple-choice",
-      "prompt": "A run produces output with wiggum_scores: {r1: {relevance: 8, completeness: 9, depth: 6, specificity: 5, structure: 9}}. What is the weighted r1 score?",
+      "prompt": "A run produces wiggum_scores r1: {depth: 8, relevance: 7, completeness: 9, grounded: 5, specificity: 6, structure: 8}. What is the weighted r1 score?",
       "options": [
-        { "id": "a", "text": "7.6", "correct": false },
-        { "id": "b", "text": "7.3", "correct": true },
-        { "id": "c", "text": "8.1", "correct": false },
-        { "id": "d", "text": "6.9", "correct": false }
+        { "id": "a", "text": "7.9", "correct": false },
+        { "id": "b", "text": "7.35", "correct": true },
+        { "id": "c", "text": "6.8", "correct": false },
+        { "id": "d", "text": "8.1", "correct": false }
       ],
-      "explanation": "Weighted score = 8×0.20 + 9×0.25 + 6×0.30 + 5×0.15 + 9×0.10 = 1.60 + 2.25 + 1.80 + 0.75 + 0.90 = 7.30. Depth (weight 0.30) and specificity (weight 0.15) are the two dimensions dragging the score below 8.0 — depth at 6 costs 1.20 points off a perfect 9, and specificity at 5 costs 0.60.",
-      "hint": "Apply the weights: relevance×0.20 + completeness×0.25 + depth×0.30 + specificity×0.15 + structure×0.10."
+      "explanation": "Weighted score = 8×0.25 + 7×0.20 + 9×0.20 + 5×0.15 + 6×0.10 + 8×0.10 = 2.00 + 1.40 + 1.80 + 0.75 + 0.60 + 0.80 = 7.35. Grounded (5×0.15 = 0.75) is the weakest contributor — a score of 5 means the evaluator found confident claims not supported by the research context. Depth at 8 is solid; the gap is in source fidelity and specificity.",
+      "hint": "Apply the six weights in order: depth×0.25 + relevance×0.20 + completeness×0.20 + grounded×0.15 + specificity×0.10 + structure×0.10."
     },
     {
       "id": "q3_2",
@@ -37,15 +37,15 @@
     {
       "id": "q3_3",
       "type": "multiple-choice",
-      "prompt": "The Wiggum loop runs with WIGGUM_PASS_THRESHOLD=8.0 and WIGGUM_MAX_ROUNDS=3. Round 1 score: 7.2. Round 2 score: 7.9. Round 3 score: 8.1. What is the outcome?",
+      "prompt": "The Wiggum loop runs with WIGGUM_PASS_THRESHOLD=9.0 and WIGGUM_MAX_ROUNDS=3. Round 1 score: 8.3. Round 2 score: 8.7. Round 3 score: 9.1. What is the outcome?",
       "options": [
-        { "id": "a", "text": "PASS — the final score (8.1) is above threshold", "correct": true },
-        { "id": "b", "text": "FAIL — the score never reached 8.0 by round 2, so max rounds are exhausted", "correct": false },
-        { "id": "c", "text": "FAIL — the first-pass score (7.2) is below 8.0, so the run automatically fails", "correct": false },
-        { "id": "d", "text": "PASS — the average score across rounds (7.73) is close enough to threshold", "correct": false }
+        { "id": "a", "text": "PASS — round 3 scores 9.1, meeting the 9.0 threshold", "correct": true },
+        { "id": "b", "text": "PASS — round 2 scores 8.7, which already meets a typical quality bar", "correct": false },
+        { "id": "c", "text": "FAIL — no round reached 9.0 within the first two rounds, so max rounds are exhausted", "correct": false },
+        { "id": "d", "text": "FAIL — the average across three rounds (8.7) is below the 9.0 threshold", "correct": false }
       ],
-      "explanation": "The loop terminates at PASS when ANY round's score meets the threshold. Round 3 scores 8.1 ≥ 8.0 → PASS. The first-pass score (r1=7.2) affects the composite metric but does not determine PASS/FAIL — that is the responsibility of any round meeting the threshold within max_rounds.",
-      "hint": "The loop terminates at PASS as soon as any round's score meets or exceeds the threshold."
+      "explanation": "The loop terminates PASS as soon as any round's score meets or exceeds WIGGUM_PASS_THRESHOLD=9.0. Round 3 scores 9.1 ≥ 9.0 → PASS. Note that both 8.3 and 8.7 would have triggered PASS under the earlier 8.0 threshold — the higher bar requires genuinely excellent output, not just above-average. The per-round score determines PASS/FAIL; the average across rounds is irrelevant to termination.",
+      "hint": "The loop terminates as soon as any single round meets or exceeds the threshold. What is the threshold, and which round first meets it?"
     },
     {
       "id": "q3_4",
