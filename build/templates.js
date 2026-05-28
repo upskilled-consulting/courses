@@ -40,7 +40,10 @@ function shellPage({ title, description = '', bodyContent = null, relPath = 'ind
   <meta name="twitter:title" content="${escHtml(title)}"/>
   <meta name="twitter:description" content="${escHtml(description)}"/>
   <meta name="twitter:image" content="${escHtml(ogImage)}"/>
-  <link rel="icon" href="data:,"/>${schemaTag}
+  <link rel="apple-touch-icon" sizes="180x180" href="${p}assets/images/apple-touch-icon.png"/>
+  <link rel="icon" type="image/png" sizes="32x32" href="${p}assets/images/favicon-32x32.png"/>
+  <link rel="icon" type="image/png" sizes="16x16" href="${p}assets/images/favicon-16x16.png"/>
+  <link rel="icon" href="${p}favicon.ico"/>${schemaTag}
   <!-- KaTeX -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous"/>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
