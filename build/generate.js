@@ -2,7 +2,8 @@
 const path = require('path');
 const fs   = require('fs-extra');
 
-const { DIST, writeFile } = require('./utils');
+const { DIST, SITE_URL, writeFile } = require('./utils');
+const BASE = (process.env.BASE_PATH || '').replace(/\/$/, '');
 const {
   shellPage,
   catalogBody,
@@ -22,6 +23,51 @@ function loadJSON(relPath) {
 // Convenience: threads relPath into shellPage so asset paths are relative-correct
 function writePage(relPath, opts) {
   writeFile(relPath, shellPage({ ...opts, relPath }));
+}
+
+// ── Sitemap accumulator ──────────────────────────────────────────
+const sitemapUrls = [];
+
+function trackUrl(relPath, priority = 0.8) {
+  const p = relPath === 'index.html' ? '/' : '/' + relPath.replace(/index\.html$/, '');
+  sitemapUrls.push({ url: `${SITE_URL}${BASE}${p}`, priority });
+}
+
+// ── JSON-LD schema builders ───────────────────────────────────────
+const ORG = {
+  '@type': 'Organization',
+  name:    'Upskilled Consulting',
+  url:     'https://upskilled.consulting',
+  logo:    'https://upskilled.consulting/assets/images/logo.png',
+};
+
+function courseSchema({ name, description, url, level }) {
+  return {
+    '@context': 'https://schema.org',
+    '@type':    'Course',
+    name, description, url,
+    provider:            ORG,
+    isAccessibleForFree: true,
+    inLanguage:          'en',
+    ...(level ? { educationalLevel: level } : {}),
+  };
+}
+
+function articleSchema({ name, description, url, courseTitle, courseUrl }) {
+  return {
+    '@context': 'https://schema.org',
+    '@type':    'Article',
+    name, description, url,
+    isAccessibleForFree: true,
+    inLanguage:          'en',
+    publisher:           ORG,
+    isPartOf: {
+      '@type': 'Course',
+      name:    courseTitle,
+      url:     courseUrl,
+      provider: ORG,
+    },
+  };
 }
 
 // ── SSG guard patch for platform.js ─────────────────────────────
@@ -59,17 +105,32 @@ function patchPlatformJs() {
 
 function genCatalog(platform) {
   console.log('\nCatalog');
-  writePage('index.html', {
+  const relPath = 'index.html';
+  const url     = `${SITE_URL}${BASE}/`;
+  writePage(relPath, {
     title:       'Upskilled — Technical ML & Computer Vision Courses',
     description: 'Free deep-technical courses in machine learning and computer vision for practitioners.',
     bodyContent: catalogBody(platform),
+    schema: [
+      {
+        '@context': 'https://schema.org',
+        '@type':    'WebSite',
+        name:        'Upskilled Consulting — Free ML & AI Courses',
+        url,
+        description: 'Free deep-technical courses in machine learning and computer vision for practitioners.',
+        publisher:   ORG,
+      },
+      { '@context': 'https://schema.org', ...ORG },
+    ],
   });
+  trackUrl(relPath, 1.0);
 }
 
 function genPrereqOrSupplement(courseRef) {
-  const seg    = courseRef.type === 'supplement' ? 'supplement' : 'prereq';
-  const module = loadJSON(courseRef.dataPath);
-  const base   = `${seg}/${courseRef.id}`;
+  const seg       = courseRef.type === 'supplement' ? 'supplement' : 'prereq';
+  const module    = loadJSON(courseRef.dataPath);
+  const base      = `${seg}/${courseRef.id}`;
+  const courseUrl = `${SITE_URL}${BASE}/${base}/`;
 
   console.log(`\n${seg}/${courseRef.id}`);
 
@@ -77,18 +138,23 @@ function genPrereqOrSupplement(courseRef) {
     title:       `${module.title} — Upskilled`,
     description: module.description,
     bodyContent: prereqOverviewBody(module, courseRef),
+    schema:      courseSchema({ name: module.title, description: module.description, url: courseUrl, level: module.level }),
   });
+  trackUrl(`${base}/index.html`, 0.9);
 
   for (const rRef of module.readings || []) {
     const rel = `${base}/reading/${rRef.id}/index.html`;
     try {
       const reading  = loadJSON(rRef.dataPath);
       const descText = (reading.learningObjectives || []).map(lo => lo.description).join(' ');
+      const desc     = descText.slice(0, 160);
       writePage(rel, {
         title:       `${reading.title} · ${module.title} — Upskilled`,
-        description: descText.slice(0, 160),
+        description: desc,
         bodyContent: readingBody(reading, module, courseRef, null),
+        schema:      articleSchema({ name: reading.title, description: desc, url: `${SITE_URL}${BASE}/${rel.replace('index.html', '')}`, courseTitle: module.title, courseUrl }),
       });
+      trackUrl(rel, 0.7);
     } catch (e) { console.warn(`  ⚠ Skipping reading ${rRef.id}: ${e.message}`); }
   }
 
@@ -96,19 +162,31 @@ function genPrereqOrSupplement(courseRef) {
     writePage(`${base}/quiz/${q.id}/index.html`, {
       title:       `${q.title} · ${module.title} — Upskilled`,
       description: `${q.questionCount || ''} question quiz on ${module.title}.`,
-      bodyContent: null,
+      bodyContent: null, // noindex applied automatically
     });
   }
 
   for (const lRef of module.labs || []) {
     const rel = `${base}/lab/${lRef.id}/index.html`;
     try {
-      const lab = loadJSON(lRef.dataPath);
+      const lab  = loadJSON(lRef.dataPath);
+      const desc = `Hands-on lab: ${lab.title}. ~${lab.estimatedMinutes} min.`;
       writePage(rel, {
         title:       `${lab.title} · ${module.title} — Upskilled`,
-        description: `Hands-on lab: ${lab.title}. ~${lab.estimatedMinutes} min.`,
+        description: desc,
         bodyContent: labBody(lab, module, courseRef, null),
+        schema: {
+          '@context': 'https://schema.org',
+          '@type':    'LearningResource',
+          name:       lab.title,
+          description: desc,
+          url:         `${SITE_URL}${BASE}/${rel.replace('index.html', '')}`,
+          provider:    ORG,
+          isAccessibleForFree: true,
+          inLanguage:  'en',
+        },
       });
+      trackUrl(rel, 0.6);
     } catch (e) { console.warn(`  ⚠ Skipping lab ${lRef.id}: ${e.message}`); }
   }
 
@@ -116,7 +194,7 @@ function genPrereqOrSupplement(courseRef) {
     writePage(`${base}/drill/${d.id}/index.html`, {
       title:       `${d.title} · ${module.title} — Upskilled`,
       description: `Practice drill: ${d.title}. ${d.cardCount} cards.`,
-      bodyContent: null,
+      bodyContent: null, // noindex applied automatically
     });
   }
 }
@@ -125,19 +203,23 @@ function genCourse(courseRef) {
   const courseManifest = loadJSON(courseRef.dataPath);
   courseRef._title     = courseManifest.title;
   const courseId       = courseRef.id;
+  const courseUrl      = `${SITE_URL}${BASE}/${courseId}/`;
+  const courseDesc     = courseManifest.subtitle || courseRef.description || '';
 
   console.log(`\ncourse/${courseId}`);
 
   writePage(`${courseId}/index.html`, {
     title:       `${courseManifest.title} — Upskilled`,
-    description: courseManifest.subtitle || courseRef.description || '',
+    description: courseDesc,
     bodyContent: courseHomeBody(courseManifest, courseRef),
+    schema:      courseSchema({ name: courseManifest.title, description: courseDesc, url: courseUrl, level: courseRef.level }),
   });
+  trackUrl(`${courseId}/index.html`, 0.9);
 
   writePage(`${courseId}/syllabus/index.html`, {
     title:       `Syllabus · ${courseManifest.title} — Upskilled`,
     description: `Full syllabus for ${courseManifest.title}.`,
-    bodyContent: null,
+    bodyContent: null, // noindex applied automatically
   });
 
   for (const modEntry of courseManifest.modules || []) {
@@ -146,23 +228,30 @@ function genCourse(courseRef) {
     catch (e) { console.warn(`  ⚠ Skipping module ${modEntry.id}: ${e.message}`); continue; }
 
     const modBase = `${courseId}/${modEntry.id}`;
+    const modUrl  = `${SITE_URL}${BASE}/${modBase}/`;
+    const modDesc = modEntry.description || '';
 
     writePage(`${modBase}/index.html`, {
       title:       `${modEntry.title} · ${courseManifest.title} — Upskilled`,
-      description: modEntry.description || '',
+      description: modDesc,
       bodyContent: moduleOverviewBody(courseManifest, courseRef, modEntry, module),
+      schema:      courseSchema({ name: modEntry.title, description: modDesc, url: modUrl, level: courseRef.level }),
     });
+    trackUrl(`${modBase}/index.html`, 0.8);
 
     for (const rRef of module.readings || []) {
       const rel = `${modBase}/reading/${rRef.id}/index.html`;
       try {
         const reading  = loadJSON(rRef.dataPath);
         const descText = (reading.learningObjectives || []).map(lo => lo.description).join(' ');
+        const desc     = descText.slice(0, 160);
         writePage(rel, {
           title:       `${reading.title} · ${modEntry.title} — Upskilled`,
-          description: descText.slice(0, 160),
+          description: desc,
           bodyContent: readingBody(reading, module, courseRef, modEntry),
+          schema:      articleSchema({ name: reading.title, description: desc, url: `${SITE_URL}${BASE}/${rel.replace('index.html', '')}`, courseTitle: courseManifest.title, courseUrl }),
         });
+        trackUrl(rel, 0.7);
       } catch (e) { console.warn(`  ⚠ Skipping reading ${rRef.id}: ${e.message}`); }
     }
 
@@ -170,7 +259,7 @@ function genCourse(courseRef) {
       writePage(`${modBase}/quiz/${q.id}/index.html`, {
         title:       `${q.title} · ${modEntry.title} — Upskilled`,
         description: `${q.questionCount || ''} question quiz on ${modEntry.title}.`,
-        bodyContent: null,
+        bodyContent: null, // noindex applied automatically
       });
     }
 
@@ -178,12 +267,24 @@ function genCourse(courseRef) {
     for (const lRef of labs) {
       const rel = `${modBase}/lab/${lRef.id}/index.html`;
       try {
-        const lab = loadJSON(lRef.dataPath);
+        const lab  = loadJSON(lRef.dataPath);
+        const desc = `Hands-on lab: ${lab.title}. ~${lab.estimatedMinutes} min.`;
         writePage(rel, {
           title:       `${lab.title} · ${modEntry.title} — Upskilled`,
-          description: `Hands-on lab: ${lab.title}. ~${lab.estimatedMinutes} min.`,
+          description: desc,
           bodyContent: labBody(lab, module, courseRef, modEntry),
+          schema: {
+            '@context': 'https://schema.org',
+            '@type':    'LearningResource',
+            name:       lab.title,
+            description: desc,
+            url:         `${SITE_URL}${BASE}/${rel.replace('index.html', '')}`,
+            provider:    ORG,
+            isAccessibleForFree: true,
+            inLanguage:  'en',
+          },
         });
+        trackUrl(rel, 0.6);
       } catch (e) { console.warn(`  ⚠ Skipping lab ${lRef.id}: ${e.message}`); }
     }
 
@@ -191,7 +292,7 @@ function genCourse(courseRef) {
       writePage(`${modBase}/drill/${d.id}/index.html`, {
         title:       `${d.title} · ${modEntry.title} — Upskilled`,
         description: `Practice drill: ${d.title}. ${d.cardCount} cards.`,
-        bodyContent: null,
+        bodyContent: null, // noindex applied automatically
       });
     }
   }
@@ -224,6 +325,20 @@ async function main() {
       }
     }
   }
+
+  // ── robots.txt ───────────────────────────────────────────────────
+  const robotsTxt = `User-agent: *\nAllow: /\nSitemap: ${SITE_URL}${BASE}/sitemap.xml\n`;
+  fs.writeFileSync(path.join(DIST, 'robots.txt'), robotsTxt, 'utf-8');
+  console.log('  → robots.txt');
+
+  // ── sitemap.xml ──────────────────────────────────────────────────
+  const today = new Date().toISOString().slice(0, 10);
+  const urlNodes = sitemapUrls.map(({ url, priority }) =>
+    `  <url>\n    <loc>${url}</loc>\n    <lastmod>${today}</lastmod>\n    <priority>${priority.toFixed(1)}</priority>\n  </url>`
+  ).join('\n');
+  const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urlNodes}\n</urlset>\n`;
+  fs.writeFileSync(path.join(DIST, 'sitemap.xml'), sitemapXml, 'utf-8');
+  console.log(`  → sitemap.xml (${sitemapUrls.length} URLs)`);
 
   console.log('\nBuild complete.');
 }

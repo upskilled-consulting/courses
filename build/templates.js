@@ -1,20 +1,46 @@
 'use strict';
-const { BASE, escHtml, navItemUrl, href, relPrefix, BACK_SVG } = require('./utils');
+const { BASE, SITE_URL, escHtml, navItemUrl, href, relPrefix, BACK_SVG } = require('./utils');
 const { renderMarkdown, renderInlineMath } = require('./render-markdown');
 
 // ── Shell page (wraps every generated HTML file) ───────────────
 // bodyContent: pre-rendered HTML for #appRoot, or null for quiz/drill shells
-function shellPage({ title, description = '', bodyContent = null, relPath = 'index.html' }) {
+function shellPage({ title, description = '', bodyContent = null, relPath = 'index.html', schema = null }) {
   const rootAttrs = bodyContent !== null ? ' data-ssg="1"' : '';
-  const p = relPrefix(relPath); // relative path prefix for local assets
+  const p = relPrefix(relPath);
+
+  // Canonical: derive from relPath (strip trailing index.html)
+  const canonicalPath = relPath === 'index.html' ? '/' : '/' + relPath.replace(/index\.html$/, '');
+  const canonicalUrl  = `${SITE_URL}${BASE}${canonicalPath}`;
+  const ogImage       = `${SITE_URL}${BASE}/assets/images/logo.png`;
+  // Shell pages (quiz/drill/syllabus) have no static body — don't index them
+  const robotsContent = bodyContent === null ? 'noindex, follow' : 'index, follow';
+
+  const schemaTag = schema
+    ? `\n  <script type="application/ld+json">\n  ${JSON.stringify(Array.isArray(schema) ? schema : schema, null, 2).split('\n').join('\n  ')}\n  </script>`
+    : '';
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="robots" content="${robotsContent}"/>
   <title>${escHtml(title)}</title>
-  <link rel="icon" href="data:,"/>
+  <link rel="canonical" href="${escHtml(canonicalUrl)}"/>
   <meta name="description" content="${escHtml(description)}"/>
+  <!-- Open Graph -->
+  <meta property="og:type" content="website"/>
+  <meta property="og:url" content="${escHtml(canonicalUrl)}"/>
+  <meta property="og:title" content="${escHtml(title)}"/>
+  <meta property="og:description" content="${escHtml(description)}"/>
+  <meta property="og:image" content="${escHtml(ogImage)}"/>
+  <meta property="og:site_name" content="Upskilled Consulting"/>
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary"/>
+  <meta name="twitter:title" content="${escHtml(title)}"/>
+  <meta name="twitter:description" content="${escHtml(description)}"/>
+  <meta name="twitter:image" content="${escHtml(ogImage)}"/>
+  <link rel="icon" href="data:,"/>${schemaTag}
   <!-- KaTeX -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" crossorigin="anonymous"/>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" crossorigin="anonymous"></script>
