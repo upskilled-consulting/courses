@@ -1,0 +1,96 @@
+# Upskilled Consulting — Free ML & AI Course Platform
+
+> 50+ hours of free, professionally-crafted ML and AI curriculum for practitioners. From foundational math to production-grade deep learning — completely free, no prerequisites.
+
+## Provider
+
+Upskilled Consulting (https://upskilled.consulting) — applied ML and AI consulting firm. 200+ students trained, >95% satisfaction rate, 10+ years of experience.
+
+## Course Catalog
+
+### Prerequisite Courses (Foundational Mathematics)
+
+**Linear Algebra**
+URL: /prereq/linear-algebra/
+Topics: vectors, matrices, linear transformations, eigenvalues, SVD, inner products, subspaces
+Level: Beginner | Format: Readings, quizzes, labs, drill decks
+
+**Matrix Algebra Foundations**
+URL: /prereq/matrix-algebra/
+Topics: matrix operations, systems of equations, LU decomposition, determinants, norms
+Level: Beginner | Format: Readings, quizzes, labs, drill decks
+
+**Calculus Foundations**
+URL: /prereq/calculus-foundations/
+Topics: limits, derivatives, chain rule, gradients, optimization, integration, multivariable calculus
+Level: Beginner | Format: Readings, quizzes, labs, drill decks
+
+**Probability & Statistics**
+URL: /prereq/probability-foundations/
+Topics: probability distributions, Bayes' theorem, MLE, hypothesis testing, information theory
+Level: Beginner | Format: Readings, quizzes, labs, drill decks
+
+### Supplement Courses (Deep Learning Building Blocks)
+
+**Neural Network Architectures**
+URL: /supplement/architectures/
+Topics: MLPs, CNNs, ResNets, RNNs, Transformers, attention mechanisms
+Level: Intermediate | Format: Readings, quizzes, labs, drill decks
+
+**Activation Functions**
+URL: /supplement/activation-functions/
+Topics: ReLU family, sigmoid, tanh, GELU, Swish, saturating vs non-saturating
+Level: Intermediate | Format: Readings, quizzes, labs, drill decks
+
+**Loss Functions**
+URL: /supplement/loss-functions/
+Topics: cross-entropy, MSE, Huber, focal loss, contrastive, metric learning losses
+Level: Intermediate | Format: Readings, quizzes, labs, drill decks
+
+**Optimizers**
+URL: /supplement/optimizers/
+Topics: SGD, momentum, Adam, AdaGrad, RMSProp, learning rate schedulers, second-order methods
+Level: Intermediate | Format: Readings, quizzes, labs, drill decks
+
+**Regularization**
+URL: /supplement/regularization/
+Topics: L1/L2 penalties, dropout, data augmentation, weight decay, implicit regularization
+Level: Intermediate | Format: Readings, quizzes, labs, drill decks
+
+**Normalization in Deep Learning**
+URL: /supplement/normalization/
+Topics: batch norm, layer norm, group norm, instance norm, weight norm, AdaIN
+Level: Intermediate | Format: Readings, quizzes, labs, drill decks
+
+**Weight Initialization**
+URL: /supplement/weight-initialization/
+Topics: Xavier/Glorot, He, LeCun, orthogonal, variance scaling, impact on training
+Level: Intermediate | Format: Readings, quizzes, labs, drill decks
+
+### Full Courses
+
+**3D Gaussian Splatting & Compression**
+URL: /3dgs-compression/
+Topics: 3DGS fundamentals, scene reconstruction, Structure from Motion, bundle adjustment, compression, spherical harmonics, opacity sorting
+Level: Advanced | Modules: Foundations of 3DGS, Scene Reconstruction, Compression
+
+**Deep Reinforcement Learning**
+URL: /deep-rl/
+Topics: MDP, Q-learning, policy gradients, PPO, SAC, actor-critic, visual RL, ViZDoom
+Level: Advanced | Modules: RL Foundations, Value Methods, Policy Gradients, Advanced RL
+
+**Harness Engineering for AI Agents**
+URL: /harness-engineering/
+Topics: agentic pipelines, producer-evaluator loops, context engineering, verification patterns, security, observability, multi-agent orchestration
+Level: Advanced | Modules: The Harness Thesis, Context & Memory, Verification & Failure Modes, Production Systems, Self-Improvement
+
+## Site Structure
+
+- / — Course catalog (all courses by category)
+- /prereq/{course-id}/ — Prerequisite course overview
+- /supplement/{course-id}/ — Supplement course overview
+- /{course-id}/ — Full course home
+- /{course-id}/{module-id}/ — Module overview
+- /{course-id}/{module-id}/reading/{id}/ — Reading page
+- /{course-id}/{module-id}/lab/{id}/ — Lab exercise
+- /sitemap.xml — Full sitemap (189 indexable URLs)

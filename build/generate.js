@@ -327,6 +327,7 @@ async function main() {
   fs.copySync(path.join(ROOT, 'data'),   path.join(DIST, 'data'));
   fs.copySync(path.join(ROOT, '404.html'),   path.join(DIST, '404.html'));
   fs.copySync(path.join(ROOT, 'favicon.ico'), path.join(DIST, 'favicon.ico'));
+  fs.copySync(path.join(ROOT, 'llms.txt'),    path.join(DIST, 'llms.txt'));
 
   patchPlatformJs();
 
