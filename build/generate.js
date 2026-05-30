@@ -325,7 +325,8 @@ async function main() {
   console.log('Copying assets…');
   fs.copySync(path.join(ROOT, 'assets'), path.join(DIST, 'assets'));
   fs.copySync(path.join(ROOT, 'data'),   path.join(DIST, 'data'));
-  fs.copySync(path.join(ROOT, '404.html'), path.join(DIST, '404.html'));
+  fs.copySync(path.join(ROOT, '404.html'),   path.join(DIST, '404.html'));
+  fs.copySync(path.join(ROOT, 'favicon.ico'), path.join(DIST, 'favicon.ico'));
 
   patchPlatformJs();
 
