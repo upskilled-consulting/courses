@@ -25,6 +25,25 @@ function writePage(relPath, opts) {
   writeFile(relPath, shellPage({ ...opts, relPath }));
 }
 
+// Build a title that fits within 60 chars, shedding parts progressively:
+//   "Reading · Module — Upskilled"  →  "Reading — Upskilled"  →  "Reading"  →  truncated
+function makeTitle(primary, context, brand = 'Upskilled') {
+  const full    = `${primary} · ${context} — ${brand}`;
+  if (full.length    <= 60) return full;
+  const noCtx   = `${primary} — ${brand}`;
+  if (noCtx.length   <= 60) return noCtx;
+  const noBrand = primary;
+  if (noBrand.length <= 60) return noBrand;
+  return primary.slice(0, 57) + '...';
+}
+
+// Build a description, falling back when learningObjectives are absent
+function makeReadingDesc(reading, moduleName) {
+  const fromObjectives = (reading.learningObjectives || [])
+    .map(lo => lo.description).join(' ').trim();
+  return (fromObjectives || `A deep-dive reading on ${reading.title} in the ${moduleName} curriculum.`).slice(0, 160);
+}
+
 // ── Sitemap accumulator ──────────────────────────────────────────
 const sitemapUrls = [];
 
@@ -145,11 +164,10 @@ function genPrereqOrSupplement(courseRef) {
   for (const rRef of module.readings || []) {
     const rel = `${base}/reading/${rRef.id}/index.html`;
     try {
-      const reading  = loadJSON(rRef.dataPath);
-      const descText = (reading.learningObjectives || []).map(lo => lo.description).join(' ');
-      const desc     = descText.slice(0, 160);
+      const reading = loadJSON(rRef.dataPath);
+      const desc    = makeReadingDesc(reading, module.title);
       writePage(rel, {
-        title:       `${reading.title} · ${module.title} — Upskilled`,
+        title:       makeTitle(reading.title, module.title),
         description: desc,
         bodyContent: readingBody(reading, module, courseRef, null),
         schema:      articleSchema({ name: reading.title, description: desc, url: `${SITE_URL}${BASE}/${rel.replace('index.html', '')}`, courseTitle: module.title, courseUrl }),
@@ -160,7 +178,7 @@ function genPrereqOrSupplement(courseRef) {
 
   for (const q of module.quizzes || []) {
     writePage(`${base}/quiz/${q.id}/index.html`, {
-      title:       `${q.title} · ${module.title} — Upskilled`,
+      title:       makeTitle(q.title, module.title),
       description: `${q.questionCount || ''} question quiz on ${module.title}.`,
       bodyContent: null, // noindex applied automatically
     });
@@ -172,7 +190,7 @@ function genPrereqOrSupplement(courseRef) {
       const lab  = loadJSON(lRef.dataPath);
       const desc = `Hands-on lab: ${lab.title}. ~${lab.estimatedMinutes} min.`;
       writePage(rel, {
-        title:       `${lab.title} · ${module.title} — Upskilled`,
+        title:       makeTitle(lab.title, module.title),
         description: desc,
         bodyContent: labBody(lab, module, courseRef, null),
         schema: {
@@ -192,7 +210,7 @@ function genPrereqOrSupplement(courseRef) {
 
   for (const d of module.drills || []) {
     writePage(`${base}/drill/${d.id}/index.html`, {
-      title:       `${d.title} · ${module.title} — Upskilled`,
+      title:       makeTitle(d.title, module.title),
       description: `Practice drill: ${d.title}. ${d.cardCount} cards.`,
       bodyContent: null, // noindex applied automatically
     });
@@ -232,7 +250,7 @@ function genCourse(courseRef) {
     const modDesc = modEntry.description || '';
 
     writePage(`${modBase}/index.html`, {
-      title:       `${modEntry.title} · ${courseManifest.title} — Upskilled`,
+      title:       makeTitle(modEntry.title, courseManifest.title),
       description: modDesc,
       bodyContent: moduleOverviewBody(courseManifest, courseRef, modEntry, module),
       schema:      courseSchema({ name: modEntry.title, description: modDesc, url: modUrl, level: courseRef.level }),
@@ -242,11 +260,10 @@ function genCourse(courseRef) {
     for (const rRef of module.readings || []) {
       const rel = `${modBase}/reading/${rRef.id}/index.html`;
       try {
-        const reading  = loadJSON(rRef.dataPath);
-        const descText = (reading.learningObjectives || []).map(lo => lo.description).join(' ');
-        const desc     = descText.slice(0, 160);
+        const reading = loadJSON(rRef.dataPath);
+        const desc    = makeReadingDesc(reading, modEntry.title);
         writePage(rel, {
-          title:       `${reading.title} · ${modEntry.title} — Upskilled`,
+          title:       makeTitle(reading.title, modEntry.title),
           description: desc,
           bodyContent: readingBody(reading, module, courseRef, modEntry),
           schema:      articleSchema({ name: reading.title, description: desc, url: `${SITE_URL}${BASE}/${rel.replace('index.html', '')}`, courseTitle: courseManifest.title, courseUrl }),
@@ -257,7 +274,7 @@ function genCourse(courseRef) {
 
     for (const q of module.quizzes || []) {
       writePage(`${modBase}/quiz/${q.id}/index.html`, {
-        title:       `${q.title} · ${modEntry.title} — Upskilled`,
+        title:       makeTitle(q.title, modEntry.title),
         description: `${q.questionCount || ''} question quiz on ${modEntry.title}.`,
         bodyContent: null, // noindex applied automatically
       });
@@ -270,7 +287,7 @@ function genCourse(courseRef) {
         const lab  = loadJSON(lRef.dataPath);
         const desc = `Hands-on lab: ${lab.title}. ~${lab.estimatedMinutes} min.`;
         writePage(rel, {
-          title:       `${lab.title} · ${modEntry.title} — Upskilled`,
+          title:       makeTitle(lab.title, modEntry.title),
           description: desc,
           bodyContent: labBody(lab, module, courseRef, modEntry),
           schema: {
@@ -290,7 +307,7 @@ function genCourse(courseRef) {
 
     for (const d of module.drills || []) {
       writePage(`${modBase}/drill/${d.id}/index.html`, {
-        title:       `${d.title} · ${modEntry.title} — Upskilled`,
+        title:       makeTitle(d.title, modEntry.title),
         description: `Practice drill: ${d.title}. ${d.cardCount} cards.`,
         bodyContent: null, // noindex applied automatically
       });
