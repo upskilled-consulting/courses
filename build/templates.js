@@ -146,6 +146,7 @@ function shellPage({ title, description = '', bodyContent = null, relPath = 'ind
         <p class="footer-contact-sub">New courses, research updates, and case studies \u2014 straight to your inbox.</p>
         <div id="footer-form-message"></div>
         <form id="footer-contact-form" class="footer-form" novalidate>
+          <input type="text" id="hp-website-footer" name="website" autocomplete="off" tabindex="-1" style="position:absolute;opacity:0;left:-9999px;height:0;width:0"/>
           <div class="footer-form-row">
             <input type="text"  id="footer-name"  name="name"  placeholder="Name"  autocomplete="name"/>
             <input type="email" id="footer-email" name="email" placeholder="Email" autocomplete="email" required/>
